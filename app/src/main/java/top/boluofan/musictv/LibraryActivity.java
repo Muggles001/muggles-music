@@ -1,6 +1,8 @@
 package top.boluofan.musictv;
 
-import android.content.Intent; 
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
@@ -91,6 +93,22 @@ public class LibraryActivity extends AppCompatActivity {
         public void run() {
             updateProgress();
             handler.postDelayed(this, 1000);
+        }
+    };
+    // 广播接收器：监听刮削成功事件
+    private final android.content.BroadcastReceiver scrapeSuccessReceiver = new android.content.BroadcastReceiver() {
+        @Override
+        public void onReceive(android.content.Context context, android.content.Intent intent) {
+            if (intent == null) return;
+            String songName = intent.getStringExtra("songName");
+            String picUrl = intent.getStringExtra("picUrl");
+            String artist = intent.getStringExtra("artist");
+
+            if (songAdapter != null) {
+                if (picUrl != null && !picUrl.isEmpty()) {
+                    songAdapter.refreshSongInfo(songName, picUrl, artist);
+                }
+            }
         }
     };
 
@@ -858,7 +876,17 @@ public class LibraryActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        
+        // 注册广播接收器
+        android.content.IntentFilter filter = new android.content.IntentFilter("top.boluofan.musictv.SCRAPE_SUCCESS");
+
+        // Android 12 (API 31) 及以上版本必须指定导出标志、Android 8.0 - 11 : 可以带标志位，使用兼容写法
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            registerReceiver(scrapeSuccessReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            // Android 7.1 及以下 : 不需要也不支持第三个参数
+            registerReceiver(scrapeSuccessReceiver, filter);
+        }
+
         // onStart 的 MediaController 回调中会执行 updatePlayingStatus
 
         // 2. 处理焦点恢复
@@ -892,6 +920,13 @@ public class LibraryActivity extends AppCompatActivity {
                 }
             }, 300);
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // 注销广播接收器
+        unregisterReceiver(scrapeSuccessReceiver);
     }
 
     private void startProgressUpdater() { handler.removeCallbacks(progressUpdater); handler.post(progressUpdater); }

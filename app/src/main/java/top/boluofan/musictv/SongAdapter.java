@@ -290,6 +290,26 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.ViewHolder> {
         return songs.size();
     }
 
+    // 供外部调用以刷新特定歌曲的封面
+    public void refreshSongInfo(String songName, String coverUrl, String artist) {
+        if (coverUrl != null && !coverUrl.isEmpty()) {
+            coverUrlCache.put(songName, coverUrl);
+        }
+        if (artist != null && !artist.isEmpty()) {
+            artistCache.put(songName, artist);
+        }
+        // 找到该歌曲的位置并刷新
+        int position = songs.indexOf(songName);
+        if (position != -1) {
+            notifyItemChanged(position);
+        }
+    }
+
+    // 可选：批量刷新所有歌曲封面
+    public void refreshAllCovers() {
+        notifyDataSetChanged();
+    }
+
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvIndex;
         ImageView ivEqualizer; 

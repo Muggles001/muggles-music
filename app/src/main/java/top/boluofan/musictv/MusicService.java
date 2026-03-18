@@ -223,6 +223,8 @@ public class MusicService extends MediaSessionService {
             @Override
             public void onSuccess(String artist, String picUrl, String lyrics) {
                 updateMediaItemMetadata(mediaItem, artist, "", picUrl, lyrics);
+                // 发送广播通知 UI 更新封面
+                sendScrapeSuccessBroadcast(songName, picUrl, artist);
             }
 
             @Override
@@ -232,6 +234,17 @@ public class MusicService extends MediaSessionService {
         });
     }
 
+    private void sendScrapeSuccessBroadcast(String songName, String picUrl, String artist) {
+        try {
+            android.content.Intent intent = new android.content.Intent("top.boluofan.musictv.SCRAPE_SUCCESS");
+            intent.putExtra("songName", songName);
+            intent.putExtra("picUrl", picUrl);
+            intent.putExtra("artist", artist);
+            sendBroadcast(intent);
+        } catch (Exception e) {
+            android.util.Log.e("MusicService", "发送广播失败：" + e.getMessage());
+        }
+    }
     private void updateMediaItemMetadata(MediaItem mediaItem, String artist, String album, String pic, String lyrics) {
         MediaItem current = player.getCurrentMediaItem();
         if (current != null && current.mediaId.equals(mediaItem.mediaId)) {
