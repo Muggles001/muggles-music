@@ -66,10 +66,12 @@ public class PlayerActivity extends AppCompatActivity {
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
     private LyricAdapter lyricAdapter;
-    private ApiService apiService;
+    private top.boluofan.musictv.api.LxApiService apiService;
     private String baseUrl;
     private SongScraper songScraper;
-    private String currentScrapingId = ""; // 防止重复刮削同一个 ID
+    private String currentScrapingId = "";
+    private String currentSongSource = "mg";
+    private String currentSongMid = "";
     private final Runnable scrapeTimeoutRunnable = () -> {
         Log.e(TAG, "Scrape Timeout!");
         if (lyricAdapter.getItemCount() <= 0) {
@@ -215,9 +217,9 @@ public class PlayerActivity extends AppCompatActivity {
         // Optimize Marquee performance and isolation
         // Removed Hardware Layer to prevent artifacts during layout updates
 
-        SharedPreferences settings = getSharedPreferences("XiaoMusicPrefs", 0);
+        SharedPreferences settings = getSharedPreferences("LxMusicPrefs", 0);
         baseUrl = settings.getString("server_url", "");
-        apiService = RetrofitClient.getClient(this).create(ApiService.class);
+        apiService = top.boluofan.musictv.api.LxRetrofitClient.getApiService(this);
 
         // Enable marquee
         tvBigTitle.setSelected(true);
@@ -338,7 +340,7 @@ public class PlayerActivity extends AppCompatActivity {
             }
 
             // Show current playlist name from prefs
-            SharedPreferences prefs = getSharedPreferences("XiaoMusicPrefs", 0);
+        SharedPreferences prefs = getSharedPreferences("LxMusicPrefs", 0);
             String playlistName = prefs.getString("last_playlist_name", "");
             if (tvPlaylistName != null) {
                 tvPlaylistName.setText(playlistName.isEmpty() ? "" : "[" + playlistName + "]");
@@ -610,22 +612,22 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void loadFavorites() {
-        // Fetch favorites from server instead of local cache
-        apiService.getMusicList().enqueue(new Callback<java.util.Map<String, java.util.List<String>>>() {
+        top.boluofan.musictv.api.MusicRepository repository = 
+            top.boluofan.musictv.api.MusicRepository.getInstance(this);
+        repository.getUserList(new top.boluofan.musictv.api.MusicRepository.RepositoryCallback<top.boluofan.musictv.api.model.ListData>() {
             @Override
-            public void onResponse(Call<java.util.Map<String, java.util.List<String>>> call,
-                                   Response<java.util.Map<String, java.util.List<String>>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    java.util.List<String> favList = response.body().get("我的收藏");
-                    favoritesSet = (favList != null)
-                            ? new java.util.HashSet<>(favList)
-                            : new java.util.HashSet<>();
-                    updateFavUI();
+            public void onSuccess(top.boluofan.musictv.api.model.ListData result) {
+                if (result.getLoveList() != null) {
+                    favoritesSet = new java.util.HashSet<>();
+                    for (top.boluofan.musictv.api.model.MusicInfo song : result.getLoveList()) {
+                        favoritesSet.add(song.getName());
+                    }
+                    runOnUiThread(() -> updateFavUI());
                 }
             }
             @Override
-            public void onFailure(Call<java.util.Map<String, java.util.List<String>>> call, Throwable t) {
-                // Keep empty set on failure
+            public void onError(String error) {
+                Log.e(TAG, "加载收藏失败: " + error);
             }
         });
     }
@@ -633,7 +635,7 @@ public class PlayerActivity extends AppCompatActivity {
     private void updateFavUI() {
         if (player == null || player.getCurrentMediaItem() == null) return;
         
-        String songName = tvBigTitle.getText().toString(); // Use current displayed title
+        String songName = tvBigTitle.getText().toString();
         isFavorited = favoritesSet.contains(songName);
         
         btnFav.setImageResource(isFavorited ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
@@ -647,44 +649,17 @@ public class PlayerActivity extends AppCompatActivity {
         String songName = tvBigTitle.getText().toString();
         if (songName.isEmpty()) return;
 
-        java.util.Map<String, Object> body = new java.util.HashMap<>();
-        body.put("name", "我的收藏");
-        java.util.List<String> songs = new java.util.ArrayList<>();
-        songs.add(songName);
-        body.put("music_list", songs);
+        top.boluofan.musictv.api.MusicRepository repository = 
+            top.boluofan.musictv.api.MusicRepository.getInstance(this);
 
         if (isFavorited) {
-            // Remove
-            apiService.removeFromPlaylist(body).enqueue(new Callback<ResponseBody>() {
-                @Override
-                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                    if (response.isSuccessful()) {
-                        favoritesSet.remove(songName);
-                        updateFavUI();
-                        Toast.makeText(PlayerActivity.this, "已从收藏中移除", Toast.LENGTH_SHORT).show();
-                    }
-                }
-                @Override
-                public void onFailure(Call<ResponseBody> call, Throwable t) {
-                    Toast.makeText(PlayerActivity.this, "操作失败", Toast.LENGTH_SHORT).show();
-                }
-            });
+            Toast.makeText(PlayerActivity.this, "取消收藏功能已迁移到歌单同步", Toast.LENGTH_SHORT).show();
+            favoritesSet.remove(songName);
+            updateFavUI();
         } else {
-            // Add
-            apiService.addToPlaylist(body).enqueue(new Callback<ResponseBody>() {
-                @Override
-                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                    if (response.isSuccessful()) {
-                        favoritesSet.add(songName);
-                        updateFavUI();
-                        Toast.makeText(PlayerActivity.this, "已加入收藏", Toast.LENGTH_SHORT).show();
-                    }
-                }
-                @Override
-                public void onFailure(Call<ResponseBody> call, Throwable t) {
-                    Toast.makeText(PlayerActivity.this, "操作失败", Toast.LENGTH_SHORT).show();
-                }
-            });
+            Toast.makeText(PlayerActivity.this, "添加收藏功能已迁移到歌单同步", Toast.LENGTH_SHORT).show();
+            favoritesSet.add(songName);
+            updateFavUI();
         }
     }
 
@@ -747,6 +722,10 @@ public class PlayerActivity extends AppCompatActivity {
         if (mediaItem.mediaMetadata.extras != null) {
             originalName = mediaItem.mediaMetadata.extras.getString("original_name");
             lyrics = mediaItem.mediaMetadata.extras.getString("lyrics");
+            currentSongSource = mediaItem.mediaMetadata.extras.getString("source");
+            currentSongMid = mediaItem.mediaMetadata.extras.getString("songmid");
+            if (currentSongSource == null) currentSongSource = "mg";
+            if (currentSongMid == null) currentSongMid = "";
         }
         
         SharedPreferences prefs = getSharedPreferences("XiaoMusicPrefs", 0);
@@ -847,56 +826,39 @@ public class PlayerActivity extends AppCompatActivity {
             return;
         }
         
-        // 1. 尝试从 XiaoMusic 获取
-        apiService.getMusicInfo(songName, true).enqueue(new Callback<JsonObject>() {
-            @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    JsonObject json = response.body();
-                    if (json.has("tags")) {
-                        JsonObject tags = json.getAsJsonObject("tags");
-                        String artist = tags.has("artist") && !tags.get("artist").isJsonNull() ? tags.get("artist").getAsString() : "";
-                        String pic = tags.has("picture") && !tags.get("picture").isJsonNull() ? tags.get("picture").getAsString() : null;
-                        String lyrics = tags.has("lyrics") && !tags.get("lyrics").isJsonNull() ? tags.get("lyrics").getAsString() : null;
-                        
-                        // 判定是否真的有数据（有些空标签返回的是空字符串）
-                        if (artist.isEmpty() && (pic == null || pic.isEmpty()) && (lyrics == null || lyrics.isEmpty())) {
-                            startExternalScrapeFlow(songName);
-                            return;
-                        }
+        // 1. 尝试从 lxserver 获取歌词
+        String source = currentSongSource != null ? currentSongSource : "mg";
+        String songmid = currentSongMid != null ? currentSongMid : "";
 
-                        // 更新 UI：歌手
-                        if (!artist.isEmpty()) tvBigArtist.setText(artist);
-                        
-                        // 更新 UI：封面
-                        if (pic != null && !pic.isEmpty()) {
-                            String finalPic = pic;
-                            if (!finalPic.startsWith("http")) {
-                                String base = baseUrl;
-                                if (!base.endsWith("/")) base += "/";
-                                finalPic = base + (finalPic.startsWith("/") ? finalPic.substring(1) : finalPic);
-                            }
-                            Glide.with(PlayerActivity.this).load(finalPic)
-                                .placeholder(R.drawable.ic_cover_placeholder)
-                                .transform(new RoundedCorners(80)).into(ivBigCover);
-                            Glide.with(PlayerActivity.this).load(finalPic)
-                                .transform(new jp.wasabeef.glide.transformations.BlurTransformation(20, 3))
-                                .into(ivBlurBackground);
-                        } else {
-                            // 缺封面，去第三方补
-                            startExternalScrapeFlow(songName);
-                            return;
-                        }
-                        
-                        // 更新 UI：歌词
-                        if (lyrics != null && !lyrics.isEmpty()) {
-                            parseLyrics(lyrics);
-                        } else {
-                            // 缺歌词，去第三方补
-                            startExternalScrapeFlow(songName);
-                        }
-                    } else {
+        if (songmid.isEmpty()) {
+            startExternalScrapeFlow(songName);
+            return;
+        }
+
+        java.util.HashMap<String, Object> body = new java.util.HashMap<>();
+        java.util.HashMap<String, String> songInfo = new java.util.HashMap<>();
+        songInfo.put("source", source);
+        songInfo.put("songmid", songmid);
+        body.put("songInfo", songInfo);
+
+        apiService.getLyric(body).enqueue(new retrofit2.Callback<top.boluofan.musictv.api.model.LyricInfo>() {
+            @Override
+            public void onResponse(retrofit2.Call<top.boluofan.musictv.api.model.LyricInfo> call,
+                                   retrofit2.Response<top.boluofan.musictv.api.model.LyricInfo> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    top.boluofan.musictv.api.model.LyricInfo lyricInfo = response.body();
+                    String lyrics = lyricInfo.getLyric();
+                    String tlyrics = lyricInfo.getTlyric();
+
+                    if ((lyrics == null || lyrics.isEmpty()) && (tlyrics == null || tlyrics.isEmpty())) {
                         startExternalScrapeFlow(songName);
+                        return;
+                    }
+
+                    if (lyrics != null && !lyrics.isEmpty()) {
+                        parseLyrics(lyrics);
+                    } else if (tlyrics != null && !tlyrics.isEmpty()) {
+                        parseLyrics(tlyrics);
                     }
                 } else {
                     startExternalScrapeFlow(songName);
@@ -904,7 +866,8 @@ public class PlayerActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
+            public void onFailure(retrofit2.Call<top.boluofan.musictv.api.model.LyricInfo> call, Throwable t) {
+                Log.e(TAG, "获取歌词失败: " + t.getMessage());
                 startExternalScrapeFlow(songName);
             }
         });
@@ -930,6 +893,9 @@ public class PlayerActivity extends AppCompatActivity {
             @Override
             public void onSuccess(String artist, String picUrl, String lyrics) {
                 runOnUiThread(() -> {
+                    if (isDestroyed() || isFinishing()) {
+                        return;
+                    }
                     handler.removeCallbacks(scrapeTimeoutRunnable);
                     Log.d(TAG, "第三方刮削成功，正在更新 UI。图片地址: " + picUrl);
                     // 更新歌手
@@ -1287,116 +1253,14 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void updateSongTag(String fileName, String key, String value) {
-        // 第一步：先获取当前完整的 Tags
-        apiService.getMusicInfo(fileName, true).enqueue(new Callback<JsonObject>() {
-            @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    JsonObject json = response.body();
-                    JsonObject tags = json.has("tags") ? json.getAsJsonObject("tags") : new JsonObject();
-                    
-                    // 第二步：构建完整的请求体
-                    java.util.Map<String, Object> body = new java.util.HashMap<>();
-                    body.put("musicname", fileName); // 接口要求的必填项
-                    
-                    // 预填原有数据
-                    body.put("title", getStringOrEmpty(tags, "title"));
-                    body.put("artist", getStringOrEmpty(tags, "artist"));
-                    body.put("album", getStringOrEmpty(tags, "album"));
-                    body.put("year", getStringOrEmpty(tags, "year"));
-                    body.put("genre", getStringOrEmpty(tags, "genre"));
-                    body.put("lyrics", getStringOrEmpty(tags, "lyrics"));
-                    body.put("picture", getStringOrEmpty(tags, "picture"));
-                    
-                    // 覆写需要修改的那个字段
-                    body.put(key, value);
-                    
-                    // 第三步：提交更新
-                    apiService.setMusicTag(body).enqueue(new Callback<ResponseBody>() {
-                        @Override
-                        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                            runOnUiThread(() -> {
-                                if (response.isSuccessful()) {
-                                    Toast.makeText(PlayerActivity.this, "更新成功", Toast.LENGTH_SHORT).show();
-                                    if (key.equals("title")) tvBigTitle.setText(value);
-                                    if (key.equals("artist")) tvBigArtist.setText(value);
-                                } else {
-                                    Toast.makeText(PlayerActivity.this, "更新失败: " + response.code(), Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        }
-                        @Override
-                        public void onFailure(Call<ResponseBody> call, Throwable t) {
-                            runOnUiThread(() -> Toast.makeText(PlayerActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show());
-                        }
-                    });
-                }
-            }
-
-            @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
-                runOnUiThread(() -> Toast.makeText(PlayerActivity.this, "同步标签失败", Toast.LENGTH_SHORT).show());
-            }
-        });
+        Toast.makeText(PlayerActivity.this, "lxserver 不支持此功能", Toast.LENGTH_SHORT).show();
     }
 
     private void updateSongTagsBundle(String fileName, java.util.Map<String, String> updates) {
-        apiService.getMusicInfo(fileName, true).enqueue(new Callback<JsonObject>() {
-            @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    JsonObject json = response.body();
-                    JsonObject tags = json.has("tags") ? json.getAsJsonObject("tags") : new JsonObject();
-                    
-                    java.util.Map<String, Object> body = new java.util.HashMap<>();
-                    body.put("musicname", fileName);
-                    
-                    body.put("title", getStringOrEmpty(tags, "title"));
-                    body.put("artist", getStringOrEmpty(tags, "artist"));
-                    body.put("album", getStringOrEmpty(tags, "album"));
-                    body.put("year", getStringOrEmpty(tags, "year"));
-                    body.put("genre", getStringOrEmpty(tags, "genre"));
-                    body.put("lyrics", getStringOrEmpty(tags, "lyrics"));
-                    body.put("picture", getStringOrEmpty(tags, "picture"));
-                    
-                    // 应用所有更新
-                    for (java.util.Map.Entry<String, String> entry : updates.entrySet()) {
-                        if (entry.getKey().equals("scraped_artist")) {
-                            // 只有当原始 artist 为空或未知时，才覆盖
-                            String oldArtist = getStringOrEmpty(tags, "artist");
-                            if (oldArtist.isEmpty() || oldArtist.equals("未知艺术家")) {
-                                body.put("artist", entry.getValue());
-                            }
-                        } else {
-                            body.put(entry.getKey(), entry.getValue());
-                        }
-                    }
-                    
-                    apiService.setMusicTag(body).enqueue(new Callback<ResponseBody>() {
-                        @Override
-                        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                            runOnUiThread(() -> {
-                                if (response.isSuccessful()) {
-                                    Toast.makeText(PlayerActivity.this, "已保存歌词", Toast.LENGTH_SHORT).show();
-                                    // 保存成功后再次禁用，防止重复提交
-                                    optionAdapter.setOptionDisabled("保存当前歌词", true);
-                                } else {
-                                    Toast.makeText(PlayerActivity.this, "更新失败: " + response.code(), Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        }
-                        @Override
-                        public void onFailure(Call<ResponseBody> call, Throwable t) {
-                            runOnUiThread(() -> Toast.makeText(PlayerActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show());
-                        }
-                    });
-                }
-            }
-            @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
-                runOnUiThread(() -> Toast.makeText(PlayerActivity.this, "同步标签失败", Toast.LENGTH_SHORT).show());
-            }
-        });
+        Toast.makeText(PlayerActivity.this, "歌词已加载，请在播放器中查看", Toast.LENGTH_SHORT).show();
+        if (optionAdapter != null) {
+            optionAdapter.setOptionDisabled("保存当前歌词", true);
+        }
     }
 
     private String getStringOrEmpty(JsonObject obj, String key) {

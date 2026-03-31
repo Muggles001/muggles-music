@@ -1,13 +1,11 @@
 package top.boluofan.musictv;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.format.Formatter;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -16,28 +14,23 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import android.content.Intent;
-import android.content.SharedPreferences;
-
+import top.boluofan.musictv.api.LxApiService;
+import top.boluofan.musictv.api.LxRetrofitClient;
+import top.boluofan.musictv.api.model.LoginResponse;
+import top.boluofan.musictv.ui.LibraryActivity;
 
 public class ConfigActivity extends AppCompatActivity {
-    private static final String PREFS_NAME = "XiaoMusicPrefs";
-    private static final String KEY_SERVER_URL = "server_url";
-    private static final String KEY_USERNAME = "username";
-    private static final String KEY_PASSWORD = "password";
-
+    private static final String TAG = "ConfigActivity";
     private LoginWebServer webServer;
     private static final int SERVER_PORT = 8088;
     private Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -47,11 +40,7 @@ public class ConfigActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Check if URL exists and jump directly
-        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-        String savedUrl = settings.getString(KEY_SERVER_URL, null);
-
-        if (savedUrl != null && !savedUrl.isEmpty()) {
+        if (LxRetrofitClient.isLoggedIn(this)) {
             startActivity(new Intent(this, LibraryActivity.class));
             finish();
             return;
@@ -69,26 +58,26 @@ public class ConfigActivity extends AppCompatActivity {
         View layoutQr = findViewById(R.id.layoutQr);
         Button btnToggleMode = findViewById(R.id.btnToggleMode);
 
+        etUrl.setText("http://localhost:9527");
+
         btnToggleMode.setOnClickListener(v -> {
             isQrMode = !isQrMode;
             if (isQrMode) {
-                btnToggleMode.setText("手动登录");
+                btnToggleMode.setText("返回手动输入");
                 layoutManual.setVisibility(View.GONE);
                 layoutQr.setVisibility(View.VISIBLE);
-                
-                // Disable focus on manual inputs when in QR mode
+
                 etUrl.setFocusable(false);
                 etUsername.setFocusable(false);
                 etPassword.setFocusable(false);
                 btnConnect.setFocusable(false);
-                
+
                 startLoginWebServer(tvIpAddress, ivQrCode, etUrl, etUsername, etPassword, btnConnect);
             } else {
-                btnToggleMode.setText("扫码登录");
+                btnToggleMode.setText("扫码配置");
                 layoutManual.setVisibility(View.VISIBLE);
                 layoutQr.setVisibility(View.GONE);
 
-                // Enable focus on manual inputs when in manual mode
                 etUrl.setFocusable(true);
                 etUrl.setFocusableInTouchMode(true);
                 etUsername.setFocusable(true);
@@ -104,8 +93,6 @@ public class ConfigActivity extends AppCompatActivity {
             }
         });
 
-        // On TV, we don't want the keyboard to pop up immediately on focus.
-        // Instead, show it only when user clicks/presses Enter on the EditText.
         View.OnClickListener clickToShowKeyboard = v -> {
             InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
             if (imm != null) {
@@ -118,7 +105,6 @@ public class ConfigActivity extends AppCompatActivity {
         etPassword.setOnClickListener(clickToShowKeyboard);
 
         btnConnect.setOnClickListener(v -> {
-            // Hide keyboard first
             InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
             if (imm != null) imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
 
@@ -132,47 +118,52 @@ public class ConfigActivity extends AppCompatActivity {
             }
 
             if (!urlRaw.startsWith("http")) {
-                urlRaw = "http://" + urlRaw;
+                urlRaw = "https://" + urlRaw;
             }
-            final String finalUrl = urlRaw.endsWith("/") ? urlRaw : urlRaw + "/";
+            String finalUrl = urlRaw.endsWith("/") ? urlRaw : urlRaw + "/";
 
             btnConnect.setEnabled(false);
             btnConnect.setText("连接中...");
 
-            // Temporarily save prefs for test
-            SharedPreferences.Editor editor = settings.edit();
-            editor.putString(KEY_SERVER_URL, finalUrl);
-            editor.putString(KEY_USERNAME, username);
-            editor.putString(KEY_PASSWORD, password);
-            editor.apply();
+            LxRetrofitClient.saveConfig(this, finalUrl, username, password);
+            LxRetrofitClient.resetClient();
 
-            // Perform test connection using musiclist API
-            ApiService apiService = RetrofitClient.getClient(this).create(ApiService.class);
-            apiService.getMusicList().enqueue(new retrofit2.Callback<java.util.Map<java.lang.String, java.util.List<java.lang.String>>>() {
+            if (username.isEmpty() || password.isEmpty()) {
+                btnConnect.setEnabled(true);
+                btnConnect.setText("连　接");
+                Toast.makeText(this, "配置已保存，将使用公共功能", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(ConfigActivity.this, top.boluofan.musictv.ui.MainActivity.class));
+                finish();
+                return;
+            }
+
+            LxApiService apiService = LxRetrofitClient.getApiService(this);
+            java.util.HashMap<String, String> body = new java.util.HashMap<>();
+            body.put("username", username);
+            body.put("password", password);
+
+            apiService.verifyUser(body).enqueue(new retrofit2.Callback<LoginResponse>() {
                 @Override
-                public void onResponse(retrofit2.Call<java.util.Map<java.lang.String, java.util.List<java.lang.String>>> call, retrofit2.Response<java.util.Map<java.lang.String, java.util.List<java.lang.String>>> response) {
+                public void onResponse(retrofit2.Call<LoginResponse> call, retrofit2.Response<LoginResponse> response) {
                     btnConnect.setEnabled(true);
                     btnConnect.setText("连　接");
 
-                    if (response.isSuccessful()) {
-                        Toast.makeText(ConfigActivity.this, "连接成功", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(ConfigActivity.this, LibraryActivity.class));
-                        finish();
-                    } else if (response.code() == 401 || response.code() == 403) {
-                        Toast.makeText(ConfigActivity.this, "认证失败，请检查用户名密码", Toast.LENGTH_LONG).show();
-                        settings.edit().clear().apply();
+                    if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                        Toast.makeText(ConfigActivity.this, "登录成功", Toast.LENGTH_SHORT).show();
                     } else {
-                        Toast.makeText(ConfigActivity.this, "服务器响应异常: " + response.code(), Toast.LENGTH_SHORT).show();
-                        settings.edit().clear().apply();
+                        Toast.makeText(ConfigActivity.this, "用户名或密码错误，将以游客身份使用", Toast.LENGTH_LONG).show();
                     }
+                    startActivity(new Intent(ConfigActivity.this, top.boluofan.musictv.ui.MainActivity.class));
+                    finish();
                 }
 
                 @Override
-                public void onFailure(retrofit2.Call<java.util.Map<java.lang.String, java.util.List<java.lang.String>>> call, Throwable t) {
+                public void onFailure(retrofit2.Call<LoginResponse> call, Throwable t) {
                     btnConnect.setEnabled(true);
                     btnConnect.setText("连　接");
-                    Toast.makeText(ConfigActivity.this, "连接超时或地址错误", Toast.LENGTH_LONG).show();
-                    settings.edit().clear().apply();
+                    Toast.makeText(ConfigActivity.this, "连接超时，将以游客身份使用", Toast.LENGTH_LONG).show();
+                    startActivity(new Intent(ConfigActivity.this, top.boluofan.musictv.ui.MainActivity.class));
+                    finish();
                 }
             });
         });
@@ -188,7 +179,6 @@ public class ConfigActivity extends AppCompatActivity {
         String loginUrl = "http://" + ipAddress + ":" + SERVER_PORT;
         tvIp.setText("访问管理: " + loginUrl);
 
-        // Generate QR Code
         generateQrCode(loginUrl, ivQr);
 
         webServer = new LoginWebServer(this, SERVER_PORT, (url, username, password) -> {

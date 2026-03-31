@@ -36,16 +36,16 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.ViewHolder> {
     private int playingIndex = -1;
     private boolean isPlayerPlaying = false; // Track player state
     private Context context;
-    private ApiService apiService;
+    private top.boluofan.musictv.api.LxApiService apiService;
     private String baseUrl;
 
-    private Map<String, String> coverUrlCache = new HashMap<>(); // Cache for cover URLs
-    private Map<String, String> artistCache = new HashMap<>(); // Cache for artist names
+    private Map<String, String> coverUrlCache = new HashMap<>();
+    private Map<String, String> artistCache = new HashMap<>();
 
     public SongAdapter(Context context) {
         this.context = context;
-        this.apiService = RetrofitClient.getClient(context).create(ApiService.class);
-        this.baseUrl = RetrofitClient.getClient(context).baseUrl().toString();
+        this.apiService = top.boluofan.musictv.api.LxRetrofitClient.getApiService(context);
+        this.baseUrl = top.boluofan.musictv.api.LxRetrofitClient.getServerUrl(context);
     }
 
     public interface OnItemClickListener {
@@ -192,67 +192,10 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.ViewHolder> {
             if (cachedUrl != null && !cachedUrl.isEmpty()) {
                 loadCover(cachedUrl, holder.ivCover);
             }
-            // null/empty means we queried and found no cover — keep placeholder
         } else {
-            // Tag the view with the song name to avoid delayed response updating wrong item
             holder.ivCover.setTag(song);
-            apiService.getMusicInfo(song, true).enqueue(new Callback<JsonObject>() {
-                @Override
-                public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                    if (response.isSuccessful() && response.body() != null) {
-                        try {
-                            JsonObject json = response.body();
-                            if (json.has("tags")) {
-                                JsonObject tags = json.getAsJsonObject("tags");
-                                if (tags != null) {
-                                    String tagArtist = tags.has("artist") && !tags.get("artist").isJsonNull() ? tags.get("artist").getAsString() : null;
-                                    String lyrics = tags.has("lyrics") && !tags.get("lyrics").isJsonNull() ? tags.get("lyrics").getAsString() : null;
-                                    
-                                    String finalArtist = tagArtist;
-                                    String lyricArtist = extractArtistFromLyrics(lyrics);
-                                    if (lyricArtist != null && !lyricArtist.isEmpty()) {
-                                        finalArtist = lyricArtist;
-                                    } else if (finalArtist == null || finalArtist.isEmpty() || finalArtist.equals("Various Artists")) {
-                                        finalArtist = "未知歌手";
-                                    }
-
-                                    artistCache.put(song, finalArtist);
-                                    if (song.equals(holder.ivCover.getTag())) {
-                                        holder.tvArtist.setText(finalArtist);
-                                    }
-
-                                    if (tags.has("picture")) {
-                                        String pic = tags.get("picture").getAsString();
-                                        if (pic != null && !pic.isEmpty()) {
-                                            String finalUrl = pic;
-                                            if (!pic.startsWith("http")) {
-                                                finalUrl = baseUrl + (pic.startsWith("/") ? pic.substring(1) : pic);
-                                            }
-                                            coverUrlCache.put(song, finalUrl);
-                                            // Only update if this ViewHolder still shows the same song
-                                            if (song.equals(holder.ivCover.getTag())) {
-                                                loadCover(finalUrl, holder.ivCover);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    // No info found - ensure we don't show "Loading..." forever
-                    if (!artistCache.containsKey(song)) artistCache.put(song, "未知歌手");
-                    if (!coverUrlCache.containsKey(song)) coverUrlCache.put(song, "");
-                }
-
-                @Override
-                public void onFailure(Call<JsonObject> call, Throwable t) {
-                    if (song.equals(holder.ivCover.getTag())) {
-                        holder.tvArtist.setText("加载失败");
-                    }
-                }
-            });
+            holder.tvArtist.setText("未知歌手");
+            coverUrlCache.put(song, "");
         }
     }
 

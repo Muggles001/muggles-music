@@ -12,7 +12,10 @@
     android:clickable="true"
     android:focusable="true"
     android:nextFocusLeft="@+id/rvPlaylists"
-    android:descendantFocusability="afterDescendants">
+    android:descendantFocusability="afterDescendants"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:minHeight="64dp">
 
     <FrameLayout
         android:layout_width="32dp"

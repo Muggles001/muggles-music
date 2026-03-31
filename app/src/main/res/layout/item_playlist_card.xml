@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="6dp"
+    android:orientation="vertical"
+    android:background="@drawable/selector_item_bg"
+    android:clickable="true"
+    android:focusable="true">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:minHeight="120dp">
+
+        <ImageView
+            android:id="@+id/ivCover"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:background="#2A2A2A"
+            tools:src="@drawable/ic_playlist_music"
+            android:contentDescription="cover"/>
+
+        <TextView
+            android:id="@+id/tvPlayCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|start"
+            android:layout_margin="8dp"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:background="@drawable/bg_play_count_overlay"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:drawablePadding="2dp"
+            app:drawableStartCompat="@drawable/ic_play"
+            app:drawableTint="#FFFFFF"
+            tools:text="123万"/>
+
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:minLines="2"
+        android:textColor="#E5E7EB"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        tools:text="歌单名称"/>
+
+    <TextView
+        android:id="@+id/tvCreator"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#9CA3AF"
+        android:textSize="12sp"
+        tools:text="创建者"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tvInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#9CA3AF"
+            android:textSize="12sp"
+            tools:text="2024-01-15"/>
+
+        <TextView
+            android:id="@+id/tvSongCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#9CA3AF"
+            android:textSize="12sp"
+            tools:text="100首"/>
+
+    </LinearLayout>
+
+</LinearLayout>

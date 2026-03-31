@@ -28,7 +28,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="肉肉音乐"
+            android:text="菠萝音乐"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#F3F4F6"
