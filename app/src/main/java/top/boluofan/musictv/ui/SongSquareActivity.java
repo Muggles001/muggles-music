@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.KeyEvent;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -20,6 +21,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.R;
+import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.api.model.Playlist;
@@ -45,6 +47,7 @@ public class SongSquareActivity extends AppCompatActivity {
     private final String[] SOURCE_NAMES = {"咪咕", "酷我", "酷狗", "QQ音乐", "网易云"};
     
     private SquarePlaylistAdapter playlistAdapter;
+    private FloatingPlayerWindow floatingPlayerWindow;
     private int currentPage = 1;
     private boolean hasMore = true;
 
@@ -56,6 +59,9 @@ public class SongSquareActivity extends AppCompatActivity {
         initViews();
         setupRecyclerViews();
         setupListeners();
+        
+        floatingPlayerWindow = new FloatingPlayerWindow(this);
+        floatingPlayerWindow.connectToService();
         
         loadSources();
     }
@@ -219,5 +225,27 @@ public class SongSquareActivity extends AppCompatActivity {
             tvSourceName = view.findViewById(R.id.tvSourceName);
             ivRadio = view.findViewById(R.id.ivRadio);
         }
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (floatingPlayerWindow != null) {
+            floatingPlayerWindow.release();
+            floatingPlayerWindow = null;
+        }
+    }
+    
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+            View currentFocus = getCurrentFocus();
+            if (currentFocus != null && floatingPlayerWindow != null) {
+                if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
+                    return true;
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event);
     }
 }

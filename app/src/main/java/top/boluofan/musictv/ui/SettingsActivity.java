@@ -2,6 +2,8 @@ package top.boluofan.musictv.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.KeyEvent;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -9,14 +11,19 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import top.boluofan.musictv.ConfigActivity;
 import top.boluofan.musictv.R;
+import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxRetrofitClient;
 
 public class SettingsActivity extends AppCompatActivity {
+    private FloatingPlayerWindow floatingPlayerWindow;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
+        
+        floatingPlayerWindow = new FloatingPlayerWindow(this);
+        floatingPlayerWindow.connectToService();
         
         initViews();
     }
@@ -44,5 +51,27 @@ public class SettingsActivity extends AppCompatActivity {
         TextView tvUsername = findViewById(R.id.tvUsername);
         String username = LxRetrofitClient.getUsername(this);
         tvUsername.setText(username.isEmpty() ? "未登录" : username);
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (floatingPlayerWindow != null) {
+            floatingPlayerWindow.release();
+            floatingPlayerWindow = null;
+        }
+    }
+    
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+            View currentFocus = getCurrentFocus();
+            if (currentFocus != null && floatingPlayerWindow != null) {
+                if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
+                    return true;
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event);
     }
 }

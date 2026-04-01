@@ -45,7 +45,9 @@ import retrofit2.Response;
 import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.SearchWebServer;
+import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.PlayerActivity;
+import android.view.KeyEvent;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.api.model.MusicInfo;
@@ -73,16 +75,9 @@ public class SearchActivity extends AppCompatActivity {
     private TextView tvResultCount;
     private TextView tvHotSearchTitle;
     
-    private View layoutMiniPlayer;
-    private ImageView ivCurrentCover;
-    private TextView tvCurrentTitle;
-    private TextView tvCurrentArtist;
-    private ImageButton btnPlayPause;
-    private ImageButton btnNext;
-    private View btnOpenPlayer;
-    
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
+    private FloatingPlayerWindow floatingPlayerWindow;
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private Runnable positionUpdater;
     
@@ -113,7 +108,6 @@ public class SearchActivity extends AppCompatActivity {
         initViews();
         setupRecyclerViews();
         setupListeners();
-        setupMiniPlayer();
     }
 
     private void initViews() {
@@ -410,65 +404,12 @@ public class SearchActivity extends AppCompatActivity {
     }
     
     private void setupMiniPlayer() {
-        layoutMiniPlayer = findViewById(R.id.layoutMiniPlayer);
-        ivCurrentCover = findViewById(R.id.ivCurrentCover);
-        tvCurrentTitle = findViewById(R.id.tvCurrentTitle);
-        tvCurrentArtist = findViewById(R.id.tvCurrentArtist);
-        btnPlayPause = findViewById(R.id.btnPlayPause);
-        btnNext = findViewById(R.id.btnNext);
-        btnOpenPlayer = findViewById(R.id.btnOpenPlayer);
-        
-        btnPlayPause.setOnClickListener(v -> {
-            if (player != null) {
-                if (player.isPlaying()) {
-                    player.pause();
-                } else {
-                    player.play();
-                }
-            }
-        });
-        
-        btnNext.setOnClickListener(v -> {
-            if (player != null) {
-                player.seekToNext();
-            }
-        });
-        
-        btnOpenPlayer.setOnClickListener(v -> {
-            startActivity(new Intent(this, PlayerActivity.class));
-        });
     }
     
     private void updateMiniPlayerVisibility() {
-        boolean hasMedia = player != null && player.getMediaItemCount() > 0;
-        layoutMiniPlayer.setVisibility(hasMedia ? View.VISIBLE : View.GONE);
     }
     
     private void updateMiniPlayerInfo() {
-        if (player == null || player.getMediaItemCount() == 0) {
-            return;
-        }
-        
-        MediaItem currentItem = player.getCurrentMediaItem();
-        if (currentItem != null) {
-            CharSequence title = currentItem.mediaMetadata.title;
-            CharSequence artist = currentItem.mediaMetadata.artist;
-            
-            tvCurrentTitle.setText(title != null ? title.toString() : "未知歌曲");
-            tvCurrentArtist.setText(artist != null ? artist.toString() : "未知歌手");
-            
-            Uri artworkUri = currentItem.mediaMetadata.artworkUri;
-            if (artworkUri != null) {
-                Glide.with(this)
-                        .load(artworkUri)
-                        .placeholder(R.drawable.ic_cover_placeholder)
-                        .into(ivCurrentCover);
-            } else {
-                ivCurrentCover.setImageResource(R.drawable.ic_cover_placeholder);
-            }
-        }
-        
-        btnPlayPause.setImageResource(player.isPlaying() ? R.drawable.ic_pause : R.drawable.ic_play);
     }
 
     private void search(String keyword) {
@@ -622,8 +563,6 @@ public class SearchActivity extends AppCompatActivity {
             songAdapter.setPlayingIndex(index);
         }
         
-        updateMiniPlayerVisibility();
-        
         Toast.makeText(this, "正在播放: " + song.getName(), Toast.LENGTH_SHORT).show();
     }
 
@@ -674,13 +613,15 @@ public class SearchActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        
+        floatingPlayerWindow = new FloatingPlayerWindow(this);
+        floatingPlayerWindow.connectToService();
+        
         SessionToken sessionToken = new SessionToken(this, new ComponentName(this, MusicService.class));
         controllerFuture = new MediaController.Builder(this, sessionToken).buildAsync();
         controllerFuture.addListener(() -> {
             try {
                 player = controllerFuture.get();
-                updateMiniPlayerVisibility();
-                updateMiniPlayerInfo();
                 setupPlayerListener();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -704,35 +645,14 @@ public class SearchActivity extends AppCompatActivity {
         
         player.addListener(new Player.Listener() {
             @Override
-            public void onPlaybackStateChanged(int playbackState) {
-                updateMiniPlayerVisibility();
-                updateMiniPlayerInfo();
-            }
-            
-            @Override
             public void onIsPlayingChanged(boolean isPlaying) {
-                updateMiniPlayerInfo();
-                updateMiniPlayerVisibility();
                 songAdapter.setPlayerPlaying(isPlaying);
             }
             
             @Override
             public void onMediaItemTransition(MediaItem mediaItem, int reason) {
-                updateMiniPlayerInfo();
-                updateMiniPlayerVisibility();
             }
         });
-        
-        positionUpdater = new Runnable() {
-            @Override
-            public void run() {
-                if (player != null && player.isPlaying()) {
-                    updateMiniPlayerInfo();
-                }
-                mainHandler.postDelayed(this, 1000);
-            }
-        };
-        mainHandler.post(positionUpdater);
     }
     
     private static class SourceViewHolder extends RecyclerView.ViewHolder {
@@ -752,8 +672,25 @@ public class SearchActivity extends AppCompatActivity {
     }
     
     @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+            View currentFocus = getCurrentFocus();
+            if (currentFocus != null && floatingPlayerWindow != null) {
+                if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
+                    return true;
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+    
+    @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (floatingPlayerWindow != null) {
+            floatingPlayerWindow.release();
+            floatingPlayerWindow = null;
+        }
         if (searchWebServer != null) {
             searchWebServer.stop();
             searchWebServer = null;

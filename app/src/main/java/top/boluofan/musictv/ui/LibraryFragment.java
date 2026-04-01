@@ -1,21 +1,13 @@
 package top.boluofan.musictv.ui;
 
-import android.animation.ObjectAnimator;
 import android.content.Intent;
 import android.content.ComponentName;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.LinearInterpolator;
-import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.cardview.widget.CardView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -24,7 +16,6 @@ import androidx.media3.session.SessionToken;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.bumptech.glide.Glide;
 import java.util.ArrayList;
 import java.util.List;
 import retrofit2.Call;
@@ -42,21 +33,12 @@ import top.boluofan.musictv.PlaylistAdapter;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
-import android.content.ComponentName;
 import android.net.Uri;
 
 public class LibraryFragment extends Fragment {
     private static final String TAG = "LibraryFragment";
     private RecyclerView rvPlaylists;
     private RecyclerView rvSongs;
-    private TextView tvCurrentTitle;
-    private TextView tvCurrentArtist;
-    private ImageView ivCurrentCover;
-    private CardView cvCurrentCover;
-    private ImageButton btnPlayPause;
-    private ImageButton btnNext;
-    private View layoutPlayer;
-    private View btnOpenPlayer;
     private TextView tvSongCount;
     private TextView tvPlaylistTitle;
     private TextView tabAllSongs;
@@ -68,16 +50,6 @@ public class LibraryFragment extends Fragment {
     
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
-    private ObjectAnimator rotateAnim;
-    
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Runnable progressUpdater = new Runnable() {
-        @Override
-        public void run() {
-            updateProgress();
-            handler.postDelayed(this, 1000);
-        }
-    };
     
     private ListData listData;
     private Playlist currentPlaylist;
@@ -103,28 +75,11 @@ public class LibraryFragment extends Fragment {
     private void initViews(View view) {
         rvPlaylists = view.findViewById(R.id.rvPlaylists);
         rvSongs = view.findViewById(R.id.rvSongs);
-        tvCurrentTitle = view.findViewById(R.id.tvCurrentTitle);
-        tvCurrentArtist = view.findViewById(R.id.tvCurrentArtist);
-        ivCurrentCover = view.findViewById(R.id.ivCurrentCover);
-        cvCurrentCover = view.findViewById(R.id.cvCurrentCover);
-        btnPlayPause = view.findViewById(R.id.btnPlayPause);
-        btnNext = view.findViewById(R.id.btnNext);
-        layoutPlayer = view.findViewById(R.id.layoutPlayer);
-        btnOpenPlayer = view.findViewById(R.id.btnOpenPlayer);
         tvSongCount = view.findViewById(R.id.tvSongCount);
         tvPlaylistTitle = view.findViewById(R.id.tvPlaylistTitle);
         tabAllSongs = view.findViewById(R.id.tabAllSongs);
         tabLoveList = view.findViewById(R.id.tabLoveList);
         btnSettings = view.findViewById(R.id.btnSettings);
-        
-        if (cvCurrentCover != null) {
-            cvCurrentCover.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-            rotateAnim = ObjectAnimator.ofFloat(cvCurrentCover, "rotation", 0f, 360f);
-            rotateAnim.setDuration(10000);
-            rotateAnim.setInterpolator(new LinearInterpolator());
-            rotateAnim.setRepeatCount(ObjectAnimator.INFINITE);
-            rotateAnim.setRepeatMode(ObjectAnimator.RESTART);
-        }
     }
     
     private void setupRecyclerViews() {
@@ -138,27 +93,6 @@ public class LibraryFragment extends Fragment {
     }
     
     private void setupListeners(View view) {
-        btnPlayPause.setOnClickListener(v -> {
-            if (player != null) {
-                if (player.isPlaying()) player.pause();
-                else player.play();
-            }
-        });
-        
-        btnNext.setOnClickListener(v -> {
-            if (player != null) player.seekToNext();
-        });
-        
-        if (btnOpenPlayer != null) {
-            btnOpenPlayer.setOnClickListener(v -> {
-                startActivity(new Intent(requireContext(), top.boluofan.musictv.PlayerActivity.class));
-            });
-        } else {
-            layoutPlayer.setOnClickListener(v -> {
-                startActivity(new Intent(requireContext(), top.boluofan.musictv.PlayerActivity.class));
-            });
-        }
-        
         playlistAdapter.setOnItemClickListener(playlistName -> {
             loadPlaylistSongs(playlistName);
         });
@@ -332,23 +266,9 @@ public class LibraryFragment extends Fragment {
                 player.addListener(new Player.Listener() {
                     @Override
                     public void onIsPlayingChanged(boolean isPlaying) {
-                        btnPlayPause.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play);
-                        if (rotateAnim != null) {
-                            if (isPlaying) {
-                                if (rotateAnim.isPaused()) rotateAnim.resume();
-                                else if (!rotateAnim.isRunning()) rotateAnim.start();
-                            } else {
-                                rotateAnim.pause();
-                            }
-                        }
-                    }
-                    
-                    @Override
-                    public void onMediaItemTransition(MediaItem mediaItem, int reason) {
-                        updateMiniPlayer(mediaItem);
+                        songAdapter.setPlayerPlaying(isPlaying);
                     }
                 });
-                handler.post(progressUpdater);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -358,48 +278,8 @@ public class LibraryFragment extends Fragment {
     @Override
     public void onStop() {
         super.onStop();
-        handler.removeCallbacks(progressUpdater);
         if (controllerFuture != null) {
             MediaController.releaseFuture(controllerFuture);
-        }
-    }
-    
-    private void updateProgress() {
-        if (player == null) return;
-        
-        long current = player.getCurrentPosition();
-        long duration = player.getDuration();
-        
-        if (duration > 0) {
-            tvCurrentArtist.setText(formatTime(current) + " / " + formatTime(duration));
-        } else {
-            tvCurrentArtist.setText("--:-- / --:--");
-        }
-    }
-    
-    private String formatTime(long millis) {
-        if (millis <= 0) return "00:00";
-        int seconds = (int) (millis / 1000);
-        int minutes = seconds / 60;
-        seconds = seconds % 60;
-        return String.format("%02d:%02d", minutes, seconds);
-    }
-    
-    private void updateMiniPlayer(MediaItem mediaItem) {
-        if (mediaItem == null) return;
-        
-        tvCurrentTitle.setText(mediaItem.mediaMetadata.title);
-        tvCurrentArtist.setText(mediaItem.mediaMetadata.artist);
-        
-        if (mediaItem.mediaMetadata.artworkUri != null) {
-            Glide.with(this).load(mediaItem.mediaMetadata.artworkUri)
-                    .placeholder(R.drawable.ic_cover_placeholder)
-                    .into(ivCurrentCover);
-        }
-        
-        if (player != null && player.isPlaying() && rotateAnim != null) {
-            if (rotateAnim.isPaused()) rotateAnim.resume();
-            else if (!rotateAnim.isRunning()) rotateAnim.start();
         }
     }
 }

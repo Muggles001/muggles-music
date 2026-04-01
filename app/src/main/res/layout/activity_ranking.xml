@@ -130,7 +130,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/layoutSourceActions"
-        app:layout_constraintBottom_toTopOf="@+id/layoutMiniPlayer">
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <!-- Left: Board List -->
         <androidx.recyclerview.widget.RecyclerView
@@ -167,16 +167,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
-
-    <!-- Mini Player (Bottom) -->
-    <include
-        layout="@layout/mini_player"
-        android:id="@+id/layoutMiniPlayer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -6,17 +6,11 @@ import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.bumptech.glide.Glide;
 import java.util.ArrayList;
 import java.util.List;
 import retrofit2.Call;
@@ -24,6 +18,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.R;
+import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.api.model.ListData;
@@ -51,28 +46,15 @@ public class LibraryActivity extends AppCompatActivity {
     
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
+    private FloatingPlayerWindow floatingPlayerWindow;
     
     private TextView tvPlaylistTitle;
     private TextView tvSongCount;
     private ImageButton btnSettings;
-    private ImageButton btnPlayPause;
-    private ImageButton btnNext;
-    private ImageView ivCurrentCover;
-    private TextView tvCurrentTitle;
-    private TextView tvCurrentTime;
-    private View btnOpenPlayer;
-    private ConstraintLayout layoutPlayer;
     
     private ListData listData;
     private Playlist currentPlaylist;
     private Handler handler;
-    private final Runnable progressUpdater = new Runnable() {
-        @Override
-        public void run() {
-            updateMiniPlayerProgress();
-            handler.postDelayed(this, 1000);
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,6 +65,10 @@ public class LibraryActivity extends AppCompatActivity {
         initViews();
         setupRecyclerViews();
         setupListeners();
+        
+        floatingPlayerWindow = new FloatingPlayerWindow(this);
+        floatingPlayerWindow.connectToService();
+        
         loadUserData();
     }
 
@@ -92,13 +78,6 @@ public class LibraryActivity extends AppCompatActivity {
         tvPlaylistTitle = findViewById(R.id.tvPlaylistTitle);
         tvSongCount = findViewById(R.id.tvSongCount);
         btnSettings = findViewById(R.id.btnSettings);
-        btnPlayPause = findViewById(R.id.btnPlayPause);
-        btnNext = findViewById(R.id.btnNext);
-        ivCurrentCover = findViewById(R.id.ivCurrentCover);
-        tvCurrentTitle = findViewById(R.id.tvCurrentTitle);
-        tvCurrentTime = findViewById(R.id.tvCurrentArtist);
-        btnOpenPlayer = findViewById(R.id.btnOpenPlayer);
-        layoutPlayer = findViewById(R.id.layoutPlayer);
     }
 
     private void setupRecyclerViews() {
@@ -113,21 +92,6 @@ public class LibraryActivity extends AppCompatActivity {
 
     private void setupListeners() {
         btnSettings.setOnClickListener(v -> showSettingsMenu());
-        
-        btnPlayPause.setOnClickListener(v -> {
-            if (player != null) {
-                if (player.isPlaying()) player.pause();
-                else player.play();
-            }
-        });
-        
-        btnNext.setOnClickListener(v -> {
-            if (player != null) player.seekToNext();
-        });
-        
-        btnOpenPlayer.setOnClickListener(v -> {
-            startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
-        });
         
         playlistAdapter.setOnItemClickListener(playlistName -> {
             loadPlaylistSongs(playlistName);
@@ -271,8 +235,6 @@ public class LibraryActivity extends AppCompatActivity {
         player.play();
         
         songAdapter.setPlayingIndex(index);
-        
-        updateMiniPlayerVisibility();
     }
 
     private MediaItem createMediaItem(MusicInfo song) {
@@ -341,31 +303,6 @@ public class LibraryActivity extends AppCompatActivity {
         finish();
     }
 
-    private void updateMiniPlayerProgress() {
-        if (player == null || player.getCurrentMediaItem() == null) {
-            return;
-        }
-        
-        long current = player.getCurrentPosition();
-        long duration = player.getDuration();
-        String progress = formatTime(current) + " / " + formatTime(duration);
-        tvCurrentTime.setText(progress);
-    }
-    
-    private void updateMiniPlayerVisibility() {
-        if (player != null && player.getMediaItemCount() > 0) {
-            layoutPlayer.setVisibility(View.VISIBLE);
-        } else {
-            layoutPlayer.setVisibility(View.GONE);
-        }
-    }
-
-    private String formatTime(long ms) {
-        if (ms < 0) return "--:--";
-        long sec = ms / 1000;
-        return String.format("%d:%02d", sec / 60, sec % 60);
-    }
-
     @Override
     protected void onStart() {
         super.onStart();
@@ -374,80 +311,23 @@ public class LibraryActivity extends AppCompatActivity {
         controllerFuture.addListener(() -> {
             try {
                 player = controllerFuture.get();
-                updateMiniPlayerVisibility();
                 player.addListener(new Player.Listener() {
                     @Override
                     public void onIsPlayingChanged(boolean isPlaying) {
                         runOnUiThread(() -> {
-                            btnPlayPause.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play);
                             songAdapter.setPlayerPlaying(isPlaying);
-                            if (isPlaying) {
-                                handler.post(progressUpdater);
-                            } else {
-                                handler.removeCallbacks(progressUpdater);
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
-                        runOnUiThread(() -> {
-                            updateMiniPlayerVisibility();
-                            if (mediaItem != null) {
-                                CharSequence title = mediaItem.mediaMetadata.title;
-                                if (title != null) {
-                                    tvCurrentTitle.setText(title);
-                                }
-                                updateCurrentCover(mediaItem);
-                            }
-                        });
-                    }
-                    
-                    @Override
-                    public void onPlaybackStateChanged(int playbackState) {
-                        runOnUiThread(() -> {
-                            updateMiniPlayerVisibility();
                         });
                     }
                 });
-                
-                MediaItem currentItem = player.getCurrentMediaItem();
-                if (currentItem != null) {
-                    CharSequence title = currentItem.mediaMetadata.title;
-                    if (title != null) {
-                        tvCurrentTitle.setText(title);
-                    }
-                    updateCurrentCover(currentItem);
-                }
-                
-                btnPlayPause.setImageResource(player.isPlaying() ? R.drawable.ic_pause : R.drawable.ic_play);
-                if (player.isPlaying()) {
-                    handler.post(progressUpdater);
-                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }, androidx.core.content.ContextCompat.getMainExecutor(this));
     }
 
-    private void updateCurrentCover(MediaItem mediaItem) {
-        Bundle extras = mediaItem.mediaMetadata.extras;
-        if (extras != null) {
-            String picUrl = extras.getString("pic_url");
-            if (picUrl != null && !picUrl.isEmpty()) {
-                Glide.with(this)
-                        .load(picUrl)
-                        .placeholder(R.drawable.ic_cover_placeholder)
-                        .error(R.drawable.ic_cover_placeholder)
-                        .into(ivCurrentCover);
-            }
-        }
-    }
-
     @Override
     protected void onStop() {
         super.onStop();
-        handler.removeCallbacks(progressUpdater);
         if (controllerFuture != null) {
             MediaController.releaseFuture(controllerFuture);
         }
@@ -455,6 +335,14 @@ public class LibraryActivity extends AppCompatActivity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+            View currentFocus = getCurrentFocus();
+            if (currentFocus != null && floatingPlayerWindow != null) {
+                if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
+                    return true;
+                }
+            }
+        }
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastBackPressTime < 2000) {
@@ -469,4 +357,13 @@ public class LibraryActivity extends AppCompatActivity {
     }
 
     private long lastBackPressTime = 0;
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (floatingPlayerWindow != null) {
+            floatingPlayerWindow.release();
+            floatingPlayerWindow = null;
+        }
+    }
 }

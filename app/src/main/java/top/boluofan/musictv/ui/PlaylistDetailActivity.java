@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.view.KeyEvent;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -25,7 +26,9 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.MusicService;
+import top.boluofan.musictv.PlayerActivity;
 import top.boluofan.musictv.R;
+import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.api.model.MusicInfo;
@@ -62,6 +65,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     private LxMusicAdapter songAdapter;
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
+    private FloatingPlayerWindow floatingPlayerWindow;
     private List<MusicInfo> songs = new ArrayList<>();
     
     private final String[] SOURCES = {"mg", "kw", "kg", "tx", "wy"};
@@ -75,6 +79,10 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         initViews();
         setupListeners();
         loadIntentData();
+        
+        floatingPlayerWindow = new FloatingPlayerWindow(this);
+        floatingPlayerWindow.connectToService();
+        
         loadPlaylistDetail();
     }
     
@@ -323,5 +331,27 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         if (controllerFuture != null) {
             MediaController.releaseFuture(controllerFuture);
         }
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (floatingPlayerWindow != null) {
+            floatingPlayerWindow.release();
+            floatingPlayerWindow = null;
+        }
+    }
+    
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+            View currentFocus = getCurrentFocus();
+            if (currentFocus != null && floatingPlayerWindow != null) {
+                if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
+                    return true;
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event);
     }
 }
