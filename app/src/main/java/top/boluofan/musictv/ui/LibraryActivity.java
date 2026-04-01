@@ -51,6 +51,7 @@ public class LibraryActivity extends AppCompatActivity {
     private TextView tvPlaylistTitle;
     private TextView tvSongCount;
     private ImageButton btnSettings;
+    private ImageButton btnBack;
     
     private ListData listData;
     private Playlist currentPlaylist;
@@ -78,6 +79,7 @@ public class LibraryActivity extends AppCompatActivity {
         tvPlaylistTitle = findViewById(R.id.tvPlaylistTitle);
         tvSongCount = findViewById(R.id.tvSongCount);
         btnSettings = findViewById(R.id.btnSettings);
+        btnBack = findViewById(R.id.btnBack);
     }
 
     private void setupRecyclerViews() {
@@ -91,6 +93,7 @@ public class LibraryActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
+        btnBack.setOnClickListener(v -> finish());
         btnSettings.setOnClickListener(v -> showSettingsMenu());
         
         playlistAdapter.setOnItemClickListener(playlistName -> {

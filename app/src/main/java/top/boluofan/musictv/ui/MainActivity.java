@@ -173,9 +173,7 @@ public class MainActivity extends AppCompatActivity {
         
         updateTabSelection(3);
         
-        getSupportFragmentManager().beginTransaction()
-            .replace(R.id.fragmentContainer, new LibraryFragment())
-            .commit();
+        startActivity(new Intent(this, LibraryActivity.class));
     }
 
     private void showSearch() {
