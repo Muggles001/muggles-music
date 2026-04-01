@@ -33,7 +33,6 @@ public class SongSquareActivity extends AppCompatActivity {
     
     private RecyclerView rvSourceList;
     private RecyclerView rvPlaylists;
-    private TextView tvSourceTitle;
     private ProgressBar loadingProgress;
     private ImageButton btnBack;
     
@@ -64,7 +63,6 @@ public class SongSquareActivity extends AppCompatActivity {
     private void initViews() {
         rvSourceList = findViewById(R.id.rvSourceList);
         rvPlaylists = findViewById(R.id.rvPlaylists);
-        tvSourceTitle = findViewById(R.id.tvSourceTitle);
         loadingProgress = findViewById(R.id.loadingProgress);
         
         btnBack = findViewById(R.id.btnBack);
@@ -140,8 +138,6 @@ public class SongSquareActivity extends AppCompatActivity {
         for (int i = 0; i < rvSourceList.getChildCount(); i++) {
             rvSourceList.getChildAt(i).setSelected(i == position);
         }
-
-        tvSourceTitle.setText(SOURCE_NAMES[position] + " - 热门歌单");
         
         loadPlaylists();
         

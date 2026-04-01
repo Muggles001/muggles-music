@@ -20,19 +20,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Current Source Title -->
-    <TextView
-        android:id="@+id/tvSourceTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="热门歌单"
-        android:textSize="16sp"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold"
-        android:padding="16dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/rvSourceList" />
-
     <!-- Playlist Grid -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvPlaylists"
@@ -43,7 +30,7 @@
         android:nextFocusDown="@id/bottomNav"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tvSourceTitle"
+        app:layout_constraintTop_toBottomOf="@+id/rvSourceList"
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <!-- Loading -->

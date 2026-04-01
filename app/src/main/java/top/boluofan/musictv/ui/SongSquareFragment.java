@@ -33,7 +33,6 @@ public class SongSquareFragment extends Fragment {
     
     private RecyclerView rvSourceList;
     private RecyclerView rvPlaylists;
-    private TextView tvSourceTitle;
     private ProgressBar loadingProgress;
     
     private List<Playlist> playlists = new ArrayList<>();
@@ -65,7 +64,6 @@ public class SongSquareFragment extends Fragment {
     private void initViews(View view) {
         rvSourceList = view.findViewById(R.id.rvSourceList);
         rvPlaylists = view.findViewById(R.id.rvPlaylists);
-        tvSourceTitle = view.findViewById(R.id.tvSourceTitle);
         loadingProgress = view.findViewById(R.id.loadingProgress);
     }
 
@@ -139,8 +137,6 @@ public class SongSquareFragment extends Fragment {
         if (playlistAdapter != null) {
             playlistAdapter.notifyDataSetChanged();
         }
-        
-        tvSourceTitle.setText(SOURCE_NAMES[position] + " - 热门歌单");
         
         if (rvSourceList.getAdapter() != null) {
             rvSourceList.getAdapter().notifyDataSetChanged();

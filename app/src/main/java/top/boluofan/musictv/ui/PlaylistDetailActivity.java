@@ -44,10 +44,10 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     private ImageView ivCover;
     private TextView tvPlaylistName;
     private TextView tvPlaylistInfo;
+    private TextView tvPlaylistDesc;
     private TextView tvPlaylistSource;
     private TextView tvPlaylistPlayCount;
     private TextView tvPlaylistCreateTime;
-    private TextView tvPlaylistDesc;
     private ImageButton btnPlayAll;
     private ImageButton btnShuffle;
     private ImageButton btnFavorite;
@@ -84,10 +84,10 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         ivCover = findViewById(R.id.ivCover);
         tvPlaylistName = findViewById(R.id.tvPlaylistName);
         tvPlaylistInfo = findViewById(R.id.tvPlaylistInfo);
+        tvPlaylistDesc = findViewById(R.id.tvPlaylistDesc);
         tvPlaylistSource = findViewById(R.id.tvPlaylistSource);
         tvPlaylistPlayCount = findViewById(R.id.tvPlaylistPlayCount);
         tvPlaylistCreateTime = findViewById(R.id.tvPlaylistCreateTime);
-        tvPlaylistDesc = findViewById(R.id.tvPlaylistDesc);
         btnPlayAll = findViewById(R.id.btnPlayAll);
         btnShuffle = findViewById(R.id.btnShuffle);
         btnFavorite = findViewById(R.id.btnFavorite);
@@ -129,7 +129,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         playlistSource = getIntent().getStringExtra("playlist_source");
         playlistCover = getIntent().getStringExtra("playlist_cover");
         
-        tvTitle.setText(playlistName != null ? playlistName : "歌单详情");
+        tvTitle.setText("歌单详情");
         tvPlaylistName.setText(playlistName);
         
         if (playlistCover != null && !playlistCover.isEmpty()) {
@@ -188,6 +188,14 @@ public class PlaylistDetailActivity extends AppCompatActivity {
             tvPlaylistSource.setText("来源: " + creator);
         }
         
+        String desc = playlist.getDesc();
+        if (desc != null && !desc.isEmpty()) {
+            tvPlaylistDesc.setText(desc);
+            tvPlaylistDesc.setVisibility(View.VISIBLE);
+        } else {
+            tvPlaylistDesc.setVisibility(View.GONE);
+        }
+        
         String playCountText = playlist.getFormattedPlayCount();
         if (playCountText != null && !playCountText.isEmpty()) {
             tvPlaylistPlayCount.setText("播放: " + playCountText);
@@ -206,13 +214,6 @@ public class PlaylistDetailActivity extends AppCompatActivity {
             tvPlaylistCreateTime.setVisibility(View.VISIBLE);
         } else {
             tvPlaylistCreateTime.setVisibility(View.GONE);
-        }
-        
-        if (playlist.getDesc() != null && !playlist.getDesc().isEmpty()) {
-            tvPlaylistDesc.setText(playlist.getDesc());
-            tvPlaylistDesc.setVisibility(View.VISIBLE);
-        } else {
-            tvPlaylistDesc.setVisibility(View.GONE);
         }
         
         String coverUrl = playlist.getPicUrl();

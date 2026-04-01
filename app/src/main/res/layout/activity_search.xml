@@ -7,15 +7,18 @@
 
     <ImageButton
         android:id="@+id/btnBack"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:src="@drawable/ic_back"
+        android:background="@drawable/btn_focused_circle"
+        android:scaleType="centerInside"
+        android:padding="8dp"
         android:contentDescription="返回"
         android:layout_margin="16dp"
+        android:focusable="true"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:tint="@android:color/white" />
+        app:tint="#FFFFFF" />
 
     <TextView
         android:id="@+id/tvTitle"

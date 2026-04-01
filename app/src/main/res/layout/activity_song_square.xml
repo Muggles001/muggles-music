@@ -43,14 +43,6 @@
             android:textColor="#FFFFFF"
             android:layout_marginStart="16dp" />
 
-        <TextView
-            android:id="@+id/tvSourceTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="热门歌单"
-            android:textSize="14sp"
-            android:textColor="#9CA3AF" />
-
     </LinearLayout>
 
     <!-- Main Content -->
