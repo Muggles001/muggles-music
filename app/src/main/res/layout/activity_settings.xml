@@ -1,20 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@drawable/bg_app_gradient">
 
     <!-- Top Bar -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/topBar"
+        android:layout_width="0dp"
         android:layout_height="64dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:background="#40000000">
+        android:background="#40000000"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <ImageButton
             android:id="@+id/btnBack"
@@ -40,92 +43,108 @@
 
     </LinearLayout>
 
-    <!-- Settings List -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+    <!-- Settings Content -->
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/topBar"
+        app:layout_constraintBottom_toBottomOf="parent">
 
-        <!-- 服务器配置 -->
         <LinearLayout
-            android:id="@+id/layoutServerConfig"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="match_parent"
             android:orientation="vertical"
-            android:gravity="center_vertical"
-            android:background="@drawable/selector_item_bg"
-            android:padding="16dp"
-            android:focusable="true"
-            android:clickable="true">
+            android:padding="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="服务器配置"
-                android:textSize="16sp"
-                android:textColor="#FFFFFF" />
+            <!-- 服务器配置 -->
+            <LinearLayout
+                android:id="@+id/layoutServerConfig"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:orientation="vertical"
+                android:gravity="center_vertical"
+                android:background="@drawable/selector_item_bg"
+                android:padding="16dp"
+                android:focusable="true"
+                android:clickable="true">
 
-            <TextView
-                android:id="@+id/tvServerUrl"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="http://localhost:9527"
-                android:textSize="12sp"
-                android:textColor="#9CA3AF"
-                android:layout_marginTop="4dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="服务器配置"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF" />
+
+                <TextView
+                    android:id="@+id/tvServerUrl"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="http://localhost:9527"
+                    android:textSize="12sp"
+                    android:textColor="#9CA3AF"
+                    android:layout_marginTop="4dp" />
+
+            </LinearLayout>
+
+            <!-- 用户信息 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:orientation="vertical"
+                android:gravity="center_vertical"
+                android:background="@drawable/selector_item_bg"
+                android:padding="16dp"
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="当前用户"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF" />
+
+                <TextView
+                    android:id="@+id/tvUsername"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="未登录"
+                    android:textSize="12sp"
+                    android:textColor="#9CA3AF"
+                    android:layout_marginTop="4dp" />
+
+            </LinearLayout>
+
+            <!-- Spacer -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="200dp" />
+
+            <!-- 清除配置 -->
+            <LinearLayout
+                android:id="@+id/layoutLogout"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/bg_btn_primary"
+                android:layout_marginTop="24dp"
+                android:focusable="true"
+                android:clickable="true">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="清除配置"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
-        <!-- 用户信息 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:orientation="vertical"
-            android:gravity="center_vertical"
-            android:background="@drawable/selector_item_bg"
-            android:padding="16dp"
-            android:layout_marginTop="8dp">
+    </ScrollView>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="当前用户"
-                android:textSize="16sp"
-                android:textColor="#FFFFFF" />
-
-            <TextView
-                android:id="@+id/tvUsername"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="未登录"
-                android:textSize="12sp"
-                android:textColor="#9CA3AF"
-                android:layout_marginTop="4dp" />
-
-        </LinearLayout>
-
-        <!-- 清除配置 -->
-        <LinearLayout
-            android:id="@+id/layoutLogout"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/bg_btn_primary"
-            android:layout_marginTop="24dp"
-            android:focusable="true"
-            android:clickable="true">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="清除配置"
-                android:textSize="16sp"
-                android:textColor="#FFFFFF" />
-
-        </LinearLayout>
-
-    </LinearLayout>
-
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

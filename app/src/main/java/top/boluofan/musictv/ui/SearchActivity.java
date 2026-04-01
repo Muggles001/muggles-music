@@ -2,11 +2,14 @@ package top.boluofan.musictv.ui;
 
 import android.content.Intent;
 import android.content.ComponentName;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
@@ -20,6 +23,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
 import androidx.cardview.widget.CardView;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
@@ -27,6 +31,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -36,6 +44,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.R;
+import top.boluofan.musictv.SearchWebServer;
 import top.boluofan.musictv.PlayerActivity;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
@@ -44,6 +53,11 @@ import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
+
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Collections;
+import java.util.List;
 
 public class SearchActivity extends AppCompatActivity {
     private static final String TAG = "SearchActivity";
@@ -78,12 +92,18 @@ public class SearchActivity extends AppCompatActivity {
     private boolean hasMore = true;
     private String lastKeyword = "";
     private List<MusicInfo> allResults = new ArrayList<>();
+    private List<String> hotSearchWords = new ArrayList<>();
     
     private final String[] SOURCES = {"all", "kw", "kg", "tx", "wy", "mg"};
-    private final String[] SOURCE_NAMES = {"全部", "酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
+    private final String[] SOURCE_NAMES = {"聚合搜索", "酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
     
     private final String[] ALL_SOURCES = {"kw", "kg", "tx", "wy", "mg"};
     private final String[] ALL_SOURCE_NAMES = {"酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
+    
+    private static final int SEARCH_SERVER_PORT = 8089;
+    private SearchWebServer searchWebServer;
+    private ImageButton btnScan;
+    private RecyclerView.Adapter<?> hotSearchAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,6 +119,7 @@ public class SearchActivity extends AppCompatActivity {
     private void initViews() {
         etSearch = findViewById(R.id.etSearch);
         btnSearch = findViewById(R.id.btnSearch);
+        btnScan = findViewById(R.id.btnScan);
         rvSourceList = findViewById(R.id.rvSourceList);
         rvHotSearch = findViewById(R.id.rvHotSearch);
         rvSearchResults = findViewById(R.id.rvSearchResults);
@@ -122,25 +143,16 @@ public class SearchActivity extends AppCompatActivity {
             @NonNull
             @Override
             public SourceViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                TextView tv = new TextView(parent.getContext());
-                tv.setLayoutParams(new RecyclerView.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT));
-                tv.setPadding(32, 12, 32, 12);
-                tv.setTextSize(14);
-                tv.setTextColor(getResources().getColorStateList(R.color.white));
-                tv.setGravity(android.view.Gravity.CENTER);
-                tv.setFocusable(true);
-                tv.setClickable(true);
-                return new SourceViewHolder(tv);
+                View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_source, parent, false);
+                return new SourceViewHolder(view);
             }
             
             @Override
             public void onBindViewHolder(@NonNull SourceViewHolder holder, int position) {
-                holder.tv.setText(SOURCE_NAMES[position]);
-                holder.tv.setBackgroundResource(R.drawable.selector_source_item);
+                holder.tvSourceName.setText(SOURCE_NAMES[position]);
+                holder.ivRadio.setImageResource(position == currentSourceIndex ? R.drawable.radio_checked : R.drawable.radio_unchecked);
                 
-                holder.tv.setOnClickListener(v -> selectSource(position));
+                holder.itemView.setOnClickListener(v -> selectSource(position));
             }
             
             @Override
@@ -150,7 +162,7 @@ public class SearchActivity extends AppCompatActivity {
         });
         
         rvHotSearch.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        rvHotSearch.setAdapter(new androidx.recyclerview.widget.RecyclerView.Adapter<HotSearchViewHolder>() {
+        hotSearchAdapter = new androidx.recyclerview.widget.RecyclerView.Adapter<HotSearchViewHolder>() {
             @NonNull
             @Override
             public HotSearchViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -158,8 +170,8 @@ public class SearchActivity extends AppCompatActivity {
                 tv.setLayoutParams(new RecyclerView.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT));
-                tv.setPadding(24, 12, 24, 12);
-                tv.setTextSize(14);
+                tv.setPadding(16, 6, 16, 6);
+                tv.setTextSize(12);
                 tv.setTextColor(getResources().getColorStateList(R.color.white));
                 tv.setBackgroundResource(R.drawable.bg_tab_selected);
                 tv.setFocusable(true);
@@ -169,7 +181,7 @@ public class SearchActivity extends AppCompatActivity {
             
             @Override
             public void onBindViewHolder(@NonNull HotSearchViewHolder holder, int position) {
-                String hotWord = "热门搜索" + (position + 1);
+                String hotWord = hotSearchWords.size() > position ? hotSearchWords.get(position) : "";
                 holder.tv.setText(hotWord);
                 holder.tv.setOnClickListener(v -> {
                     etSearch.setText(hotWord);
@@ -179,9 +191,10 @@ public class SearchActivity extends AppCompatActivity {
             
             @Override
             public int getItemCount() {
-                return 5;
+                return Math.min(hotSearchWords.size(), 10);
             }
-        });
+        };
+        rvHotSearch.setAdapter(hotSearchAdapter);
         
         rvSourceList.post(() -> {
             if (rvSourceList.getChildCount() > 0) {
@@ -229,6 +242,45 @@ public class SearchActivity extends AppCompatActivity {
         if (!lastKeyword.isEmpty()) {
             search(lastKeyword);
         }
+        
+        loadHotSearch();
+    }
+    
+    private void loadHotSearch() {
+        String source = currentSource;
+        if ("all".equals(source)) {
+            source = "wy";
+        }
+        
+        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        apiService.getHotSearch(source).enqueue(new Callback<okhttp3.ResponseBody>() {
+            @Override
+            public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        String bodyStr = response.body().string();
+                        com.google.gson.JsonObject obj = new com.google.gson.Gson().fromJson(bodyStr, com.google.gson.JsonObject.class);
+                        com.google.gson.JsonArray arr = obj.getAsJsonArray("list");
+                        hotSearchWords.clear();
+                        if (arr != null) {
+                            for (int i = 0; i < arr.size() && i < 10; i++) {
+                                hotSearchWords.add(arr.get(i).getAsString());
+                            }
+                        }
+                        if (hotSearchAdapter != null) {
+                            hotSearchAdapter.notifyDataSetChanged();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
+                t.printStackTrace();
+            }
+        });
     }
     
     private void setupListeners() {
@@ -249,6 +301,112 @@ public class SearchActivity extends AppCompatActivity {
             }
             return false;
         });
+        
+        btnScan.setOnClickListener(v -> showScanSearchDialog());
+    }
+    
+    private void showScanSearchDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_scan_search, null);
+        ImageView ivQrCode = dialogView.findViewById(R.id.ivQrCode);
+        TextView tvIpAddress = dialogView.findViewById(R.id.tvIpAddress);
+        
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setNegativeButton("关闭", (d, which) -> {
+                    if (searchWebServer != null) {
+                        searchWebServer.stop();
+                        searchWebServer = null;
+                    }
+                })
+                .create();
+        
+        String ipAddress = getIPAddress();
+        if (ipAddress == null) {
+            tvIpAddress.setText("无法获取局域网地址");
+        } else {
+            String searchUrl = "http://" + ipAddress + ":" + SEARCH_SERVER_PORT;
+            tvIpAddress.setText(searchUrl);
+            generateQrCode(searchUrl, ivQrCode);
+            
+            searchWebServer = new SearchWebServer(this, SEARCH_SERVER_PORT, (keyword, source) -> {
+                mainHandler.post(() -> {
+                    dialog.dismiss();
+                    if (searchWebServer != null) {
+                        searchWebServer.stop();
+                        searchWebServer = null;
+                    }
+                    
+                    if (source != null && !source.isEmpty()) {
+                        int sourceIdx = -1;
+                        for (int i = 0; i < SOURCES.length; i++) {
+                            if (SOURCES[i].equals(source)) {
+                                sourceIdx = i;
+                                break;
+                            }
+                        }
+                        if (sourceIdx >= 0) {
+                            selectSource(sourceIdx);
+                        }
+                    }
+                    
+                    etSearch.setText(keyword);
+                    search(keyword);
+                    Toast.makeText(this, "收到推送的搜索: " + keyword, Toast.LENGTH_SHORT).show();
+                });
+            });
+            
+            try {
+                searchWebServer.start();
+            } catch (Exception e) {
+                Toast.makeText(this, "服务启动失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        }
+        
+        dialog.setOnDismissListener(d -> {
+            if (searchWebServer != null) {
+                searchWebServer.stop();
+                searchWebServer = null;
+            }
+        });
+        
+        dialog.show();
+    }
+    
+    private void generateQrCode(String text, ImageView imageView) {
+        QRCodeWriter writer = new QRCodeWriter();
+        try {
+            BitMatrix bitMatrix = writer.encode(text, BarcodeFormat.QR_CODE, 512, 512);
+            int width = bitMatrix.getWidth();
+            int height = bitMatrix.getHeight();
+            Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    bmp.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
+                }
+            }
+            imageView.setImageBitmap(bmp);
+        } catch (WriterException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private String getIPAddress() {
+        try {
+            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface intf : interfaces) {
+                List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+                for (InetAddress addr : addrs) {
+                    if (!addr.isLoopbackAddress()) {
+                        String sAddr = addr.getHostAddress();
+                        boolean isIPv4 = sAddr.indexOf(':') < 0;
+                        if (isIPv4) return sAddr;
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return null;
     }
     
     private void setupMiniPlayer() {
@@ -578,12 +736,27 @@ public class SearchActivity extends AppCompatActivity {
     }
     
     private static class SourceViewHolder extends RecyclerView.ViewHolder {
-        TextView tv;
-        SourceViewHolder(TextView tv) { super(tv); this.tv = tv; }
+        ImageView ivRadio;
+        TextView tvSourceName;
+        
+        SourceViewHolder(View itemView) {
+            super(itemView);
+            ivRadio = itemView.findViewById(R.id.ivRadio);
+            tvSourceName = itemView.findViewById(R.id.tvSourceName);
+        }
     }
     
     private static class HotSearchViewHolder extends RecyclerView.ViewHolder {
         TextView tv;
         HotSearchViewHolder(TextView tv) { super(tv); this.tv = tv; }
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (searchWebServer != null) {
+            searchWebServer.stop();
+            searchWebServer = null;
+        }
     }
 }

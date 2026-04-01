@@ -2,9 +2,11 @@ package top.boluofan.musictv.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -77,25 +79,16 @@ public class SongSquareActivity extends AppCompatActivity {
             @NonNull
             @Override
             public SourceViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                TextView tv = new TextView(parent.getContext());
-                tv.setLayoutParams(new RecyclerView.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT));
-                tv.setPadding(32, 12, 32, 12);
-                tv.setTextSize(14);
-                tv.setTextColor(getResources().getColorStateList(R.color.white));
-                tv.setGravity(android.view.Gravity.CENTER);
-                tv.setFocusable(true);
-                tv.setClickable(true);
-                return new SourceViewHolder(tv);
+                View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_source, parent, false);
+                return new SourceViewHolder(view);
             }
             
             @Override
             public void onBindViewHolder(@NonNull SourceViewHolder holder, int position) {
-                holder.tv.setText(SOURCE_NAMES[position]);
-                holder.tv.setBackgroundResource(R.drawable.selector_source_item);
+                holder.tvSourceName.setText(SOURCE_NAMES[position]);
+                holder.ivRadio.setImageResource(position == currentSourceIndex ? R.drawable.radio_checked : R.drawable.radio_unchecked);
                 
-                holder.tv.setOnClickListener(v -> selectSource(position));
+                holder.itemView.setOnClickListener(v -> selectSource(position));
             }
             
             @Override
@@ -108,7 +101,7 @@ public class SongSquareActivity extends AppCompatActivity {
         
         playlistAdapter = new SquarePlaylistAdapter();
         rvPlaylists.setAdapter(playlistAdapter);
-        rvPlaylists.setLayoutManager(new GridLayoutManager(this, 3));
+        rvPlaylists.setLayoutManager(new GridLayoutManager(this, 5));
         
         rvSourceList.post(() -> {
             if (rvSourceList.getChildCount() > 0) {
@@ -223,7 +216,12 @@ public class SongSquareActivity extends AppCompatActivity {
     }
     
     private static class SourceViewHolder extends androidx.recyclerview.widget.RecyclerView.ViewHolder {
-        TextView tv;
-        SourceViewHolder(TextView tv) { super(tv); this.tv = tv; }
+        TextView tvSourceName;
+        ImageView ivRadio;
+        SourceViewHolder(View view) {
+            super(view);
+            tvSourceName = view.findViewById(R.id.tvSourceName);
+            ivRadio = view.findViewById(R.id.ivRadio);
+        }
     }
 }

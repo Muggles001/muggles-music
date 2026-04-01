@@ -105,11 +105,25 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
+        private static final String[] SOURCES = {"kw", "kg", "tx", "wy", "mg"};
+        private static final String[] SOURCE_NAMES = {"酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
+        
+        private static String getSourceDisplayName(String source) {
+            if (source == null || source.isEmpty()) return null;
+            for (int i = 0; i < SOURCES.length; i++) {
+                if (SOURCES[i].equals(source)) {
+                    return SOURCE_NAMES[i];
+                }
+            }
+            return source;
+        }
+        
         private final ImageView ivEqualizer;
         private final TextView tvIndex;
         private final ImageView ivCover;
         private final TextView tvName;
         private final TextView tvArtist;
+        private final TextView tvSource;
         private final ImageView btnPlay;
         private final ImageView btnFullscreen;
 
@@ -120,6 +134,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
             ivCover = itemView.findViewById(R.id.ivCover);
             tvName = itemView.findViewById(R.id.tvSongName);
             tvArtist = itemView.findViewById(R.id.tvArtist);
+            tvSource = itemView.findViewById(R.id.tvSource);
             btnPlay = itemView.findViewById(R.id.btnItemPlay);
             btnFullscreen = itemView.findViewById(R.id.btnItemFullscreen);
         }
@@ -127,6 +142,17 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         void bind(MusicInfo song, boolean isCurrentSong, boolean isPlayingNow) {
             tvName.setText(song.getName());
             tvArtist.setText(song.getSinger() != null ? song.getSinger() : "未知歌手");
+            
+            String sourceName = song.getSearchSource();
+            if (sourceName == null || sourceName.isEmpty()) {
+                sourceName = getSourceDisplayName(song.getSource());
+            }
+            if (sourceName != null && !sourceName.isEmpty()) {
+                tvSource.setText(sourceName);
+                tvSource.setVisibility(View.VISIBLE);
+            } else {
+                tvSource.setVisibility(View.GONE);
+            }
             
             if (isCurrentSong) {
                 ivEqualizer.setVisibility(View.VISIBLE);

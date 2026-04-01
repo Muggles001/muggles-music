@@ -113,25 +113,16 @@ public class RankingActivity extends AppCompatActivity {
             @NonNull
             @Override
             public SourceViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                TextView tv = new TextView(parent.getContext());
-                tv.setLayoutParams(new RecyclerView.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT));
-                tv.setPadding(32, 12, 32, 12);
-                tv.setTextSize(14);
-                tv.setTextColor(getResources().getColorStateList(R.color.white));
-                tv.setGravity(android.view.Gravity.CENTER);
-                tv.setFocusable(true);
-                tv.setClickable(true);
-                return new SourceViewHolder(tv);
+                View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_source, parent, false);
+                return new SourceViewHolder(view);
             }
             
             @Override
             public void onBindViewHolder(@NonNull SourceViewHolder holder, int position) {
-                holder.tv.setText(SOURCE_NAMES[position]);
-                holder.tv.setBackgroundResource(R.drawable.selector_source_item);
+                holder.tvSourceName.setText(SOURCE_NAMES[position]);
+                holder.ivRadio.setImageResource(position == currentSourceIndex ? R.drawable.radio_checked : R.drawable.radio_unchecked);
                 
-                holder.tv.setOnClickListener(v -> selectSource(position));
+                holder.itemView.setOnClickListener(v -> selectSource(position));
             }
             
             @Override
@@ -574,8 +565,13 @@ public class RankingActivity extends AppCompatActivity {
     }
     
     private static class SourceViewHolder extends RecyclerView.ViewHolder {
-        TextView tv;
-        SourceViewHolder(TextView tv) { super(tv); this.tv = tv; }
+        TextView tvSourceName;
+        ImageView ivRadio;
+        SourceViewHolder(View view) { 
+            super(view);
+            tvSourceName = view.findViewById(R.id.tvSourceName);
+            ivRadio = view.findViewById(R.id.ivRadio);
+        }
     }
     
     private class BoardViewHolder extends RecyclerView.ViewHolder {

@@ -12,11 +12,8 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.api.model.Playlist;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class SquarePlaylistAdapter extends RecyclerView.Adapter<SquarePlaylistAdapter.ViewHolder> {
 
@@ -87,17 +84,6 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<SquarePlaylistAd
             holder.tvCreator.setVisibility(View.GONE);
         }
 
-        int songCount = playlist.getSongCount();
-        if (songCount > 0) {
-            holder.tvSongCount.setVisibility(View.VISIBLE);
-            holder.tvSongCount.setText(songCount + "首");
-        } else {
-            holder.tvSongCount.setVisibility(View.GONE);
-        }
-
-        String info = formatPlaylistInfo(playlist);
-        holder.tvInfo.setText(info);
-
         holder.itemView.setOnClickListener(v -> {
             int oldPos = selectedPosition;
             int newPos = holder.getAdapterPosition();
@@ -114,27 +100,6 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<SquarePlaylistAd
         holder.itemView.setSelected(selectedPosition == position);
     }
 
-    private String formatPlaylistInfo(Playlist playlist) {
-        StringBuilder sb = new StringBuilder();
-        
-        if (playlist.getCreateTime() != null && playlist.getCreateTime() > 0) {
-            try {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-                sb.append(sdf.format(new Date(playlist.getCreateTime())));
-            } catch (Exception e) {
-                sb.append(playlist.getCreateTime());
-            }
-        }
-        
-        int songCount = playlist.getSongCount();
-        if (songCount > 0) {
-            if (sb.length() > 0) sb.append(" · ");
-            sb.append(songCount).append("首");
-        }
-        
-        return sb.toString();
-    }
-
     @Override
     public int getItemCount() {
         return playlists.size();
@@ -145,8 +110,6 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<SquarePlaylistAd
         TextView tvPlayCount;
         TextView tvName;
         TextView tvCreator;
-        TextView tvInfo;
-        TextView tvSongCount;
 
         ViewHolder(View itemView) {
             super(itemView);
@@ -154,8 +117,6 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<SquarePlaylistAd
             tvPlayCount = itemView.findViewById(R.id.tvPlayCount);
             tvName = itemView.findViewById(R.id.tvName);
             tvCreator = itemView.findViewById(R.id.tvCreator);
-            tvInfo = itemView.findViewById(R.id.tvInfo);
-            tvSongCount = itemView.findViewById(R.id.tvSongCount);
         }
     }
 }
