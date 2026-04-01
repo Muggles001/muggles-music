@@ -152,11 +152,33 @@ public class RankingActivity extends AppCompatActivity {
                 return boards.size();
             }
         });
+
+        rvBoards.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus && boards.size() > 0 && currentBoardIndex >= 0 && currentBoardIndex < boards.size()) {
+                rvBoards.post(() -> {
+                    if (rvBoards.getChildCount() > currentBoardIndex) {
+                        rvBoards.getChildAt(currentBoardIndex).requestFocus();
+                    } else if (rvBoards.getChildCount() > 0) {
+                        rvBoards.getChildAt(0).requestFocus();
+                    }
+                });
+            }
+        });
+
+        rvSongs.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus && boards.size() > 0 && currentBoardIndex >= 0 && currentBoardIndex < boards.size()) {
+                rvBoards.post(() -> {
+                    for (int i = 0; i < rvBoards.getChildCount(); i++) {
+                        rvBoards.getChildAt(i).setSelected(i == currentBoardIndex);
+                    }
+                });
+            }
+        });
         
         songAdapter = new LxMusicAdapter();
         rvSongs.setAdapter(songAdapter);
         rvSongs.setLayoutManager(new LinearLayoutManager(this));
-        
+
         songAdapter.setOnItemClickListener((song, position) -> {
             playSongAtIndex(position);
         });
@@ -298,6 +320,9 @@ public class RankingActivity extends AppCompatActivity {
         loadSongs();
         
         rvBoards.post(() -> {
+            for (int i = 0; i < rvBoards.getChildCount(); i++) {
+                rvBoards.getChildAt(i).setSelected(i == position);
+            }
             if (rvBoards.getChildCount() > position) {
                 View itemView = rvBoards.getChildAt(position);
                 if (itemView != null) {
