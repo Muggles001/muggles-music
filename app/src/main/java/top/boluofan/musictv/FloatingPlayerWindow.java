@@ -1,11 +1,14 @@
 package top.boluofan.musictv;
 
 import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,6 +33,10 @@ import com.google.common.util.concurrent.MoreExecutors;
 public class FloatingPlayerWindow {
     private static final String TAG = "FloatingPlayerWindow";
 
+    private static final int FADE_DURATION = 300;
+    private static final int AUTO_FADE_DELAY = 3000;
+    private static final int PLAYER_MARGIN_TOP = 0;
+
     private final Activity activity;
     private final Context context;
     private final View floatingView;
@@ -42,8 +49,16 @@ public class FloatingPlayerWindow {
     private ListenableFuture<MediaController> controllerFuture;
     private Player.Listener playerListener;
     private ObjectAnimator rotateAnim;
+    private ObjectAnimator fadeAnim;
+    private ValueAnimator scaleAnim;
+    private Handler fadeHandler;
+    private Runnable fadeOutRunnable;
     private boolean isPlaying = false;
     private boolean isConnected = false;
+    private boolean isFadedOut = false;
+    private boolean isFocused = false;
+    private int collapsedWidth = 96;
+    private int expandedWidth = 300;
 
     public FloatingPlayerWindow(Activity activity) {
         this.activity = activity;
@@ -65,10 +80,11 @@ public class FloatingPlayerWindow {
         ViewGroup rootView = (ViewGroup) activity.getWindow().getDecorView();
         
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
+                collapsedWidth,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         );
-        params.setMargins(12, 120, 0, 0);
+        params.setMargins(0, PLAYER_MARGIN_TOP, 0, 0);
+        params.gravity = android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL;
         
         container.setLayoutParams(params);
         
@@ -84,18 +100,24 @@ public class FloatingPlayerWindow {
         rotateAnim.setInterpolator(new LinearInterpolator());
         rotateAnim.setRepeatCount(ObjectAnimator.INFINITE);
         rotateAnim.setRepeatMode(ObjectAnimator.RESTART);
+
+        fadeHandler = new Handler(Looper.getMainLooper());
+        fadeOutRunnable = this::fadeOut;
     }
 
     private void setupListeners() {
         container.setOnClickListener(v -> openPlayer());
 
         container.setOnFocusChangeListener((v, hasFocus) -> {
+            isFocused = hasFocus;
             if (hasFocus) {
                 container.setBackgroundResource(R.drawable.bg_floating_player_focused);
                 tvTitle.setSelected(true);
+                expandPlayer();
             } else {
                 container.setBackgroundResource(R.drawable.bg_floating_player);
                 tvTitle.setSelected(false);
+                collapsePlayer();
             }
         });
 
@@ -114,6 +136,108 @@ public class FloatingPlayerWindow {
     private void openPlayer() {
         context.startActivity(new Intent(context, PlayerActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+
+    private void expandPlayer() {
+        if (scaleAnim != null && scaleAnim.isRunning()) {
+            scaleAnim.cancel();
+        }
+
+        fadeHandler.removeCallbacks(fadeOutRunnable);
+
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) container.getLayoutParams();
+        if (params.width != expandedWidth) {
+            final FrameLayout.LayoutParams finalParams = params;
+            scaleAnim = ObjectAnimator.ofInt(params.width, expandedWidth);
+            scaleAnim.setDuration(FADE_DURATION);
+            scaleAnim.setEvaluator(new android.animation.IntEvaluator());
+            scaleAnim.addUpdateListener(animation -> {
+                int width = (int) animation.getAnimatedValue();
+                finalParams.width = width;
+                container.setLayoutParams(finalParams);
+            });
+            scaleAnim.start();
+        }
+    }
+
+    private void collapsePlayer() {
+        if (scaleAnim != null && scaleAnim.isRunning()) {
+            scaleAnim.cancel();
+        }
+
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) container.getLayoutParams();
+        if (params.width != collapsedWidth) {
+            final FrameLayout.LayoutParams finalParams = params;
+            scaleAnim = ObjectAnimator.ofInt(params.width, collapsedWidth);
+            scaleAnim.setDuration(FADE_DURATION);
+            scaleAnim.setEvaluator(new android.animation.IntEvaluator());
+            scaleAnim.addUpdateListener(animation -> {
+                int width = (int) animation.getAnimatedValue();
+                finalParams.width = width;
+                container.setLayoutParams(finalParams);
+            });
+            scaleAnim.start();
+        }
+    }
+
+    private static class WidthEvaluator implements java.util.concurrent.Callable<Integer> {
+        private int width;
+
+        public void setWidth(int width) {
+            this.width = width;
+        }
+
+        public int getWidth() {
+            return width;
+        }
+
+        @Override
+        public Integer call() {
+            return width;
+        }
+    }
+
+    private void fadeIn() {
+        if (fadeAnim != null && fadeAnim.isRunning()) {
+            fadeAnim.cancel();
+        }
+        
+        fadeHandler.removeCallbacks(fadeOutRunnable);
+        
+        if (!isFadedOut && container.getAlpha() >= 1.0f) {
+            return;
+        }
+        
+        isFadedOut = false;
+        
+        container.setVisibility(View.VISIBLE);
+        fadeAnim = ObjectAnimator.ofFloat(container, "alpha", container.getAlpha(), 1.0f);
+        fadeAnim.setDuration(FADE_DURATION);
+        fadeAnim.start();
+    }
+
+    private void fadeOut() {
+        if (fadeAnim != null && fadeAnim.isRunning()) {
+            fadeAnim.cancel();
+        }
+        
+        if (isFadedOut || container.getAlpha() <= 0.0f) {
+            return;
+        }
+        
+        isFadedOut = true;
+        
+        fadeAnim = ObjectAnimator.ofFloat(container, "alpha", container.getAlpha(), 0.0f);
+        fadeAnim.setDuration(FADE_DURATION);
+        fadeAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                if (isFadedOut) {
+                    container.setVisibility(View.GONE);
+                }
+            }
+        });
+        fadeAnim.start();
     }
 
     public void connectToService() {
@@ -224,12 +348,22 @@ public class FloatingPlayerWindow {
             }
 
             container.setVisibility(View.VISIBLE);
+            container.setAlpha(1.0f);
+            isFadedOut = false;
         });
     }
 
     public void hide() {
         if (container != null) {
-            activity.runOnUiThread(() -> container.setVisibility(View.GONE));
+            activity.runOnUiThread(() -> {
+                fadeHandler.removeCallbacks(fadeOutRunnable);
+                if (fadeAnim != null) {
+                    fadeAnim.cancel();
+                }
+                container.setVisibility(View.GONE);
+                container.setAlpha(1.0f);
+                isFadedOut = false;
+            });
         }
     }
 
@@ -237,6 +371,14 @@ public class FloatingPlayerWindow {
         if (rotateAnim != null) {
             rotateAnim.cancel();
             rotateAnim = null;
+        }
+        if (fadeAnim != null) {
+            fadeAnim.cancel();
+            fadeAnim = null;
+        }
+        if (fadeHandler != null) {
+            fadeHandler.removeCallbacks(fadeOutRunnable);
+            fadeHandler = null;
         }
         if (player != null && playerListener != null) {
             player.removeListener(playerListener);
