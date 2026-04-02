@@ -56,6 +56,8 @@ public class LibraryActivity extends AppCompatActivity {
     private TextView tvPlaylistTitle;
     private TextView tvSongCount;
     private ImageButton btnBack;
+    private ImageButton btnPlayAll;
+    private ImageButton btnShuffle;
     
     private ListData listData;
     private Playlist currentPlaylist;
@@ -83,6 +85,8 @@ public class LibraryActivity extends AppCompatActivity {
         tvPlaylistTitle = findViewById(R.id.tvPlaylistTitle);
         tvSongCount = findViewById(R.id.tvSongCount);
         btnBack = findViewById(R.id.btnBack);
+        btnPlayAll = findViewById(R.id.btnPlayAll);
+        btnShuffle = findViewById(R.id.btnShuffle);
         ImageButton btnRefresh = findViewById(R.id.btnRefresh);
         ImageButton btnLogout = findViewById(R.id.btnLogout);
         
@@ -104,6 +108,9 @@ public class LibraryActivity extends AppCompatActivity {
 
     private void setupListeners() {
         btnBack.setOnClickListener(v -> finish());
+        
+        btnPlayAll.setOnClickListener(v -> playAll(false));
+        btnShuffle.setOnClickListener(v -> playAll(true));
         
         playlistAdapter.setOnItemClickListener(playlistName -> {
             loadPlaylistSongs(playlistName);
@@ -260,6 +267,28 @@ public class LibraryActivity extends AppCompatActivity {
         player.play();
         
         songAdapter.setPlayingIndex(index);
+    }
+    
+    private void playAll(boolean shuffle) {
+        if (currentPlaylist == null || currentPlaylist.getSongs() == null || currentPlaylist.getSongs().isEmpty()) {
+            Toast.makeText(this, "没有可播放的歌曲", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (player == null) return;
+        
+        List<MediaItem> mediaItems = new ArrayList<>();
+        for (MusicInfo song : currentPlaylist.getSongs()) {
+            mediaItems.add(createMediaItem(song));
+        }
+        
+        int startIndex = shuffle ? (int) (Math.random() * currentPlaylist.getSongs().size()) : 0;
+        
+        player.setMediaItems(mediaItems, startIndex, 0);
+        player.prepare();
+        player.play();
+        
+        Toast.makeText(this, shuffle ? "随机播放" : "播放全部", Toast.LENGTH_SHORT).show();
     }
 
     private MediaItem createMediaItem(MusicInfo song) {

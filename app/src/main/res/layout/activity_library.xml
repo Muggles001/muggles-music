@@ -129,7 +129,31 @@
                 android:layout_height="wrap_content"
                 android:text="0 首歌曲"
                 android:textSize="14sp"
-                android:textColor="#9CA3AF" />
+                android:textColor="#9CA3AF"
+                android:layout_marginEnd="16dp" />
+
+            <ImageButton
+                android:id="@+id/btnPlayAll"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_play"
+                android:background="@drawable/btn_focused_circle"
+                android:scaleType="centerInside"
+                android:padding="10dp"
+                android:focusable="true"
+                android:contentDescription="播放全部" />
+
+            <ImageButton
+                android:id="@+id/btnShuffle"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:src="@drawable/ic_shuffle"
+                android:background="@drawable/btn_focused_circle"
+                android:scaleType="centerInside"
+                android:padding="10dp"
+                android:focusable="true"
+                android:contentDescription="随机播放" />
 
         </LinearLayout>
 
