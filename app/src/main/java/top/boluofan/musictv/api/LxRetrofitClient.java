@@ -101,6 +101,14 @@ public class LxRetrofitClient {
         resetClient();
     }
 
+    public static void clearUserInfo(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit()
+            .remove(KEY_USERNAME)
+            .remove(KEY_PASSWORD)
+            .apply();
+    }
+
     public static boolean isLoggedIn(Context context) {
         String username = getUsername(context);
         String password = getPassword(context);

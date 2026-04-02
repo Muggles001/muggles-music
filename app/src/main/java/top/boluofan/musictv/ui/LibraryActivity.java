@@ -50,7 +50,6 @@ public class LibraryActivity extends AppCompatActivity {
     
     private TextView tvPlaylistTitle;
     private TextView tvSongCount;
-    private ImageButton btnSettings;
     private ImageButton btnBack;
     
     private ListData listData;
@@ -78,8 +77,12 @@ public class LibraryActivity extends AppCompatActivity {
         rvSongs = findViewById(R.id.rvSongs);
         tvPlaylistTitle = findViewById(R.id.tvPlaylistTitle);
         tvSongCount = findViewById(R.id.tvSongCount);
-        btnSettings = findViewById(R.id.btnSettings);
         btnBack = findViewById(R.id.btnBack);
+        ImageButton btnRefresh = findViewById(R.id.btnRefresh);
+        ImageButton btnLogout = findViewById(R.id.btnLogout);
+        
+        btnRefresh.setOnClickListener(v -> loadUserData());
+        btnLogout.setOnClickListener(v -> logout());
     }
 
     private void setupRecyclerViews() {
@@ -89,13 +92,13 @@ public class LibraryActivity extends AppCompatActivity {
         
         songAdapter = new LxMusicAdapter();
         songAdapter.setShowDeleteButton(true);
+        songAdapter.setShowFavButton(false);
         rvSongs.setAdapter(songAdapter);
         rvSongs.setLayoutManager(new LinearLayoutManager(this));
     }
 
     private void setupListeners() {
         btnBack.setOnClickListener(v -> finish());
-        btnSettings.setOnClickListener(v -> showSettingsMenu());
         
         playlistAdapter.setOnItemClickListener(playlistName -> {
             loadPlaylistSongs(playlistName);
@@ -107,6 +110,11 @@ public class LibraryActivity extends AppCompatActivity {
         
         songAdapter.setOnPlayClickListener((song, position) -> {
             playSongAtIndex(position);
+        });
+        
+        songAdapter.setOnFullscreenClickListener((song, position) -> {
+            playSongAtIndex(position);
+            startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
         });
     }
 
@@ -280,32 +288,10 @@ public class LibraryActivity extends AppCompatActivity {
         return builder.build();
     }
 
-    private void showSettingsMenu() {
-        android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnSettings);
-        popup.getMenu().add("刷新列表");
-        popup.getMenu().add("搜索音乐");
-        popup.getMenu().add("退出登录");
-        popup.setOnMenuItemClickListener(item -> {
-            String title = (String) item.getTitle();
-            if ("刷新列表".equals(title)) {
-                loadUserData();
-                return true;
-            } else if ("搜索音乐".equals(title)) {
-                startActivity(new Intent(this, SearchActivity.class));
-                return true;
-            } else if ("退出登录".equals(title)) {
-                logout();
-                return true;
-            }
-            return false;
-        });
-        popup.show();
-    }
-
     private void logout() {
         if (player != null) player.stop();
-        LxRetrofitClient.clearConfig(this);
-        Intent intent = new Intent(this, top.boluofan.musictv.ConfigActivity.class);
+        LxRetrofitClient.clearUserInfo(this);
+        Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
@@ -352,19 +338,11 @@ public class LibraryActivity extends AppCompatActivity {
             }
         }
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - lastBackPressTime < 2000) {
-                finish();
-            } else {
-                Toast.makeText(this, "再按一次退出程序", Toast.LENGTH_SHORT).show();
-                lastBackPressTime = currentTime;
-            }
+            finish();
             return true;
         }
         return super.onKeyDown(keyCode, event);
     }
-
-    private long lastBackPressTime = 0;
     
     @Override
     protected void onDestroy() {

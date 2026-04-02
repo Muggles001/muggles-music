@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.FloatingPlayerWindow;
@@ -27,6 +28,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton btnSongSquare;
     private ImageButton btnRanking;
     private ImageButton btnSettings;
+    
+    private long lastBackPressTime = 0;
     
     private TextView tvLibrary;
     private TextView tvSearch;
@@ -221,6 +224,16 @@ public class MainActivity extends AppCompatActivity {
                     return true;
                 }
             }
+        }
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - lastBackPressTime < 2000) {
+                finish();
+            } else {
+                Toast.makeText(this, "再按一次退出程序", Toast.LENGTH_SHORT).show();
+                lastBackPressTime = currentTime;
+            }
+            return true;
         }
         return super.onKeyDown(keyCode, event);
     }

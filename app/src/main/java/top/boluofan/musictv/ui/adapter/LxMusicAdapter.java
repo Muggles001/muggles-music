@@ -24,6 +24,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
     private int playingIndex = -1;
     private boolean isPlaying = false;
     private boolean showDeleteButton = false;
+    private boolean showFavButton = true;
 
     public interface OnItemClickListener {
         void onItemClick(MusicInfo song, int position);
@@ -59,6 +60,10 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
 
     public void setShowDeleteButton(boolean show) {
         this.showDeleteButton = show;
+    }
+
+    public void setShowFavButton(boolean show) {
+        this.showFavButton = show;
     }
 
     public void setSongs(List<MusicInfo> songs) {
@@ -117,6 +122,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
                 deleteListener.onDeleteClick(song, holder.getAdapterPosition());
             });
         }
+        holder.btnFav.setVisibility(showFavButton ? View.VISIBLE : View.GONE);
     }
 
     @Override
@@ -147,6 +153,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         private final ImageView btnPlay;
         private final ImageView btnFullscreen;
         private final ImageView btnDelete;
+        private final ImageView btnFav;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -159,6 +166,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
             btnPlay = itemView.findViewById(R.id.btnItemPlay);
             btnFullscreen = itemView.findViewById(R.id.btnItemFullscreen);
             btnDelete = itemView.findViewById(R.id.btnItemDelete);
+            btnFav = itemView.findViewById(R.id.btnItemFav);
         }
 
         void bind(MusicInfo song, boolean isCurrentSong, boolean isPlayingNow) {
