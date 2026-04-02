@@ -8,14 +8,18 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+import okhttp3.ResponseBody;
 import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.FloatingPlayerWindow;
@@ -26,6 +30,7 @@ import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.api.model.Playlist;
 import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
 import top.boluofan.musictv.PlaylistAdapter;
+import top.boluofan.musictv.util.DialogHelper;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
@@ -115,6 +120,10 @@ public class LibraryActivity extends AppCompatActivity {
         songAdapter.setOnFullscreenClickListener((song, position) -> {
             playSongAtIndex(position);
             startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
+        });
+        
+        songAdapter.setOnDeleteClickListener((song, position) -> {
+            showDeleteConfirmDialog(song, position);
         });
     }
 
@@ -286,6 +295,131 @@ public class LibraryActivity extends AppCompatActivity {
         builder.setMediaMetadata(metadataBuilder.build());
         
         return builder.build();
+    }
+
+    private void showDeleteConfirmDialog(MusicInfo song, int position) {
+        if (currentPlaylist == null) return;
+        
+        String listId = currentPlaylist.getId();
+        if ("default".equals(listId) || "love".equals(listId) || "temp".equals(listId)) {
+            Toast.makeText(this, "系统歌单无法删除歌曲", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        String songId = song.getId();
+        if (songId == null || songId.isEmpty()) {
+            songId = song.getSongmid();
+        }
+        if (songId == null || songId.isEmpty()) {
+            Toast.makeText(this, "无法获取歌曲ID", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        final String finalSongId = songId;
+        DialogHelper.showDeleteConfirmDialog(this, song.getName(), new DialogHelper.IDialogCallback() {
+            @Override
+            public void onConfirm() {
+                deleteSong(song, position, finalSongId);
+            }
+
+            @Override
+            public void onCancel() {
+            }
+        });
+    }
+
+    private void deleteSong(MusicInfo song, int position, String songId) {
+        if (currentPlaylist == null) return;
+
+        String username = LxRetrofitClient.getUsername(this);
+        String password = LxRetrofitClient.getPassword(this);
+
+        if (username.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        LxApiService apiService = LxRetrofitClient.getApiService(this);
+
+        apiService.getUserList(username, password).enqueue(new Callback<ListData>() {
+            @Override
+            public void onResponse(Call<ListData> call, Response<ListData> response) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    runOnUiThread(() -> Toast.makeText(LibraryActivity.this, "获取歌单失败", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
+                ListData listData = response.body();
+                List<Playlist> userPlaylists = listData.getUserList();
+                if (userPlaylists == null) {
+                    runOnUiThread(() -> Toast.makeText(LibraryActivity.this, "歌单不存在", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
+                Playlist targetPlaylist = null;
+                for (Playlist p : userPlaylists) {
+                    if (currentPlaylist.getName().equals(p.getName())) {
+                        targetPlaylist = p;
+                        break;
+                    }
+                }
+
+                if (targetPlaylist == null) {
+                    runOnUiThread(() -> Toast.makeText(LibraryActivity.this, "歌单不存在", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
+                List<MusicInfo> songList = targetPlaylist.getSongs();
+                if (songList == null) {
+                    runOnUiThread(() -> Toast.makeText(LibraryActivity.this, "歌单为空", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
+                boolean removed = false;
+                for (int i = 0; i < songList.size(); i++) {
+                    MusicInfo m = songList.get(i);
+                    String mId = m.getId();
+                    if (mId == null || mId.isEmpty()) mId = m.getSongmid();
+                    if (songId.equals(mId)) {
+                        songList.remove(i);
+                        removed = true;
+                        break;
+                    }
+                }
+
+                if (!removed) {
+                    runOnUiThread(() -> Toast.makeText(LibraryActivity.this, "歌曲不存在", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
+                targetPlaylist.setSongs(songList);
+                targetPlaylist.setSongCount(songList.size());
+
+                apiService.updateUserList(username, password, listData).enqueue(new Callback<ResponseBody>() {
+                    @Override
+                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                        runOnUiThread(() -> {
+                            if (response.isSuccessful()) {
+                                Toast.makeText(LibraryActivity.this, "删除成功", Toast.LENGTH_SHORT).show();
+                                loadUserData();
+                            } else {
+                                Toast.makeText(LibraryActivity.this, "删除失败", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onFailure(Call<ResponseBody> call, Throwable t) {
+                        runOnUiThread(() -> Toast.makeText(LibraryActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_LONG).show());
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(Call<ListData> call, Throwable t) {
+                runOnUiThread(() -> Toast.makeText(LibraryActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        });
     }
 
     private void logout() {

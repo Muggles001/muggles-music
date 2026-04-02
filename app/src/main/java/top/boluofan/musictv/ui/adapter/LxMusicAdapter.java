@@ -21,6 +21,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
     private OnPlayClickListener playListener;
     private OnFullscreenClickListener fullscreenListener;
     private OnDeleteClickListener deleteListener;
+    private OnFavClickListener favListener;
     private int playingIndex = -1;
     private boolean isPlaying = false;
     private boolean showDeleteButton = false;
@@ -42,6 +43,10 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         void onDeleteClick(MusicInfo song, int position);
     }
 
+    public interface OnFavClickListener {
+        void onFavClick(MusicInfo song, int position);
+    }
+
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
     }
@@ -56,6 +61,10 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
 
     public void setOnDeleteClickListener(OnDeleteClickListener listener) {
         this.deleteListener = listener;
+    }
+
+    public void setOnFavClickListener(OnFavClickListener listener) {
+        this.favListener = listener;
     }
 
     public void setShowDeleteButton(boolean show) {
@@ -123,6 +132,11 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
             });
         }
         holder.btnFav.setVisibility(showFavButton ? View.VISIBLE : View.GONE);
+        if (showFavButton && favListener != null) {
+            holder.btnFav.setOnClickListener(v -> {
+                favListener.onFavClick(song, holder.getAdapterPosition());
+            });
+        }
     }
 
     @Override

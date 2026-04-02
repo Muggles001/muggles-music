@@ -136,4 +136,11 @@ public interface LxApiService {
             @Query("bangid") String bangId,
             @Query("page") int page
     );
+
+    @POST("api/music/user/list/remove")
+    Call<ResponseBody> removeSongsFromPlaylist(
+            @Header("x-user-name") String username,
+            @Header("x-user-password") String password,
+            @Body Map<String, Object> body
+    );
 }
