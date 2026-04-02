@@ -208,7 +208,9 @@ public class RankingActivity extends AppCompatActivity {
     private void collectPlaylist() {
         if (!LxRetrofitClient.isLoggedIn(this)) {
             Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
-            startActivity(new Intent(this, top.boluofan.musictv.ConfigActivity.class));
+            Intent intent = new Intent(this, top.boluofan.musictv.ConfigActivity.class);
+            intent.putExtra("server_url", LxRetrofitClient.getServerUrl(this));
+            startActivity(intent);
             return;
         }
         
@@ -325,7 +327,9 @@ public class RankingActivity extends AppCompatActivity {
     private void collectSingleSong(MusicInfo song) {
         if (!LxRetrofitClient.isLoggedIn(this)) {
             Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
-            startActivity(new Intent(this, top.boluofan.musictv.ConfigActivity.class));
+            Intent intent = new Intent(this, top.boluofan.musictv.ConfigActivity.class);
+            intent.putExtra("server_url", LxRetrofitClient.getServerUrl(this));
+            startActivity(intent);
             return;
         }
 
