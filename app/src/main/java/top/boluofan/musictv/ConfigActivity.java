@@ -59,6 +59,11 @@ public class ConfigActivity extends AppCompatActivity {
         Button btnToggleMode = findViewById(R.id.btnToggleMode);
 
         etUrl.setText("http://localhost:9527");
+        
+        String serverUrlFromSettings = getIntent().getStringExtra("server_url");
+        if (serverUrlFromSettings != null && !serverUrlFromSettings.isEmpty()) {
+            etUrl.setText(serverUrlFromSettings);
+        }
 
         btnToggleMode.setOnClickListener(v -> {
             isQrMode = !isQrMode;

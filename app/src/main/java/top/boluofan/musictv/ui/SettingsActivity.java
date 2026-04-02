@@ -28,13 +28,27 @@ public class SettingsActivity extends AppCompatActivity {
         initViews();
     }
 
+    private static final String EXTRA_SERVER_URL = "server_url";
+    
     private void initViews() {
         ImageButton btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
         
+        String serverUrl = LxRetrofitClient.getServerUrl(this);
+        
         LinearLayout layoutServerConfig = findViewById(R.id.layoutServerConfig);
         layoutServerConfig.setOnClickListener(v -> {
-            startActivity(new Intent(this, ConfigActivity.class));
+            Intent intent = new Intent(this, ConfigActivity.class);
+            intent.putExtra(EXTRA_SERVER_URL, serverUrl);
+            startActivity(intent);
+        });
+
+        LinearLayout layoutUserInfo = findViewById(R.id.layoutUserInfo);
+        String username = LxRetrofitClient.getUsername(this);
+        layoutUserInfo.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ConfigActivity.class);
+            intent.putExtra(EXTRA_SERVER_URL, serverUrl);
+            startActivity(intent);
         });
         
         LinearLayout layoutLogout = findViewById(R.id.layoutLogout);
@@ -46,10 +60,9 @@ public class SettingsActivity extends AppCompatActivity {
         });
         
         TextView tvServerUrl = findViewById(R.id.tvServerUrl);
-        tvServerUrl.setText(LxRetrofitClient.getServerUrl(this));
+        tvServerUrl.setText(serverUrl);
         
         TextView tvUsername = findViewById(R.id.tvUsername);
-        String username = LxRetrofitClient.getUsername(this);
         tvUsername.setText(username.isEmpty() ? "未登录" : username);
     }
     

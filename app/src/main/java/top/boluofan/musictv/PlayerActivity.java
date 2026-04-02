@@ -72,6 +72,7 @@ public class PlayerActivity extends AppCompatActivity {
     private String currentScrapingId = "";
     private String currentSongSource = "mg";
     private String currentSongMid = "";
+    private boolean hasArtwork = false;
     private final Runnable scrapeTimeoutRunnable = () -> {
         Log.e(TAG, "Scrape Timeout!");
         if (lyricAdapter.getItemCount() <= 0) {
@@ -330,9 +331,14 @@ public class PlayerActivity extends AppCompatActivity {
             }
             // Prepare data from current player queue
             if (player != null) {
-                List<String> queue = new ArrayList<>();
+                List<top.boluofan.musictv.DrawerSongAdapter.DrawerSongItem> queue = new ArrayList<>();
                 for (int i = 0; i < player.getMediaItemCount(); i++) {
-                    queue.add(player.getMediaItemAt(i).mediaMetadata.title.toString());
+                    androidx.media3.common.MediaItem item = player.getMediaItemAt(i);
+                    String title = item.mediaMetadata.title != null ? item.mediaMetadata.title.toString() : "";
+                    String artist = item.mediaMetadata.artist != null ? item.mediaMetadata.artist.toString() : "";
+                    String coverUrl = item.mediaMetadata.artworkUri != null ? item.mediaMetadata.artworkUri.toString() : "";
+                    
+                    queue.add(new top.boluofan.musictv.DrawerSongAdapter.DrawerSongItem(title, artist, coverUrl, "", ""));
                 }
                 drawerSongAdapter.setSongs(queue);
                 drawerSongAdapter.setPlayingIndex(player.getCurrentMediaItemIndex());
@@ -761,7 +767,7 @@ public class PlayerActivity extends AppCompatActivity {
         }
 
         // 2. 处理封面状态
-        boolean hasArtwork = false;
+        hasArtwork = false;
         if (mediaItem.mediaMetadata.artworkData != null) {
             byte[] data = mediaItem.mediaMetadata.artworkData;
             Glide.with(this).load(data)
@@ -791,14 +797,15 @@ public class PlayerActivity extends AppCompatActivity {
             }
         }
 
-        // 3. 触发抓取补全逻辑：只要缺封面 或 缺歌词，就去尝试抓取
-        if (!hasArtwork || lyrics == null || lyrics.isEmpty()) {
+        // 3. 触发抓取补全逻辑：只要缺歌词，就去尝试获取
+        // 封面如果已存在，则不刮削
+        if (lyrics == null || lyrics.isEmpty()) {
             // 只有当歌曲 ID 变化时（或者之前没记录到 ID）才重新触发
             if (!isCurrentlyScraping) {
                 fetchMusicInfoForScraping(queryName, false);
             }
         } else {
-            // 如果都全了，重置状态
+            // 如果歌词已获取到，重置状态
             currentScrapingId = "";
         }
     }
@@ -903,8 +910,8 @@ public class PlayerActivity extends AppCompatActivity {
                         tvBigArtist.setText(artist);
                     }
                     
-                    // 更新封面
-                    if (picUrl != null && !picUrl.isEmpty()) {
+                    // 更新封面：只有当封面不存在时才更新
+                    if (!hasArtwork && picUrl != null && !picUrl.isEmpty()) {
                         Glide.with(PlayerActivity.this)
                             .load(picUrl)
                             .apply(new RequestOptions()
@@ -930,18 +937,17 @@ public class PlayerActivity extends AppCompatActivity {
                             .apply(new RequestOptions()
                                 .transform(new jp.wasabeef.glide.transformations.BlurTransformation(20, 3)))
                             .into(ivBlurBackground);
-                    } else {
-                         ivBigCover.setImageResource(R.drawable.ic_cover_placeholder);
-                         ivBlurBackground.setImageResource(android.R.color.black);
                     }
                     
                     // 更新歌词
                     if (lyrics != null && !lyrics.isEmpty()) {
                         parseLyrics(lyrics);
                         // 刮削到歌词或封面，启用保存功能
-                        scrapedPicUrl = picUrl;
-                        scrapedArtist = artist;
-                        if (optionAdapter != null) optionAdapter.setOptionDisabled("保存当前歌词", false);
+                        if (!hasArtwork && picUrl != null && !picUrl.isEmpty()) {
+                            scrapedPicUrl = picUrl;
+                            scrapedArtist = artist;
+                            if (optionAdapter != null) optionAdapter.setOptionDisabled("保存当前歌词", false);
+                        }
                     } else {
                         showNoLyrics("暂无当前歌曲歌词");
                     }

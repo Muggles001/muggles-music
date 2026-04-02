@@ -88,6 +88,7 @@ public class LibraryActivity extends AppCompatActivity {
         rvPlaylists.setLayoutManager(new LinearLayoutManager(this));
         
         songAdapter = new LxMusicAdapter();
+        songAdapter.setShowDeleteButton(true);
         rvSongs.setAdapter(songAdapter);
         rvSongs.setLayoutManager(new LinearLayoutManager(this));
     }
@@ -101,6 +102,10 @@ public class LibraryActivity extends AppCompatActivity {
         });
         
         songAdapter.setOnItemClickListener((song, position) -> {
+            playSongAtIndex(position);
+        });
+        
+        songAdapter.setOnPlayClickListener((song, position) -> {
             playSongAtIndex(position);
         });
     }

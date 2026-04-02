@@ -20,8 +20,10 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
     private OnItemClickListener listener;
     private OnPlayClickListener playListener;
     private OnFullscreenClickListener fullscreenListener;
+    private OnDeleteClickListener deleteListener;
     private int playingIndex = -1;
     private boolean isPlaying = false;
+    private boolean showDeleteButton = false;
 
     public interface OnItemClickListener {
         void onItemClick(MusicInfo song, int position);
@@ -35,6 +37,10 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         void onFullscreenClick(MusicInfo song, int position);
     }
 
+    public interface OnDeleteClickListener {
+        void onDeleteClick(MusicInfo song, int position);
+    }
+
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
     }
@@ -45,6 +51,14 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
 
     public void setOnFullscreenClickListener(OnFullscreenClickListener listener) {
         this.fullscreenListener = listener;
+    }
+
+    public void setOnDeleteClickListener(OnDeleteClickListener listener) {
+        this.deleteListener = listener;
+    }
+
+    public void setShowDeleteButton(boolean show) {
+        this.showDeleteButton = show;
     }
 
     public void setSongs(List<MusicInfo> songs) {
@@ -97,6 +111,12 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
                 fullscreenListener.onFullscreenClick(song, holder.getAdapterPosition());
             }
         });
+        holder.btnDelete.setVisibility(showDeleteButton ? View.VISIBLE : View.GONE);
+        if (showDeleteButton && deleteListener != null) {
+            holder.btnDelete.setOnClickListener(v -> {
+                deleteListener.onDeleteClick(song, holder.getAdapterPosition());
+            });
+        }
     }
 
     @Override
@@ -126,6 +146,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         private final TextView tvSource;
         private final ImageView btnPlay;
         private final ImageView btnFullscreen;
+        private final ImageView btnDelete;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -137,6 +158,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
             tvSource = itemView.findViewById(R.id.tvSource);
             btnPlay = itemView.findViewById(R.id.btnItemPlay);
             btnFullscreen = itemView.findViewById(R.id.btnItemFullscreen);
+            btnDelete = itemView.findViewById(R.id.btnItemDelete);
         }
 
         void bind(MusicInfo song, boolean isCurrentSong, boolean isPlayingNow) {
