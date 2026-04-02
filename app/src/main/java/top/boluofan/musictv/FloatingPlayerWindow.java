@@ -79,6 +79,11 @@ public class FloatingPlayerWindow {
     private void setupContainer() {
         ViewGroup rootView = (ViewGroup) activity.getWindow().getDecorView();
         
+        View existingContainer = rootView.findViewById(R.id.floatingPlayerContainer);
+        if (existingContainer != null && existingContainer.getParent() != null) {
+            ((ViewGroup) existingContainer.getParent()).removeView(existingContainer);
+        }
+        
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                 collapsedWidth,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -368,6 +373,11 @@ public class FloatingPlayerWindow {
     }
 
     public void release() {
+        isFocused = false;
+        if (scaleAnim != null) {
+            scaleAnim.cancel();
+            scaleAnim = null;
+        }
         if (rotateAnim != null) {
             rotateAnim.cancel();
             rotateAnim = null;
@@ -386,6 +396,23 @@ public class FloatingPlayerWindow {
         if (controllerFuture != null) {
             MediaController.releaseFuture(controllerFuture);
         }
+        
+        if (container != null) {
+            container.setOnFocusChangeListener(null);
+            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) container.getLayoutParams();
+            if (params != null) {
+                params.width = collapsedWidth;
+                container.setLayoutParams(params);
+            }
+            container.setBackgroundResource(R.drawable.bg_floating_player);
+            tvTitle.setSelected(false);
+            
+            ViewGroup parent = (ViewGroup) container.getParent();
+            if (parent != null) {
+                parent.removeView(container);
+            }
+        }
+        
         isConnected = false;
     }
     

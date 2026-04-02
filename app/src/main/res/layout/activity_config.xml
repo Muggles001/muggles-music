@@ -231,7 +231,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="如何获取账号密码？\n在 lxserver 的 config.js 中配置用户"
+                android:text="如何获取账号密码？\n在 lxserver 的[管理控制台]中配置用户"
                 android:textColor="#6B7280"
                 android:textSize="12sp"
                 android:gravity="start" />
