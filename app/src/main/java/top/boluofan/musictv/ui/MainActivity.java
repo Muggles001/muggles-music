@@ -9,6 +9,12 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.media3.common.Player;
+import androidx.media3.session.MediaController;
+import androidx.media3.session.SessionToken;
+import com.google.common.util.concurrent.ListenableFuture;
+import android.content.ComponentName;
+import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxRetrofitClient;
@@ -38,6 +44,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvSettings;
 
     private int currentSelectedTab = 0;
+    
+    private MediaController player;
+    private ListenableFuture<MediaController> controllerFuture;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +68,28 @@ public class MainActivity extends AppCompatActivity {
         setupListeners();
         
         showSongSquare();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        SessionToken sessionToken = new SessionToken(this, new ComponentName(this, MusicService.class));
+        controllerFuture = new MediaController.Builder(this, sessionToken).buildAsync();
+        controllerFuture.addListener(() -> {
+            try {
+                player = controllerFuture.get();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, androidx.core.content.ContextCompat.getMainExecutor(this));
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (controllerFuture != null) {
+            MediaController.releaseFuture(controllerFuture);
+        }
     }
 
     private void initViews() {
@@ -228,6 +259,15 @@ public class MainActivity extends AppCompatActivity {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastBackPressTime < 2000) {
+                boolean backgroundPlay = LxRetrofitClient.getBackgroundPlay(this);
+                if (!backgroundPlay && player != null) {
+                    player.stop();
+                    player.clearMediaItems();
+                }
+                if (!backgroundPlay && floatingPlayerWindow != null) {
+                    floatingPlayerWindow.release();
+                    floatingPlayerWindow = null;
+                }
                 finish();
             } else {
                 Toast.makeText(this, "再按一次退出程序", Toast.LENGTH_SHORT).show();

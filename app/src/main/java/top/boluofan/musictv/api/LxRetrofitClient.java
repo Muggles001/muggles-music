@@ -18,6 +18,7 @@ public class LxRetrofitClient {
     private static final String KEY_PASSWORD = "password";
     private static final String KEY_QUALITY = "quality";
     private static final String KEY_ADMIN_PASSWORD = "admin_password";
+    private static final String KEY_BACKGROUND_PLAY = "background_play";
 
     private static Retrofit retrofit = null;
     private static String currentBaseUrl = null;
@@ -123,6 +124,16 @@ public class LxRetrofitClient {
     public static void setQuality(Context context, String quality) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         prefs.edit().putString(KEY_QUALITY, quality).apply();
+    }
+
+    public static boolean getBackgroundPlay(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return prefs.getBoolean(KEY_BACKGROUND_PLAY, true);
+    }
+
+    public static void setBackgroundPlay(Context context, boolean enabled) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putBoolean(KEY_BACKGROUND_PLAY, enabled).apply();
     }
 
     public static void resetClient() {

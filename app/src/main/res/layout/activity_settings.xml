@@ -136,6 +136,40 @@
 
             </LinearLayout>
 
+            <!-- 允许后台播放 -->
+            <LinearLayout
+                android:id="@+id/layoutBackgroundPlay"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/selector_item_bg"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:layout_marginTop="8dp"
+                android:focusable="true"
+                android:clickable="true">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="允许后台播放"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF" />
+
+                <ImageButton
+                    android:id="@+id/btnBackgroundPlay"
+                    android:layout_width="60dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/toggle_on"
+                    android:scaleType="centerInside"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="允许后台播放" />
+
+            </LinearLayout>
+
             <!-- 清除配置 -->
             <LinearLayout
                 android:id="@+id/layoutLogout"

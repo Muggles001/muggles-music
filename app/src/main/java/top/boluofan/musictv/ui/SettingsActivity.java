@@ -2,20 +2,30 @@ package top.boluofan.musictv.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ImageButton;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.media3.common.Player;
+import androidx.media3.session.MediaController;
+import androidx.media3.session.SessionToken;
+import com.google.common.util.concurrent.ListenableFuture;
+import android.content.ComponentName;
 import top.boluofan.musictv.ConfigActivity;
+import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxRetrofitClient;
 
 public class SettingsActivity extends AppCompatActivity {
     private FloatingPlayerWindow floatingPlayerWindow;
+    private MediaController player;
+    private ListenableFuture<MediaController> controllerFuture;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,18 +62,70 @@ public class SettingsActivity extends AppCompatActivity {
         });
         
         LinearLayout layoutLogout = findViewById(R.id.layoutLogout);
-        layoutLogout.setOnClickListener(v -> {
-            LxRetrofitClient.clearConfig(this);
-            Toast.makeText(this, "配置已清除", Toast.LENGTH_SHORT).show();
-            startActivity(new Intent(this, MainActivity.class));
-            finish();
-        });
+        layoutLogout.setOnClickListener(v -> clearConfigAndLogout());
         
         TextView tvServerUrl = findViewById(R.id.tvServerUrl);
         tvServerUrl.setText(serverUrl);
         
         TextView tvUsername = findViewById(R.id.tvUsername);
         tvUsername.setText(username.isEmpty() ? "未登录" : username);
+        
+        ImageButton btnBackgroundPlay = findViewById(R.id.btnBackgroundPlay);
+        LinearLayout layoutBackgroundPlay = findViewById(R.id.layoutBackgroundPlay);
+        updateBackgroundPlayButton(btnBackgroundPlay);
+        
+        layoutBackgroundPlay.setOnClickListener(v -> {
+            boolean newState = !LxRetrofitClient.getBackgroundPlay(this);
+            LxRetrofitClient.setBackgroundPlay(this, newState);
+            Toast.makeText(this, "后台播放: " + (newState ? "开启" : "关闭"), Toast.LENGTH_SHORT).show();
+            updateBackgroundPlayButton(btnBackgroundPlay);
+        });
+    }
+    
+    private void updateBackgroundPlayButton(ImageButton btn) {
+        boolean isEnabled = LxRetrofitClient.getBackgroundPlay(this);
+        btn.setBackgroundResource(isEnabled ? R.drawable.toggle_on_new : R.drawable.toggle_off_new);
+    }
+
+    private void clearConfigAndLogout() {
+        boolean backgroundPlay = LxRetrofitClient.getBackgroundPlay(this);
+        
+        if (!backgroundPlay && player != null) {
+            player.stop();
+            player.clearMediaItems();
+        }
+        if (!backgroundPlay && floatingPlayerWindow != null) {
+            floatingPlayerWindow.release();
+            floatingPlayerWindow = null;
+        }
+        LxRetrofitClient.clearConfig(this);
+        Toast.makeText(this, "配置已清除", Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(this, ConfigActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        SessionToken sessionToken = new SessionToken(this, new ComponentName(this, MusicService.class));
+        controllerFuture = new MediaController.Builder(this, sessionToken).buildAsync();
+        controllerFuture.addListener(() -> {
+            try {
+                player = controllerFuture.get();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, androidx.core.content.ContextCompat.getMainExecutor(this));
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (controllerFuture != null) {
+            MediaController.releaseFuture(controllerFuture);
+        }
     }
     
     @Override

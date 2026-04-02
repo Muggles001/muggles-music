@@ -289,7 +289,14 @@ public class LibraryActivity extends AppCompatActivity {
     }
 
     private void logout() {
-        if (player != null) player.stop();
+        if (player != null) {
+            player.stop();
+            player.clearMediaItems();
+        }
+        if (floatingPlayerWindow != null) {
+            floatingPlayerWindow.release();
+            floatingPlayerWindow = null;
+        }
         LxRetrofitClient.clearUserInfo(this);
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
