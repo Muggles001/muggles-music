@@ -44,6 +44,9 @@ public class SongSquareFragment extends Fragment {
     
     private SquarePlaylistAdapter playlistAdapter;
     private int currentPage = 1;
+    private boolean hasMore = true;
+    private boolean isLoading = false;
+    private boolean isLoadingMore = false;
 
     @Nullable
     @Override
@@ -99,6 +102,24 @@ public class SongSquareFragment extends Fragment {
         rvPlaylists.setAdapter(playlistAdapter);
         rvPlaylists.setLayoutManager(new GridLayoutManager(requireContext(), 3));
         
+        rvPlaylists.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager();
+                if (layoutManager == null) return;
+                
+                int totalItemCount = layoutManager.getItemCount();
+                int lastVisibleItem = layoutManager.findLastVisibleItemPosition();
+                
+                if (dy > 0 && !isLoadingMore && hasMore) {
+                    if (lastVisibleItem >= totalItemCount - 5) {
+                        loadMorePlaylists();
+                    }
+                }
+            }
+        });
+        
         rvPlaylists.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus) {
                 View bottomNav = getActivity().findViewById(R.id.bottomNav);
@@ -132,6 +153,7 @@ public class SongSquareFragment extends Fragment {
         
         currentSource = newSource;
         currentPage = 1;
+        hasMore = true;
         playlists.clear();
         
         if (playlistAdapter != null) {
@@ -159,12 +181,15 @@ public class SongSquareFragment extends Fragment {
     }
 
     private void loadPlaylists() {
+        if (isLoading) return;
+        isLoading = true;
         showLoading(true);
         
         LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
         apiService.getSongListList(currentSource, "", "hot", currentPage).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
+                isLoading = false;
                 showLoading(false);
                 if (response.isSuccessful() && response.body() != null) {
                     try {
@@ -172,6 +197,10 @@ public class SongSquareFragment extends Fragment {
                         com.google.gson.Gson gson = new com.google.gson.Gson();
                         SongListResult result = gson.fromJson(bodyStr, SongListResult.class);
                         if (result != null && result.getList() != null) {
+                            if (currentPage == 1) {
+                                playlists.clear();
+                            }
+                            hasMore = result.getList().size() >= 20;
                             playlists.addAll(result.getList());
                             updatePlaylistList();
                         }
@@ -194,8 +223,50 @@ public class SongSquareFragment extends Fragment {
 
             @Override
             public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
+                isLoading = false;
                 showLoading(false);
                 Toast.makeText(requireContext(), "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    private void loadMorePlaylists() {
+        if (isLoadingMore || !hasMore) return;
+        isLoadingMore = true;
+        currentPage++;
+        
+        playlistAdapter.setShowFooter(true);
+        
+        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        apiService.getSongListList(currentSource, "", "hot", currentPage).enqueue(new Callback<okhttp3.ResponseBody>() {
+            @Override
+            public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
+                isLoadingMore = false;
+                playlistAdapter.setShowFooter(false);
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        String bodyStr = response.body().string();
+                        com.google.gson.Gson gson = new com.google.gson.Gson();
+                        SongListResult result = gson.fromJson(bodyStr, SongListResult.class);
+                        if (result != null && result.getList() != null) {
+                            hasMore = result.getList().size() >= 20;
+                            playlists.addAll(result.getList());
+                            updatePlaylistList();
+                        }
+                    } catch (Exception e) {
+                        currentPage--;
+                        Toast.makeText(requireContext(), "解析失败", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    currentPage--;
+                }
+            }
+
+            @Override
+            public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
+                isLoadingMore = false;
+                playlistAdapter.setShowFooter(false);
+                currentPage--;
             }
         });
     }

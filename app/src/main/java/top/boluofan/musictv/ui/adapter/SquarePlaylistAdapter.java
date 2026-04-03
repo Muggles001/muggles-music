@@ -15,11 +15,15 @@ import top.boluofan.musictv.api.model.Playlist;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SquarePlaylistAdapter extends RecyclerView.Adapter<SquarePlaylistAdapter.ViewHolder> {
+public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+    private static final int TYPE_ITEM = 0;
+    private static final int TYPE_FOOTER = 1;
 
     private List<Playlist> playlists = new ArrayList<>();
     private OnItemClickListener listener;
     private int selectedPosition = 0;
+    private boolean showFooter = false;
 
     public interface OnItemClickListener {
         void onItemClick(Playlist playlist);
@@ -28,6 +32,17 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<SquarePlaylistAd
     public void setData(List<Playlist> playlists) {
         this.playlists = playlists != null ? playlists : new ArrayList<>();
         notifyDataSetChanged();
+    }
+
+    public void setShowFooter(boolean show) {
+        if (showFooter != show) {
+            showFooter = show;
+            if (show) {
+                notifyItemInserted(getItemCount());
+            } else {
+                notifyItemRemoved(getItemCount());
+            }
+        }
     }
 
     public void setOnItemClickListener(OnItemClickListener listener) {
@@ -43,50 +58,66 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<SquarePlaylistAd
         }
     }
 
+    @Override
+    public int getItemViewType(int position) {
+        if (showFooter && position == getItemCount() - 1) {
+            return TYPE_FOOTER;
+        }
+        return TYPE_ITEM;
+    }
+
     @NonNull
     @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (viewType == TYPE_FOOTER) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_loading_footer, parent, false);
+            return new FooterViewHolder(view);
+        }
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_playlist_card, parent, false);
         return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        if (holder instanceof FooterViewHolder) {
+            return;
+        }
+        ViewHolder viewHolder = (ViewHolder) holder;
         Playlist playlist = playlists.get(position);
         
-        holder.tvName.setText(playlist.getName());
+        viewHolder.tvName.setText(playlist.getName());
         
         String picUrl = playlist.getPicUrl();
         if (picUrl != null && !picUrl.isEmpty()) {
-            Glide.with(holder.itemView.getContext())
+            Glide.with(viewHolder.itemView.getContext())
                     .load(picUrl)
                     .placeholder(R.drawable.ic_playlist_music)
                     .transition(DrawableTransitionOptions.withCrossFade())
                     .centerCrop()
-                    .into(holder.ivCover);
+                    .into(viewHolder.ivCover);
         } else {
-            holder.ivCover.setImageResource(R.drawable.ic_playlist_music);
+            viewHolder.ivCover.setImageResource(R.drawable.ic_playlist_music);
         }
 
         String playCount = playlist.getFormattedPlayCount();
         if (playCount != null && !playCount.isEmpty()) {
-            holder.tvPlayCount.setVisibility(View.VISIBLE);
-            holder.tvPlayCount.setText(playCount);
+            viewHolder.tvPlayCount.setVisibility(View.VISIBLE);
+            viewHolder.tvPlayCount.setText(playCount);
         } else {
-            holder.tvPlayCount.setVisibility(View.GONE);
+            viewHolder.tvPlayCount.setVisibility(View.GONE);
         }
 
         String creator = playlist.getCreator();
         if (creator != null && !creator.isEmpty()) {
-            holder.tvCreator.setVisibility(View.VISIBLE);
-            holder.tvCreator.setText(creator);
+            viewHolder.tvCreator.setVisibility(View.VISIBLE);
+            viewHolder.tvCreator.setText(creator);
         } else {
-            holder.tvCreator.setVisibility(View.GONE);
+            viewHolder.tvCreator.setVisibility(View.GONE);
         }
 
-        holder.itemView.setOnClickListener(v -> {
+        viewHolder.itemView.setOnClickListener(v -> {
             int oldPos = selectedPosition;
-            int newPos = holder.getAdapterPosition();
+            int newPos = viewHolder.getAdapterPosition();
             if (newPos == RecyclerView.NO_POSITION) return;
 
             selectedPosition = newPos;
@@ -97,12 +128,14 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<SquarePlaylistAd
             if (listener != null) listener.onItemClick(playlist);
         });
 
-        holder.itemView.setSelected(selectedPosition == position);
+        viewHolder.itemView.setSelected(selectedPosition == position);
     }
 
     @Override
     public int getItemCount() {
-        return playlists.size();
+        int count = playlists.size();
+        if (showFooter) count++;
+        return count;
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
@@ -117,6 +150,12 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<SquarePlaylistAd
             tvPlayCount = itemView.findViewById(R.id.tvPlayCount);
             tvName = itemView.findViewById(R.id.tvName);
             tvCreator = itemView.findViewById(R.id.tvCreator);
+        }
+    }
+
+    static class FooterViewHolder extends RecyclerView.ViewHolder {
+        FooterViewHolder(View itemView) {
+            super(itemView);
         }
     }
 }
