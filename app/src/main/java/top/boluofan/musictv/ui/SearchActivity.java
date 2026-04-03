@@ -110,6 +110,7 @@ public class SearchActivity extends AppCompatActivity {
         initViews();
         setupRecyclerViews();
         setupListeners();
+        updateResults();
     }
 
     private void initViews() {
@@ -166,7 +167,7 @@ public class SearchActivity extends AppCompatActivity {
                 tv.setLayoutParams(new RecyclerView.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT));
-                tv.setPadding(16, 6, 16, 6);
+                tv.setPadding(20, 6, 20, 6);
                 tv.setTextSize(12);
                 tv.setTextColor(getResources().getColorStateList(R.color.white));
                 tv.setBackgroundResource(R.drawable.bg_tab_selected);
@@ -270,6 +271,7 @@ public class SearchActivity extends AppCompatActivity {
                         if (hotSearchAdapter != null) {
                             hotSearchAdapter.notifyDataSetChanged();
                         }
+                        runOnUiThread(() -> updateResults());
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -541,13 +543,25 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void updateResults() {
-        if (allResults.isEmpty()) {
-            tvNoResults.setVisibility(View.VISIBLE);
-            rvSearchResults.setVisibility(View.GONE);
-        } else {
-            tvNoResults.setVisibility(View.GONE);
-            rvSearchResults.setVisibility(View.VISIBLE);
+        boolean hasHotSearch = !hotSearchWords.isEmpty();
+        boolean hasSearchResults = !allResults.isEmpty();
+        
+        tvHotSearchTitle.setVisibility(hasHotSearch ? View.VISIBLE : View.GONE);
+        rvHotSearch.setVisibility(hasHotSearch ? View.VISIBLE : View.GONE);
+        
+        if (hasSearchResults) {
+            tvResultCount.setVisibility(View.VISIBLE);
             tvResultCount.setText("共 " + allResults.size() + " 首");
+            rvSearchResults.setVisibility(View.VISIBLE);
+            tvNoResults.setVisibility(View.GONE);
+        } else {
+            tvResultCount.setVisibility(View.GONE);
+            rvSearchResults.setVisibility(View.GONE);
+            if (!hasHotSearch) {
+                tvNoResults.setVisibility(View.VISIBLE);
+            } else {
+                tvNoResults.setVisibility(View.GONE);
+            }
         }
         
         songAdapter.setSongs(allResults);
@@ -687,6 +701,22 @@ public class SearchActivity extends AppCompatActivity {
                 }
             }
         }
+        
+        if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+            View currentFocus = getCurrentFocus();
+            if (currentFocus != null) {
+                if (currentFocus.getParent() == rvSourceList) {
+                    if (hotSearchWords.isEmpty()) {
+                        return true;
+                    }
+                } else if (currentFocus.getParent() == rvHotSearch) {
+                    if (allResults.isEmpty()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        
         return super.onKeyDown(keyCode, event);
     }
     
