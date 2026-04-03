@@ -68,6 +68,7 @@ public class SearchActivity extends AppCompatActivity {
     
     private EditText etSearch;
     private Button btnSearch;
+    private ImageButton btnClear;
     private RecyclerView rvSourceList;
     private RecyclerView rvHotSearch;
     private RecyclerView rvSearchResults;
@@ -116,6 +117,7 @@ public class SearchActivity extends AppCompatActivity {
     private void initViews() {
         etSearch = findViewById(R.id.etSearch);
         btnSearch = findViewById(R.id.btnSearch);
+        btnClear = findViewById(R.id.btnClear);
         btnScan = findViewById(R.id.btnScan);
         rvSourceList = findViewById(R.id.rvSourceList);
         rvHotSearch = findViewById(R.id.rvHotSearch);
@@ -250,7 +252,12 @@ public class SearchActivity extends AppCompatActivity {
     private void loadHotSearch() {
         String source = currentSource;
         if ("all".equals(source)) {
-            source = "wy";
+            hotSearchWords.clear();
+            if (hotSearchAdapter != null) {
+                hotSearchAdapter.notifyDataSetChanged();
+            }
+            runOnUiThread(() -> updateResults());
+            return;
         }
         
         LxApiService apiService = LxRetrofitClient.getApiService(this);
@@ -294,6 +301,13 @@ public class SearchActivity extends AppCompatActivity {
             }
             hideKeyboard();
             search(keyword);
+        });
+        
+        btnClear.setOnClickListener(v -> {
+            etSearch.setText("");
+            lastKeyword = "";
+            allResults.clear();
+            updateResults();
         });
         
         etSearch.setOnEditorActionListener((v, actionId, event) -> {
@@ -706,11 +720,11 @@ public class SearchActivity extends AppCompatActivity {
             View currentFocus = getCurrentFocus();
             if (currentFocus != null) {
                 if (currentFocus.getParent() == rvSourceList) {
-                    if (hotSearchWords.isEmpty()) {
+                    if (!"all".equals(currentSource) && hotSearchWords.isEmpty()) {
                         return true;
                     }
                 } else if (currentFocus.getParent() == rvHotSearch) {
-                    if (allResults.isEmpty()) {
+                    if (!"all".equals(currentSource) && allResults.isEmpty()) {
                         return true;
                     }
                 }
