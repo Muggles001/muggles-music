@@ -107,22 +107,32 @@ public class SongSquareActivity extends AppCompatActivity {
         
         playlistAdapter = new SquarePlaylistAdapter();
         rvPlaylists.setAdapter(playlistAdapter);
-        rvPlaylists.setLayoutManager(new GridLayoutManager(this, 5));
+        GridLayoutManager gridLayoutManager = new GridLayoutManager(this, 5);
+        rvPlaylists.setLayoutManager(gridLayoutManager);
         
         rvPlaylists.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
                 GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager();
-                if (layoutManager == null) return;
+                if (layoutManager == null || isLoadingMore || !hasMore) return;
                 
+                int spanCount = gridLayoutManager.getSpanCount();
                 int totalItemCount = layoutManager.getItemCount();
-                int lastVisibleItem = layoutManager.findLastVisibleItemPosition();
+                int firstVisiblePosition = layoutManager.findFirstVisibleItemPosition();
                 
-                if (dy > 0 && !isLoadingMore && hasMore) {
-                    if (lastVisibleItem >= totalItemCount - 5) {
-                        loadMorePlaylists();
-                    }
+                if (dy <= 0) return;
+                
+                int recyclerHeight = recyclerView.getHeight();
+                int itemHeight = recyclerHeight / spanCount;
+                if (itemHeight <= 0) return;
+                
+                int visibleRows = recyclerHeight / itemHeight;
+                int thresholdRow = Math.max(1, visibleRows - 1);
+                int thresholdPosition = totalItemCount - (thresholdRow * spanCount);
+                
+                if (firstVisiblePosition >= thresholdPosition - spanCount) {
+                    loadMorePlaylists();
                 }
             }
         });
