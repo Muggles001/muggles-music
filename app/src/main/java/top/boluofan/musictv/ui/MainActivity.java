@@ -14,6 +14,8 @@ import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 import com.google.common.util.concurrent.ListenableFuture;
 import android.content.ComponentName;
+import android.util.Log;
+import androidx.recyclerview.widget.RecyclerView;
 import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.FloatingPlayerWindow;
@@ -22,6 +24,7 @@ import top.boluofan.musictv.util.FocusAnimationHelper;
 import top.boluofan.musictv.ui.SongSquareFragment;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MainActivity";
     private FloatingPlayerWindow floatingPlayerWindow;
     private LinearLayout tabLibrary;
     private LinearLayout tabSearch;
@@ -248,11 +251,30 @@ public class MainActivity extends AppCompatActivity {
     
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        Log.d(TAG, "onKeyDown: keyCode=" + keyCode);
         if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
             View currentFocus = getCurrentFocus();
+            Log.d(TAG, "LEFT key, currentFocus=" + currentFocus);
             if (currentFocus != null && floatingPlayerWindow != null) {
                 if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
                     return true;
+                }
+            }
+
+            if (currentFocus != null && currentFocus.getId() == R.id.tabSearch) {
+                View fragmentView = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer).getView();
+                if (fragmentView != null) {
+                    RecyclerView rvSourceList = fragmentView.findViewById(R.id.rvSourceList);
+                    if (rvSourceList != null) {
+                        RecyclerView.LayoutManager lm = rvSourceList.getLayoutManager();
+                        if (lm != null) {
+                            View firstSource = lm.findViewByPosition(0);
+                            if (firstSource != null) {
+                                firstSource.setFocusable(true);
+                                return firstSource.requestFocus();
+                            }
+                        }
+                    }
                 }
             }
         }

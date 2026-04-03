@@ -2,6 +2,7 @@ package top.boluofan.musictv.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -320,9 +321,33 @@ public class SongSquareActivity extends AppCompatActivity {
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
             View currentFocus = getCurrentFocus();
+            Log.d(TAG, "onKeyDown LEFT, currentFocus=" + currentFocus);
+            
             if (currentFocus != null && floatingPlayerWindow != null) {
                 if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
                     return true;
+                }
+            }
+
+            if (currentFocus != null) {
+                int[] location = new int[2];
+                currentFocus.getLocationOnScreen(location);
+                int viewY = location[1];
+                
+                int screenHeight = getResources().getDisplayMetrics().heightPixels;
+                Log.d(TAG, "viewY=" + viewY + ", screenHeight=" + screenHeight + ", threshold=" + (screenHeight * 0.8f));
+                
+                if (viewY > screenHeight * 0.8f) {
+                    RecyclerView.LayoutManager lm = rvSourceList.getLayoutManager();
+                    Log.d(TAG, "In bottom area, rvSourceList lm=" + lm);
+                    if (lm != null) {
+                        View firstSource = lm.findViewByPosition(0);
+                        Log.d(TAG, "firstSource=" + firstSource);
+                        if (firstSource != null) {
+                            firstSource.setFocusable(true);
+                            return firstSource.requestFocus();
+                        }
+                    }
                 }
             }
         }
