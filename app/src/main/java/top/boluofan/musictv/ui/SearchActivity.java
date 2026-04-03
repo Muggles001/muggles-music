@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.content.ComponentName;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -161,6 +162,13 @@ public class SearchActivity extends AppCompatActivity {
         });
         
         rvHotSearch.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        rvHotSearch.addItemDecoration(new RecyclerView.ItemDecoration() {
+            @Override
+            public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
+                outRect.left = 2;
+                outRect.right = 2;
+            }
+        });
         hotSearchAdapter = new androidx.recyclerview.widget.RecyclerView.Adapter<HotSearchViewHolder>() {
             @NonNull
             @Override
@@ -169,7 +177,7 @@ public class SearchActivity extends AppCompatActivity {
                 tv.setLayoutParams(new RecyclerView.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT));
-                tv.setPadding(20, 6, 20, 6);
+                tv.setPadding(18, 6, 18, 6);
                 tv.setTextSize(12);
                 tv.setTextColor(getResources().getColorStateList(R.color.white));
                 tv.setBackgroundResource(R.drawable.bg_tab_selected);
