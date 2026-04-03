@@ -1,6 +1,7 @@
 package top.boluofan.musictv.ui;
 
 import android.content.Intent;
+import android.content.DialogInterface;
 import android.content.ComponentName;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -305,70 +306,70 @@ public class SearchActivity extends AppCompatActivity {
     }
     
     private void showScanSearchDialog() {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_scan_search, null);
-        ImageView ivQrCode = dialogView.findViewById(R.id.ivQrCode);
-        TextView tvIpAddress = dialogView.findViewById(R.id.tvIpAddress);
-        
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setView(dialogView)
-                .setNegativeButton("关闭", (d, which) -> {
-                    if (searchWebServer != null) {
-                        searchWebServer.stop();
-                        searchWebServer = null;
-                    }
-                })
-                .create();
-        
         String ipAddress = getIPAddress();
         if (ipAddress == null) {
-            tvIpAddress.setText("无法获取局域网地址");
-        } else {
-            String searchUrl = "http://" + ipAddress + ":" + SEARCH_SERVER_PORT;
-            tvIpAddress.setText(searchUrl);
-            generateQrCode(searchUrl, ivQrCode);
-            
-            searchWebServer = new SearchWebServer(this, SEARCH_SERVER_PORT, (keyword, source) -> {
-                mainHandler.post(() -> {
-                    dialog.dismiss();
-                    if (searchWebServer != null) {
-                        searchWebServer.stop();
-                        searchWebServer = null;
-                    }
-                    
-                    if (source != null && !source.isEmpty()) {
-                        int sourceIdx = -1;
-                        for (int i = 0; i < SOURCES.length; i++) {
-                            if (SOURCES[i].equals(source)) {
-                                sourceIdx = i;
-                                break;
-                            }
-                        }
-                        if (sourceIdx >= 0) {
-                            selectSource(sourceIdx);
-                        }
-                    }
-                    
-                    etSearch.setText(keyword);
-                    search(keyword);
-                    Toast.makeText(this, "收到推送的搜索: " + keyword, Toast.LENGTH_SHORT).show();
-                });
-            });
-            
-            try {
-                searchWebServer.start();
-            } catch (Exception e) {
-                Toast.makeText(this, "服务启动失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
+            Toast.makeText(this, "无法获取局域网地址", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        String searchUrl = "http://" + ipAddress + ":" + SEARCH_SERVER_PORT;
         
-        dialog.setOnDismissListener(d -> {
+        AlertDialog qrDialog = DialogHelper.showQrCodeDialog(
+            this,
+            "扫码搜索",
+            "在手机浏览器访问地址后搜索歌曲",
+            searchUrl,
+            searchUrl
+        );
+        
+        qrDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "关闭", (d, which) -> {
             if (searchWebServer != null) {
                 searchWebServer.stop();
                 searchWebServer = null;
             }
         });
         
-        dialog.show();
+        searchWebServer = new SearchWebServer(this, SEARCH_SERVER_PORT, (keyword, source) -> {
+            mainHandler.post(() -> {
+                qrDialog.dismiss();
+                if (searchWebServer != null) {
+                    searchWebServer.stop();
+                    searchWebServer = null;
+                }
+                
+                if (source != null && !source.isEmpty()) {
+                    int sourceIdx = -1;
+                    for (int i = 0; i < SOURCES.length; i++) {
+                        if (SOURCES[i].equals(source)) {
+                            sourceIdx = i;
+                            break;
+                        }
+                    }
+                    if (sourceIdx >= 0) {
+                        selectSource(sourceIdx);
+                    }
+                }
+                
+                etSearch.setText(keyword);
+                search(keyword);
+                Toast.makeText(this, "收到推送的搜索: " + keyword, Toast.LENGTH_SHORT).show();
+            });
+        });
+        
+        try {
+            searchWebServer.start();
+        } catch (Exception e) {
+            Toast.makeText(this, "服务启动失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        
+        qrDialog.setOnDismissListener(d -> {
+            if (searchWebServer != null) {
+                searchWebServer.stop();
+                searchWebServer = null;
+            }
+        });
+        
+        qrDialog.show();
     }
     
     private void generateQrCode(String text, ImageView imageView) {

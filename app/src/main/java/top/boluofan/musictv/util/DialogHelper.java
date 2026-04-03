@@ -1,11 +1,15 @@
 package top.boluofan.musictv.util;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.TextView;
+import androidx.appcompat.app.AlertDialog;
+import java.util.Hashtable;
 import top.boluofan.musictv.R;
 
 public class DialogHelper {
@@ -107,5 +111,66 @@ public class DialogHelper {
 
     public static AlertDialog showOverwriteConfirmDialog(Context context, String playlistName, IDialogCallback callback) {
         return showConfirmDialog(context, "歌单已存在", "已存在名为「" + playlistName + "」的歌单，是否覆盖？", "覆盖", "取消", callback);
+    }
+
+    public static androidx.appcompat.app.AlertDialog showQrCodeDialog(Context context, String title, String hint, String qrCodeUrl, String ipAddress) {
+        View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_scan_search, null);
+        
+        TextView tvTitle = dialogView.findViewById(R.id.tvDialogTitle);
+        TextView tvHint = dialogView.findViewById(R.id.tvDialogHint);
+        ImageView ivQrCode = dialogView.findViewById(R.id.ivQrCode);
+        TextView tvIpAddress = dialogView.findViewById(R.id.tvIpAddress);
+        
+        tvTitle.setText(title);
+        tvHint.setText(hint);
+        tvIpAddress.setText(ipAddress);
+        
+        android.graphics.Bitmap qrBitmap = generateQrCodeBitmap(qrCodeUrl, 512);
+        if (qrBitmap != null) {
+            ivQrCode.setImageBitmap(qrBitmap);
+        }
+        
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(context);
+        builder.setView(dialogView);
+        
+        androidx.appcompat.app.AlertDialog dialog = builder.create();
+        
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawableResource(R.drawable.bg_dialog);
+            }
+        });
+        
+        return dialog;
+    }
+
+    private static android.graphics.Bitmap generateQrCodeBitmap(String content, int size) {
+        try {
+            com.google.zxing.BarcodeFormat format = com.google.zxing.BarcodeFormat.QR_CODE;
+            com.google.zxing.EncodeHintType[] hintTypes = new com.google.zxing.EncodeHintType[]{
+                com.google.zxing.EncodeHintType.CHARACTER_SET,
+                com.google.zxing.EncodeHintType.MARGIN
+            };
+            String[] hints = new String[]{"UTF-8", "1"};
+            Hashtable<com.google.zxing.EncodeHintType, String> hints2 = new Hashtable<>();
+            hints2.put(com.google.zxing.EncodeHintType.CHARACTER_SET, "UTF-8");
+            hints2.put(com.google.zxing.EncodeHintType.MARGIN, "1");
+            
+            com.google.zxing.qrcode.QRCodeWriter writer = new com.google.zxing.qrcode.QRCodeWriter();
+            com.google.zxing.common.BitMatrix bitMatrix = writer.encode(content, format, size, size, hints2);
+            
+            int width = bitMatrix.getWidth();
+            int height = bitMatrix.getHeight();
+            android.graphics.Bitmap bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.RGB_565);
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    bmp.setPixel(x, y, bitMatrix.get(x, y) ? android.graphics.Color.BLACK : android.graphics.Color.WHITE);
+                }
+            }
+            return bmp;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

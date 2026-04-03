@@ -1,5 +1,6 @@
 package top.boluofan.musictv;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -13,6 +14,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
@@ -28,6 +30,7 @@ import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.api.model.LoginResponse;
 import top.boluofan.musictv.ui.LibraryActivity;
+import top.boluofan.musictv.util.DialogHelper;
 
 public class ConfigActivity extends AppCompatActivity {
     private static final String TAG = "ConfigActivity";
@@ -35,34 +38,48 @@ public class ConfigActivity extends AppCompatActivity {
     private static final int SERVER_PORT = 8088;
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private boolean isQrMode = false;
+    
+    private EditText etUrl;
+    private EditText etUsername;
+    private EditText etPassword;
+    private Button btnConnect;
+    private View layoutManual;
+    private View layoutQr;
+    private Button btnToggleMode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (LxRetrofitClient.isLoggedIn(this)) {
-            startActivity(new Intent(this, LibraryActivity.class));
-            finish();
-            return;
-        }
-
         setContentView(R.layout.activity_config);
 
-        EditText etUrl = findViewById(R.id.etUrl);
-        EditText etUsername = findViewById(R.id.etUsername);
-        EditText etPassword = findViewById(R.id.etPassword);
-        Button btnConnect = findViewById(R.id.btnConnect);
+        etUrl = findViewById(R.id.etUrl);
+        etUsername = findViewById(R.id.etUsername);
+        etPassword = findViewById(R.id.etPassword);
+        btnConnect = findViewById(R.id.btnConnect);
         ImageView ivQrCode = findViewById(R.id.ivQrCode);
         TextView tvIpAddress = findViewById(R.id.tvIpAddress);
-        View layoutManual = findViewById(R.id.layoutManual);
-        View layoutQr = findViewById(R.id.layoutQr);
-        Button btnToggleMode = findViewById(R.id.btnToggleMode);
+        layoutManual = findViewById(R.id.layoutManual);
+        layoutQr = findViewById(R.id.layoutQr);
+        btnToggleMode = findViewById(R.id.btnToggleMode);
 
         etUrl.setText("http://localhost:9527");
         
         String serverUrlFromSettings = getIntent().getStringExtra("server_url");
+        String usernameFromSettings = getIntent().getStringExtra("username");
+        
         if (serverUrlFromSettings != null && !serverUrlFromSettings.isEmpty()) {
             etUrl.setText(serverUrlFromSettings);
+        }
+        
+        if (usernameFromSettings != null && !usernameFromSettings.isEmpty()) {
+            etUsername.setText(usernameFromSettings);
+        }
+        
+        if (LxRetrofitClient.isLoggedIn(this)) {
+            String savedPassword = LxRetrofitClient.getPassword(this);
+            if (!savedPassword.isEmpty()) {
+                etPassword.setText(savedPassword);
+            }
         }
 
         btnToggleMode.setOnClickListener(v -> {
@@ -77,7 +94,7 @@ public class ConfigActivity extends AppCompatActivity {
                 etPassword.setFocusable(false);
                 btnConnect.setFocusable(false);
 
-                startLoginWebServer(tvIpAddress, ivQrCode, etUrl, etUsername, etPassword, btnConnect);
+                showQrCodeDialog();
             } else {
                 btnToggleMode.setText("扫码配置");
                 layoutManual.setVisibility(View.VISIBLE);
@@ -172,6 +189,67 @@ public class ConfigActivity extends AppCompatActivity {
                 }
             });
         });
+    }
+
+    private void showQrCodeDialog() {
+        String ipAddress = getIPAddress();
+        if (ipAddress == null) {
+            Toast.makeText(this, "无法获取局域网地址，请检查网络", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String loginUrl = "http://" + ipAddress + ":" + SERVER_PORT;
+        
+        AlertDialog qrDialog = DialogHelper.showQrCodeDialog(
+            this,
+            "扫码配置服务器",
+            "在手机浏览器访问地址后填写配置信息",
+            loginUrl,
+            "访问管理: " + loginUrl
+        );
+        
+        qrDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "关闭", (d, which) -> {
+            if (webServer != null) {
+                webServer.stop();
+                webServer = null;
+            }
+            isQrMode = false;
+            btnToggleMode.setText("扫码配置");
+            layoutManual.setVisibility(View.VISIBLE);
+            layoutQr.setVisibility(View.GONE);
+            
+            etUrl.setFocusable(true);
+            etUsername.setFocusable(true);
+            etPassword.setFocusable(true);
+            btnConnect.setFocusable(true);
+        });
+        
+        webServer = new LoginWebServer(this, SERVER_PORT, (url, username, password) -> {
+            mainHandler.post(() -> {
+                qrDialog.dismiss();
+                etUrl.setText(url);
+                etUsername.setText(username);
+                etPassword.setText(password);
+                Toast.makeText(this, "收到推送信息，正在登录...", Toast.LENGTH_SHORT).show();
+                btnConnect.performClick();
+            });
+        });
+
+        try {
+            webServer.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(this, "服务启动失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        
+        qrDialog.setOnDismissListener(d -> {
+            if (webServer != null) {
+                webServer.stop();
+                webServer = null;
+            }
+        });
+        
+        qrDialog.show();
     }
 
     private void startLoginWebServer(TextView tvIp, ImageView ivQr, EditText etUrl, EditText etUsername, EditText etPassword, Button btnConnect) {

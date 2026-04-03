@@ -39,26 +39,33 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private static final String EXTRA_SERVER_URL = "server_url";
+    private static final String EXTRA_USERNAME = "username";
     
     private void initViews() {
         ImageButton btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
         
         String serverUrl = LxRetrofitClient.getServerUrl(this);
+        String username = LxRetrofitClient.getUsername(this);
         
         LinearLayout layoutServerConfig = findViewById(R.id.layoutServerConfig);
         layoutServerConfig.setOnClickListener(v -> {
             Intent intent = new Intent(this, ConfigActivity.class);
             intent.putExtra(EXTRA_SERVER_URL, serverUrl);
+            intent.putExtra(EXTRA_USERNAME, username);
             startActivity(intent);
         });
 
         LinearLayout layoutUserInfo = findViewById(R.id.layoutUserInfo);
-        String username = LxRetrofitClient.getUsername(this);
         layoutUserInfo.setOnClickListener(v -> {
-            Intent intent = new Intent(this, ConfigActivity.class);
-            intent.putExtra(EXTRA_SERVER_URL, serverUrl);
-            startActivity(intent);
+            if (LxRetrofitClient.isLoggedIn(this)) {
+                Intent intent = new Intent(this, LibraryActivity.class);
+                startActivity(intent);
+            } else {
+                Intent intent = new Intent(this, ConfigActivity.class);
+                intent.putExtra(EXTRA_SERVER_URL, serverUrl);
+                startActivity(intent);
+            }
         });
         
         LinearLayout layoutLogout = findViewById(R.id.layoutLogout);
