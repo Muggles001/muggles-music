@@ -50,7 +50,7 @@ public class PlayerActivity extends AppCompatActivity {
     private TextView tvCurrentTime, tvDuration;
     private TextView tvTooltip, tvSeekProgress, tvPlaylistName, tvPlaylistCount;
     private android.widget.LinearLayout layoutTooltip, layoutSeekProgress;
-    private ImageButton btnRepeat, btnPrev, btnPlayPause, btnNext, btnFav, btnQueue;
+    private ImageButton btnRepeat, btnPrev, btnPlayPause, btnNext, btnScrape, btnQueue;
     private android.view.View layoutDrawer;
     private android.view.ViewGroup layoutMainContent;
     private RecyclerView rvDrawerSongs;
@@ -60,8 +60,6 @@ public class PlayerActivity extends AppCompatActivity {
     private PlayerOptionAdapter optionAdapter;
     private String scrapedPicUrl = ""; // 用于保存刮削到的封面地址
     private String scrapedArtist = ""; // 用于保存刮削到的歌手名
-    private boolean isFavorited = false;
-    private java.util.Set<String> favoritesSet = new java.util.HashSet<>();
 
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
@@ -174,7 +172,7 @@ public class PlayerActivity extends AppCompatActivity {
         btnPrev = findViewById(R.id.btnPrev);
         btnPlayPause = findViewById(R.id.btnPlayPause);
         btnNext = findViewById(R.id.btnNext);
-        btnFav = findViewById(R.id.btnFav);
+        btnScrape = findViewById(R.id.btnScrape);
         btnQueue = findViewById(R.id.btnQueue);
         layoutDrawer = findViewById(R.id.layoutDrawer);
         layoutMainContent = findViewById(R.id.layoutMainContent);
@@ -280,8 +278,11 @@ public class PlayerActivity extends AppCompatActivity {
             }
         });
 
-        btnFav.setOnClickListener(v -> {
-            toggleFavorite();
+        btnScrape.setOnClickListener(v -> {
+            String songName = tvBigTitle.getText().toString();
+            if (!songName.isEmpty() && !songName.equals("Song Title")) {
+                startExternalScrapeFlow(songName);
+            }
             resetControlsTimer();
         });
 
@@ -318,8 +319,6 @@ public class PlayerActivity extends AppCompatActivity {
             updateControlsUI();
             resetControlsTimer();
         });
-
-        loadFavorites();
     }
 
     private void toggleDrawer(boolean show) {
@@ -517,7 +516,7 @@ public class PlayerActivity extends AppCompatActivity {
                 if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
                     // If focus is already on bottom row, hide
                     View focused = getCurrentFocus();
-                    if (focused == btnPlayPause || focused == btnPrev || focused == btnNext || focused == btnFav || focused == btnRepeat || focused == btnQueue) {
+                    if (focused == btnPlayPause || focused == btnPrev || focused == btnNext || focused == btnScrape || focused == btnRepeat || focused == btnQueue) {
                         hideBottomControls();
                         return true;
                     }
@@ -610,62 +609,9 @@ public class PlayerActivity extends AppCompatActivity {
             btnRepeat.setAlpha(1.0f);
         }
         
-        updateFavUI();
         if (layoutDrawer.getVisibility() == View.VISIBLE) {
             drawerSongAdapter.setPlayingIndex(player.getCurrentMediaItemIndex());
             drawerSongAdapter.setPlayerPlaying(player.isPlaying());
-        }
-    }
-
-    private void loadFavorites() {
-        top.boluofan.musictv.api.MusicRepository repository = 
-            top.boluofan.musictv.api.MusicRepository.getInstance(this);
-        repository.getUserList(new top.boluofan.musictv.api.MusicRepository.RepositoryCallback<top.boluofan.musictv.api.model.ListData>() {
-            @Override
-            public void onSuccess(top.boluofan.musictv.api.model.ListData result) {
-                if (result.getLoveList() != null) {
-                    favoritesSet = new java.util.HashSet<>();
-                    for (top.boluofan.musictv.api.model.MusicInfo song : result.getLoveList()) {
-                        favoritesSet.add(song.getName());
-                    }
-                    runOnUiThread(() -> updateFavUI());
-                }
-            }
-            @Override
-            public void onError(String error) {
-                Log.e(TAG, "加载收藏失败: " + error);
-            }
-        });
-    }
-
-    private void updateFavUI() {
-        if (player == null || player.getCurrentMediaItem() == null) return;
-        
-        String songName = tvBigTitle.getText().toString();
-        isFavorited = favoritesSet.contains(songName);
-        
-        btnFav.setImageResource(isFavorited ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
-        btnFav.setColorFilter(isFavorited ? android.graphics.Color.RED : android.graphics.Color.WHITE);
-        btnFav.setAlpha(1.0f);
-    }
-
-    private void toggleFavorite() {
-        if (player == null || player.getCurrentMediaItem() == null) return;
-        
-        String songName = tvBigTitle.getText().toString();
-        if (songName.isEmpty()) return;
-
-        top.boluofan.musictv.api.MusicRepository repository = 
-            top.boluofan.musictv.api.MusicRepository.getInstance(this);
-
-        if (isFavorited) {
-            Toast.makeText(PlayerActivity.this, "取消收藏功能已迁移到歌单同步", Toast.LENGTH_SHORT).show();
-            favoritesSet.remove(songName);
-            updateFavUI();
-        } else {
-            Toast.makeText(PlayerActivity.this, "添加收藏功能已迁移到歌单同步", Toast.LENGTH_SHORT).show();
-            favoritesSet.add(songName);
-            updateFavUI();
         }
     }
 

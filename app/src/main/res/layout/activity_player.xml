@@ -378,27 +378,7 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent" />
 
-            <!-- RIGHT GROUP: Mode, Fav -->
-            <ImageButton
-                android:id="@+id/btnFav"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_marginEnd="48dp"
-                android:background="@drawable/btn_focused_circle"
-                android:src="@drawable/ic_favorite_border"
-                android:scaleType="centerInside"
-                android:padding="12dp"
-                android:alpha="0.8"
-                android:contentDescription="Favorite"
-                android:focusable="true"
-                android:nextFocusUp="@+id/progressBar"
-                android:nextFocusLeft="@+id/btnRepeat"
-                android:nextFocusRight="@+id/btnFav"
-                android:nextFocusDown="@+id/btnFav"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/btnQueue"
-                app:layout_constraintBottom_toBottomOf="@+id/btnQueue"/>
-
+            <!-- RIGHT GROUP: Mode, Scrape -->
             <ImageButton
                 android:id="@+id/btnRepeat"
                 android:layout_width="60dp"
@@ -413,9 +393,29 @@
                 android:focusable="true"
                 android:nextFocusUp="@+id/progressBar"
                 android:nextFocusLeft="@+id/btnNext"
-                android:nextFocusRight="@+id/btnFav"
+                android:nextFocusRight="@+id/btnScrape"
                 android:nextFocusDown="@+id/btnRepeat"
-                app:layout_constraintEnd_toStartOf="@+id/btnFav"
+                app:layout_constraintEnd_toStartOf="@+id/btnScrape"
+                app:layout_constraintTop_toTopOf="@+id/btnQueue"
+                app:layout_constraintBottom_toBottomOf="@+id/btnQueue"/>
+
+            <ImageButton
+                android:id="@+id/btnScrape"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_marginEnd="48dp"
+                android:background="@drawable/btn_focused_circle"
+                android:src="@drawable/ic_scrape"
+                android:scaleType="centerInside"
+                android:padding="12dp"
+                android:alpha="0.8"
+                android:contentDescription="Scrape"
+                android:focusable="true"
+                android:nextFocusUp="@+id/progressBar"
+                android:nextFocusLeft="@+id/btnRepeat"
+                android:nextFocusRight="@+id/btnScrape"
+                android:nextFocusDown="@+id/btnScrape"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/btnQueue"
                 app:layout_constraintBottom_toBottomOf="@+id/btnQueue"/>
         </androidx.constraintlayout.widget.ConstraintLayout>
