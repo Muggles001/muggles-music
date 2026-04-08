@@ -16,7 +16,7 @@ public class LoginWebServer extends NanoHTTPD {
     private OnLoginDataReceivedListener listener;
 
     public interface OnLoginDataReceivedListener {
-        void onDataReceived(String url, String username, String password);
+        void onDataReceived(String url, String username, String password, String token);
     }
 
     public LoginWebServer(Context context, int port, OnLoginDataReceivedListener listener) {
@@ -43,9 +43,10 @@ public class LoginWebServer extends NanoHTTPD {
                 String url = params.get("url");
                 String username = params.get("username");
                 String password = params.get("password");
+                String token = params.get("token");
 
                 if (listener != null) {
-                    listener.onDataReceived(url, username, password);
+                    listener.onDataReceived(url, username, password, token);
                 }
 
                 return newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "SUCCESS");
@@ -92,6 +93,10 @@ public class LoginWebServer extends NanoHTTPD {
                 "            <label>密码 (可选)</label>\n" +
                 "            <input type=\"password\" id=\"password\" placeholder=\"Password\">\n" +
                 "        </div>\n" +
+                "        <div class=\"field\">\n" +
+                "            <label>Token (可选)</label>\n" +
+                "            <input type=\"text\" id=\"token\" placeholder=\"User Token\">\n" +
+                "        </div>\n" +
                 "        <button onclick=\"submitLogin()\" id=\"btn\">推送到电视</button>\n" +
                 "        <div id=\"status\"></div>\n" +
                 "    </div>\n" +
@@ -112,6 +117,7 @@ public class LoginWebServer extends NanoHTTPD {
                 "            formData.append('url', url);\n" +
                 "            formData.append('username', username);\n" +
                 "            formData.append('password', password);\n" +
+                "            formData.append('token', document.getElementById('token').value);\n" +
                 "\n" +
                 "            fetch('/login', {\n" +
                 "                method: 'POST',\n" +

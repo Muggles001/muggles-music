@@ -42,6 +42,7 @@ public class ConfigActivity extends AppCompatActivity {
     private EditText etUrl;
     private EditText etUsername;
     private EditText etPassword;
+    private EditText etToken;
     private Button btnConnect;
     private View layoutManual;
     private View layoutQr;
@@ -55,6 +56,7 @@ public class ConfigActivity extends AppCompatActivity {
         etUrl = findViewById(R.id.etUrl);
         etUsername = findViewById(R.id.etUsername);
         etPassword = findViewById(R.id.etPassword);
+        etToken = findViewById(R.id.etToken);
         btnConnect = findViewById(R.id.btnConnect);
         ImageView ivQrCode = findViewById(R.id.ivQrCode);
         TextView tvIpAddress = findViewById(R.id.tvIpAddress);
@@ -82,6 +84,11 @@ public class ConfigActivity extends AppCompatActivity {
             }
         }
 
+        String savedToken = LxRetrofitClient.getToken(this);
+        if (!savedToken.isEmpty()) {
+            etToken.setText(savedToken);
+        }
+
         btnToggleMode.setOnClickListener(v -> {
             isQrMode = !isQrMode;
             if (isQrMode) {
@@ -92,6 +99,7 @@ public class ConfigActivity extends AppCompatActivity {
                 etUrl.setFocusable(false);
                 etUsername.setFocusable(false);
                 etPassword.setFocusable(false);
+                etToken.setFocusable(false);
                 btnConnect.setFocusable(false);
 
                 showQrCodeDialog();
@@ -106,6 +114,8 @@ public class ConfigActivity extends AppCompatActivity {
                 etUsername.setFocusableInTouchMode(true);
                 etPassword.setFocusable(true);
                 etPassword.setFocusableInTouchMode(true);
+                etToken.setFocusable(true);
+                etToken.setFocusableInTouchMode(true);
                 btnConnect.setFocusable(true);
 
                 if (webServer != null) {
@@ -125,6 +135,7 @@ public class ConfigActivity extends AppCompatActivity {
         etUrl.setOnClickListener(clickToShowKeyboard);
         etUsername.setOnClickListener(clickToShowKeyboard);
         etPassword.setOnClickListener(clickToShowKeyboard);
+        etToken.setOnClickListener(clickToShowKeyboard);
 
         btnConnect.setOnClickListener(v -> {
             InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
@@ -133,6 +144,7 @@ public class ConfigActivity extends AppCompatActivity {
             String urlRaw = etUrl.getText().toString().trim();
             String username = etUsername.getText().toString().trim();
             String password = etPassword.getText().toString().trim();
+            String token = etToken.getText().toString().trim();
 
             if (urlRaw.isEmpty()) {
                 Toast.makeText(this, "请输入服务器地址", Toast.LENGTH_SHORT).show();
@@ -147,7 +159,7 @@ public class ConfigActivity extends AppCompatActivity {
             btnConnect.setEnabled(false);
             btnConnect.setText("连接中...");
 
-            LxRetrofitClient.saveConfig(this, finalUrl, username, password);
+            LxRetrofitClient.saveConfig(this, finalUrl, username, password, token);
             LxRetrofitClient.resetClient();
 
             if (username.isEmpty() || password.isEmpty()) {
@@ -224,12 +236,13 @@ public class ConfigActivity extends AppCompatActivity {
             btnConnect.setFocusable(true);
         });
         
-        webServer = new LoginWebServer(this, SERVER_PORT, (url, username, password) -> {
+        webServer = new LoginWebServer(this, SERVER_PORT, (url, username, password, token) -> {
             mainHandler.post(() -> {
                 qrDialog.dismiss();
                 etUrl.setText(url);
                 etUsername.setText(username);
                 etPassword.setText(password);
+                etToken.setText(token);
                 Toast.makeText(this, "收到推送信息，正在登录...", Toast.LENGTH_SHORT).show();
                 btnConnect.performClick();
             });
@@ -264,11 +277,12 @@ public class ConfigActivity extends AppCompatActivity {
 
         generateQrCode(loginUrl, ivQr);
 
-        webServer = new LoginWebServer(this, SERVER_PORT, (url, username, password) -> {
+        webServer = new LoginWebServer(this, SERVER_PORT, (url, username, password, token) -> {
             mainHandler.post(() -> {
                 etUrl.setText(url);
                 etUsername.setText(username);
                 etPassword.setText(password);
+                etToken.setText(token);
                 Toast.makeText(this, "收到推送信息，正在登录...", Toast.LENGTH_SHORT).show();
                 btnConnect.performClick();
             });

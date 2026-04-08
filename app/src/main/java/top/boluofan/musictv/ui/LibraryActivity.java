@@ -139,7 +139,8 @@ public class LibraryActivity extends AppCompatActivity {
         
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
-        
+        String token = LxRetrofitClient.getToken(this);
+
         if (username.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
             startActivity(new Intent(this, top.boluofan.musictv.ConfigActivity.class));
@@ -147,7 +148,7 @@ public class LibraryActivity extends AppCompatActivity {
             return;
         }
         
-        apiService.getUserList(username, password).enqueue(new Callback<ListData>() {
+        apiService.getUserList(username, password,token).enqueue(new Callback<ListData>() {
             @Override
             public void onResponse(Call<ListData> call, Response<ListData> response) {
                 if (response.isSuccessful() && response.body() != null) {
@@ -362,6 +363,7 @@ public class LibraryActivity extends AppCompatActivity {
 
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
+        String token = LxRetrofitClient.getToken(this);
 
         if (username.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
@@ -370,7 +372,7 @@ public class LibraryActivity extends AppCompatActivity {
 
         LxApiService apiService = LxRetrofitClient.getApiService(this);
 
-        apiService.getUserList(username, password).enqueue(new Callback<ListData>() {
+        apiService.getUserList(username, password,token).enqueue(new Callback<ListData>() {
             @Override
             public void onResponse(Call<ListData> call, Response<ListData> response) {
                 if (!response.isSuccessful() || response.body() == null) {
@@ -424,7 +426,7 @@ public class LibraryActivity extends AppCompatActivity {
                 targetPlaylist.setSongs(songList);
                 targetPlaylist.setSongCount(songList.size());
 
-                apiService.updateUserList(username, password, listData).enqueue(new Callback<ResponseBody>() {
+                apiService.updateUserList(username, password, token, listData).enqueue(new Callback<ResponseBody>() {
                     @Override
                     public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                         runOnUiThread(() -> {

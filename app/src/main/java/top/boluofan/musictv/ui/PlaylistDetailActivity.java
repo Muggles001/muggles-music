@@ -149,11 +149,12 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
+        String token = LxRetrofitClient.getToken(this);
         LxApiService apiService = LxRetrofitClient.getApiService(this);
         
         btnFavorite.setEnabled(false);
         
-        apiService.getUserList(username, password).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
+        apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
             public void onResponse(Call<top.boluofan.musictv.api.model.ListData> call, Response<top.boluofan.musictv.api.model.ListData> response) {
                 btnFavorite.setEnabled(true);
@@ -205,6 +206,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     private void doCollectPlaylist(top.boluofan.musictv.api.model.ListData listData, top.boluofan.musictv.api.model.Playlist existingPlaylist) {
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
+        String token = LxRetrofitClient.getToken(this);
         LxApiService apiService = LxRetrofitClient.getApiService(this);
         
         top.boluofan.musictv.api.model.Playlist newPlaylist;
@@ -230,7 +232,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         }
         
         btnFavorite.setEnabled(false);
-        apiService.updateUserList(username, password, listData).enqueue(new Callback<okhttp3.ResponseBody>() {
+        apiService.updateUserList(username, password, token, listData).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
                 btnFavorite.setEnabled(true);
@@ -260,9 +262,10 @@ public class PlaylistDetailActivity extends AppCompatActivity {
 
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
+        String token = LxRetrofitClient.getToken(this);
         LxApiService apiService = LxRetrofitClient.getApiService(this);
 
-        apiService.getUserList(username, password).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
+        apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
             public void onResponse(Call<top.boluofan.musictv.api.model.ListData> call, Response<top.boluofan.musictv.api.model.ListData> response) {
                 if (!response.isSuccessful() || response.body() == null) {
@@ -298,6 +301,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     private void addSongToPlaylist(top.boluofan.musictv.api.model.ListData listData, top.boluofan.musictv.api.model.Playlist playlist, MusicInfo song) {
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
+        String token = LxRetrofitClient.getToken(this);
         LxApiService apiService = LxRetrofitClient.getApiService(this);
 
         List<MusicInfo> songList = playlist.getSongs();
@@ -316,7 +320,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         playlist.setSongs(songList);
         playlist.setSongCount(songList.size());
 
-        apiService.updateUserList(username, password, listData).enqueue(new Callback<okhttp3.ResponseBody>() {
+        apiService.updateUserList(username, password, token, listData).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
                 if (response.isSuccessful()) {
@@ -336,9 +340,10 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     private void fetchAndAddSongToPlaylist(String playlistName, MusicInfo song) {
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
+        String token = LxRetrofitClient.getToken(this);
         LxApiService apiService = LxRetrofitClient.getApiService(this);
 
-        apiService.getUserList(username, password).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
+        apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
             public void onResponse(Call<top.boluofan.musictv.api.model.ListData> call, Response<top.boluofan.musictv.api.model.ListData> response) {
                 if (!response.isSuccessful() || response.body() == null) {

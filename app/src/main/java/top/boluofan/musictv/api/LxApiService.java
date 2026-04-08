@@ -26,13 +26,15 @@ public interface LxApiService {
     @GET("api/user/list")
     Call<ListData> getUserList(
             @Header("x-user-name") String username,
-            @Header("x-user-password") String password
+            @Header("x-user-password") String password,
+            @Header("x-user-token") String token
     );
 
     @POST("api/user/list")
     Call<ResponseBody> updateUserList(
             @Header("x-user-name") String username,
             @Header("x-user-password") String password,
+            @Header("x-user-token") String token,
             @Body ListData listData
     );
 
@@ -141,6 +143,7 @@ public interface LxApiService {
     Call<ResponseBody> removeSongsFromPlaylist(
             @Header("x-user-name") String username,
             @Header("x-user-password") String password,
+            @Header("x-user-token") String token,
             @Body Map<String, Object> body
     );
 }

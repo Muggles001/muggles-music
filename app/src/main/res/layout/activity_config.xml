@@ -191,13 +191,44 @@
                 android:textColorHint="#4B5563"
                 android:textSize="15sp"
                 android:singleLine="true"
+                android:imeOptions="actionNext"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:nextFocusDown="@+id/etToken"
+                android:nextFocusUp="@+id/etUsername"
+                android:nextFocusLeft="@+id/btnToggleMode"
+                android:nextFocusRight="@+id/etPassword"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Token -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="用户 Token (选填)"
+                android:textColor="#9CA3AF"
+                android:textSize="13sp"
+                android:layout_marginBottom="6dp" />
+
+            <EditText
+                android:id="@+id/etToken"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_input_field"
+                android:hint="请输入用户 Token"
+                android:inputType="text"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#4B5563"
+                android:textSize="15sp"
+                android:singleLine="true"
                 android:imeOptions="actionDone"
                 android:focusable="true"
                 android:focusableInTouchMode="true"
                 android:nextFocusDown="@+id/btnConnect"
-                android:nextFocusUp="@+id/etUsername"
+                android:nextFocusUp="@+id/etPassword"
                 android:nextFocusLeft="@+id/btnToggleMode"
-                android:nextFocusRight="@+id/etPassword"
+                android:nextFocusRight="@+id/etToken"
                 android:layout_marginBottom="28dp" />
 
             <!-- Connect Button -->

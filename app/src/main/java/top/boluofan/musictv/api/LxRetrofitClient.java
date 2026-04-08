@@ -16,6 +16,7 @@ public class LxRetrofitClient {
     private static final String KEY_SERVER_URL = "server_url";
     private static final String KEY_USERNAME = "username";
     private static final String KEY_PASSWORD = "password";
+    private static final String KEY_TOKEN = "x-user-token";
     private static final String KEY_QUALITY = "quality";
     private static final String KEY_ADMIN_PASSWORD = "admin_password";
     private static final String KEY_BACKGROUND_PLAY = "background_play";
@@ -81,17 +82,23 @@ public class LxRetrofitClient {
         return prefs.getString(KEY_PASSWORD, "");
     }
 
+    public static String getToken(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return prefs.getString(KEY_TOKEN, "");
+    }
+
     public static String getServerUrl(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         return prefs.getString(KEY_SERVER_URL, "");
     }
 
-    public static void saveConfig(Context context, String serverUrl, String username, String password) {
+    public static void saveConfig(Context context, String serverUrl, String username, String password, String token) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         prefs.edit()
                 .putString(KEY_SERVER_URL, serverUrl)
                 .putString(KEY_USERNAME, username)
                 .putString(KEY_PASSWORD, password)
+                .putString(KEY_TOKEN, token)
                 .apply();
         resetClient();
     }

@@ -153,8 +153,9 @@ public class LibraryFragment extends Fragment {
         LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
+        String token = LxRetrofitClient.getToken(requireContext());
         
-        apiService.getUserList(username, password).enqueue(new Callback<ListData>() {
+        apiService.getUserList(username, password,token).enqueue(new Callback<ListData>() {
             @Override
             public void onResponse(Call<ListData> call, Response<ListData> response) {
                 if (response.isSuccessful() && response.body() != null) {

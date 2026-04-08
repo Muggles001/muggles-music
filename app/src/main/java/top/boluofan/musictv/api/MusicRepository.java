@@ -67,8 +67,9 @@ public class MusicRepository {
     public void getUserList(RepositoryCallback<ListData> callback) {
         String username = LxRetrofitClient.getUsername(context);
         String password = LxRetrofitClient.getPassword(context);
+        String token = LxRetrofitClient.getToken(context);
 
-        apiService.getUserList(username, password).enqueue(new retrofit2.Callback<ListData>() {
+        apiService.getUserList(username, password, token).enqueue(new retrofit2.Callback<ListData>() {
             @Override
             public void onResponse(Call<ListData> call, Response<ListData> response) {
                 if (response.isSuccessful() && response.body() != null) {
@@ -88,8 +89,9 @@ public class MusicRepository {
     public void updateUserList(ListData listData, RepositoryCallback<Boolean> callback) {
         String username = LxRetrofitClient.getUsername(context);
         String password = LxRetrofitClient.getPassword(context);
+        String token = LxRetrofitClient.getToken(context);
 
-        apiService.updateUserList(username, password, listData).enqueue(new retrofit2.Callback<okhttp3.ResponseBody>() {
+        apiService.updateUserList(username, password, token, listData).enqueue(new retrofit2.Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
                 callback.onSuccess(response.isSuccessful());
