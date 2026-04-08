@@ -33,10 +33,12 @@ jobs:
             ${{ runner.os }}-gradle-
       
       - name: Grant execute permission
-        run: chmod +x gradlew 
+        run: chmod +x gradlew
 
       - name: Build release APK
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --no-daemon
+        env:
+          GRADLE_CONNECT_TIMEOUT_MAX: 120
 
       - name: Upload APK files
         uses: actions/upload-artifact@v4
