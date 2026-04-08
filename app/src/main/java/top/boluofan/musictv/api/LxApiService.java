@@ -49,8 +49,8 @@ public interface LxApiService {
     @POST("api/music/url")
     Call<MusicUrlResponse> getMusicUrl(@Body Map<String, Object> body);
 
-    @POST("api/music/lyric")
-    Call<LyricInfo> getLyric(@Body Map<String, Object> body);
+    @GET("api/music/lyric")
+    Call<LyricInfo> getLyric(@Query("source") String source, @Query("songmid") String songmid, @Query("quality") String quality);
 
     @GET("api/music/hotSearch")
     Call<ResponseBody> getHotSearch(@Query("source") String source);

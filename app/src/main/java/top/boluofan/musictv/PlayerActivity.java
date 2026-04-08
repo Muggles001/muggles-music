@@ -788,13 +788,9 @@ public class PlayerActivity extends AppCompatActivity {
             return;
         }
 
-        java.util.HashMap<String, Object> body = new java.util.HashMap<>();
-        java.util.HashMap<String, String> songInfo = new java.util.HashMap<>();
-        songInfo.put("source", source);
-        songInfo.put("songmid", songmid);
-        body.put("songInfo", songInfo);
+        String quality = top.boluofan.musictv.api.LxRetrofitClient.getQuality(this);
 
-        apiService.getLyric(body).enqueue(new retrofit2.Callback<top.boluofan.musictv.api.model.LyricInfo>() {
+        apiService.getLyric(source, songmid, quality).enqueue(new retrofit2.Callback<top.boluofan.musictv.api.model.LyricInfo>() {
             @Override
             public void onResponse(retrofit2.Call<top.boluofan.musictv.api.model.LyricInfo> call,
                                    retrofit2.Response<top.boluofan.musictv.api.model.LyricInfo> response) {
@@ -1191,17 +1187,17 @@ public class PlayerActivity extends AppCompatActivity {
         editText.setText(defaultValue);
         if (defaultValue != null) editText.setSelection(defaultValue.length());
 
-        new androidx.appcompat.app.AlertDialog.Builder(this, androidx.appcompat.R.style.Theme_AppCompat_Dialog_Alert)
-            .setTitle(title)
-            .setView(editText)
-            .setPositiveButton("保存", (dialog, which) -> {
-                String value = editText.getText().toString().trim();
-                if (!value.isEmpty()) {
-                    listener.onSubmit(value);
-                }
-            })
-            .setNegativeButton("取消", null)
-            .show();
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(editText)
+                .setPositiveButton("保存", (dialog, which) -> {
+                    String value = editText.getText().toString().trim();
+                    if (!value.isEmpty()) {
+                        listener.onSubmit(value);
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
 
     private void updateSongTag(String fileName, String key, String value) {

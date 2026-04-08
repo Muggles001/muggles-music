@@ -147,14 +147,8 @@ public class MusicRepository {
         });
     }
 
-    public void getLyric(String source, String songmid, RepositoryCallback<LyricInfo> callback) {
-        Map<String, Object> body = new HashMap<>();
-        Map<String, String> songInfo = new HashMap<>();
-        songInfo.put("source", source);
-        songInfo.put("songmid", songmid);
-        body.put("songInfo", songInfo);
-
-        apiService.getLyric(body).enqueue(new retrofit2.Callback<LyricInfo>() {
+    public void getLyric(String source, String songmid, String quality, RepositoryCallback<LyricInfo> callback) {
+        apiService.getLyric(source, songmid, quality).enqueue(new retrofit2.Callback<LyricInfo>() {
             @Override
             public void onResponse(Call<LyricInfo> call, Response<LyricInfo> response) {
                 if (response.isSuccessful() && response.body() != null) {
