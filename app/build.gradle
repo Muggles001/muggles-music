@@ -17,10 +17,24 @@ android {
         }
     }
     buildTypes {
+        debug {
+            minifyEnabled false
+            lintOptions {
+                abortOnError true
+            }
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            lintOptions {
+                abortOnError true
+            }
         }
+    }
+
+    lint {
+        abortOnError true
+        checkReleaseBuilds true
     }
     splits {
         abi {
