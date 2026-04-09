@@ -80,7 +80,7 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
             View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_loading_footer, parent, false);
             return new FooterViewHolder(view);
         }
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_playlist_card, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_playlist_info, parent, false);
         return new ViewHolder(view);
     }
 
@@ -94,13 +94,23 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         
         viewHolder.tvName.setText(playlist.getName());
         
+        viewHolder.itemView.post(() -> {
+            int width = viewHolder.itemView.getWidth();
+            if (width > 0) {
+                View cover = viewHolder.itemView.findViewById(R.id.ivCover);
+                cover.getLayoutParams().height = width;
+                cover.requestLayout();
+            }
+        });
+        
         String picUrl = playlist.getPicUrl();
         if (picUrl != null && !picUrl.isEmpty()) {
             Glide.with(viewHolder.itemView.getContext())
                     .load(picUrl)
                     .placeholder(R.drawable.ic_playlist_music)
                     .transition(DrawableTransitionOptions.withCrossFade())
-                    .centerCrop()
+                    .fitCenter()
+                    .override(300, 300)
                     .into(viewHolder.ivCover);
         } else {
             viewHolder.ivCover.setImageResource(R.drawable.ic_playlist_music);
@@ -121,6 +131,11 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         } else {
             viewHolder.tvCreator.setVisibility(View.GONE);
         }
+
+        String time = playlist.getTime();
+        int songCount = playlist.getSongCount();
+        String infoText = (time != null && !time.isEmpty() ? time + " · " : "") + songCount + "首";
+        viewHolder.tvInfo.setText(infoText);
 
         viewHolder.itemView.setOnClickListener(v -> {
             int oldPos = selectedPosition;
@@ -149,6 +164,7 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         ImageView ivCover;
         TextView tvPlayCount;
         TextView tvName;
+        TextView tvInfo;
         TextView tvCreator;
 
         ViewHolder(View itemView) {
@@ -156,6 +172,7 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
             ivCover = itemView.findViewById(R.id.ivCover);
             tvPlayCount = itemView.findViewById(R.id.tvPlayCount);
             tvName = itemView.findViewById(R.id.tvName);
+            tvInfo = itemView.findViewById(R.id.tvInfo);
             tvCreator = itemView.findViewById(R.id.tvCreator);
         }
     }

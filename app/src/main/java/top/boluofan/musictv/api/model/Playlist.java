@@ -34,6 +34,9 @@ public class Playlist {
     @SerializedName("songCount")
     private Integer songCount;
 
+    @SerializedName("total")
+    private String total;
+
     @SerializedName("time")
     private String time;
 
@@ -42,6 +45,9 @@ public class Playlist {
 
     @SerializedName("creator")
     private String creator;
+
+    @SerializedName("author")
+    private String author;
 
     @SerializedName("playCount")
     private Long playCount;
@@ -137,6 +143,13 @@ public class Playlist {
 
     public int getSongCount() {
         if (songCount != null) return songCount;
+        if (total != null && !total.isEmpty()) {
+            try {
+                return Integer.parseInt(total);
+            } catch (NumberFormatException e) {
+                return 0;
+            }
+        }
         return songs != null ? songs.size() : 0;
     }
 
@@ -153,7 +166,10 @@ public class Playlist {
         if (info != null && info.getAuthor() != null && !info.getAuthor().isEmpty()) {
             return info.getAuthor();
         }
-        return creator;
+        if (creator != null && !creator.isEmpty()) {
+            return creator;
+        }
+        return author;
     }
 
     public String getTime() {

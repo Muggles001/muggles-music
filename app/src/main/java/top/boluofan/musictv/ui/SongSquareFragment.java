@@ -100,7 +100,7 @@ public class SongSquareFragment extends Fragment {
         
         playlistAdapter = new SquarePlaylistAdapter();
         rvPlaylists.setAdapter(playlistAdapter);
-        GridLayoutManager gridLayoutManager = new GridLayoutManager(requireContext(), 3);
+        GridLayoutManager gridLayoutManager = new GridLayoutManager(requireContext(), 6);
         rvPlaylists.setLayoutManager(gridLayoutManager);
         
         rvPlaylists.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -112,19 +112,11 @@ public class SongSquareFragment extends Fragment {
                 
                 int spanCount = gridLayoutManager.getSpanCount();
                 int totalItemCount = layoutManager.getItemCount();
-                int firstVisiblePosition = layoutManager.findFirstVisibleItemPosition();
+                int lastVisiblePosition = layoutManager.findLastVisibleItemPosition();
                 
                 if (dy <= 0) return;
                 
-                int recyclerHeight = recyclerView.getHeight();
-                int itemHeight = recyclerHeight / spanCount;
-                if (itemHeight <= 0) return;
-                
-                int visibleRows = recyclerHeight / itemHeight;
-                int thresholdRow = Math.max(1, visibleRows - 1);
-                int thresholdPosition = totalItemCount - (thresholdRow * spanCount);
-                
-                if (firstVisiblePosition >= thresholdPosition - spanCount) {
+                if (lastVisiblePosition >= totalItemCount - spanCount * 2) {
                     loadMorePlaylists();
                 }
             }
