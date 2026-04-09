@@ -42,7 +42,10 @@
             android:textColor="#FFFFFF"
             android:textSize="9sp"
             android:drawablePadding="2dp"
+            android:gravity="center_vertical"
+            android:includeFontPadding="false"
             app:drawableStartCompat="@drawable/ic_play"
+            app:drawableSize="12dp"
             app:drawableTint="#FFFFFF"
             tools:text="123万"/>
 
@@ -67,17 +70,37 @@
             android:maxLines="1"
             android:textColor="#9CA3AF"
             android:textSize="9sp"
-            tools:text="2024-01-15 · 50首"/>
+            tools:text="50首"/>
 
-        <TextView
-            android:id="@+id/tvCreator"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="#6B7280"
-            android:textSize="8sp"
-            tools:text="创建者"/>
+            android:layout_marginTop="1dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvCreator"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#6B7280"
+                android:textSize="8sp"
+                tools:text="创建者"/>
+
+            <TextView
+                android:id="@+id/tvSongCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#6B7280"
+                android:textSize="8sp"
+                tools:text="50首"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 

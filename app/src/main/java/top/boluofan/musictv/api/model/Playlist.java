@@ -214,6 +214,10 @@ public class Playlist {
         return playCount;
     }
 
+    public String getPlayCountStr() {
+        return playCountStr;
+    }
+
     public void setPlayCount(Long playCount) {
         this.playCount = playCount;
     }

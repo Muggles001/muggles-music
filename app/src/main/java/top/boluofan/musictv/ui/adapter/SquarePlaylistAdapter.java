@@ -116,26 +116,43 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
             viewHolder.ivCover.setImageResource(R.drawable.ic_playlist_music);
         }
 
-        String playCount = playlist.getFormattedPlayCount();
-        if (playCount != null && !playCount.isEmpty()) {
+        Long playCount = playlist.getPlayCount();
+        String playCountStr = playlist.getPlayCountStr();
+        boolean hasPlayCount = (playCount != null && playCount > 0) || 
+                               (playCountStr != null && !playCountStr.isEmpty()) ||
+                               (playlist.getInfo() != null && playlist.getInfo().getPlayCount() != null && !playlist.getInfo().getPlayCount().isEmpty());
+        if (hasPlayCount) {
             viewHolder.tvPlayCount.setVisibility(View.VISIBLE);
-            viewHolder.tvPlayCount.setText(playCount);
+            viewHolder.tvPlayCount.setText(playlist.getFormattedPlayCount());
         } else {
             viewHolder.tvPlayCount.setVisibility(View.GONE);
         }
 
         String creator = playlist.getCreator();
-        if (creator != null && !creator.isEmpty()) {
+        int songCount = playlist.getSongCount();
+        
+        boolean hasCreator = creator != null && !creator.isEmpty();
+        boolean hasSongCount = songCount > 0;
+        
+        if (hasCreator || hasSongCount) {
             viewHolder.tvCreator.setVisibility(View.VISIBLE);
-            viewHolder.tvCreator.setText(creator);
+            viewHolder.tvSongCount.setVisibility(View.VISIBLE);
+            
+            String creatorText = hasCreator ? creator : "";
+            viewHolder.tvCreator.setText(creatorText);
+            viewHolder.tvCreator.setHint(hasCreator ? null : " ");
+            
+            if (hasSongCount) {
+                viewHolder.tvSongCount.setText(songCount + "首");
+            } else {
+                viewHolder.tvSongCount.setText(" ");
+            }
         } else {
             viewHolder.tvCreator.setVisibility(View.GONE);
+            viewHolder.tvSongCount.setVisibility(View.GONE);
         }
 
-        String time = playlist.getTime();
-        int songCount = playlist.getSongCount();
-        String infoText = (time != null && !time.isEmpty() ? time + " · " : "") + songCount + "首";
-        viewHolder.tvInfo.setText(infoText);
+        viewHolder.tvInfo.setVisibility(View.GONE);
 
         viewHolder.itemView.setOnClickListener(v -> {
             int oldPos = selectedPosition;
@@ -166,6 +183,7 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         TextView tvName;
         TextView tvInfo;
         TextView tvCreator;
+        TextView tvSongCount;
 
         ViewHolder(View itemView) {
             super(itemView);
@@ -174,6 +192,7 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
             tvName = itemView.findViewById(R.id.tvName);
             tvInfo = itemView.findViewById(R.id.tvInfo);
             tvCreator = itemView.findViewById(R.id.tvCreator);
+            tvSongCount = itemView.findViewById(R.id.tvSongCount);
         }
     }
 
