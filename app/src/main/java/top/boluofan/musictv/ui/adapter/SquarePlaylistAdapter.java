@@ -33,6 +33,13 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         this.playlists = playlists != null ? playlists : new ArrayList<>();
         notifyDataSetChanged();
     }
+    
+    public void addData(List<Playlist> newPlaylists) {
+        if (newPlaylists == null || newPlaylists.isEmpty()) return;
+        int startPosition = playlists.size();
+        playlists.addAll(newPlaylists);
+        notifyItemRangeInserted(startPosition, newPlaylists.size());
+    }
 
     public void setShowFooter(boolean show) {
         if (showFooter != show) {

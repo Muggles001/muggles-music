@@ -264,7 +264,7 @@ public class SongSquareActivity extends AppCompatActivity {
                         if (result != null && result.getList() != null) {
                             hasMore = result.getList().size() >= 20;
                             playlists.addAll(result.getList());
-                            updatePlaylistList();
+                            playlistAdapter.addData(result.getList());
                         }
                     } catch (Exception e) {
                         currentPage--;
