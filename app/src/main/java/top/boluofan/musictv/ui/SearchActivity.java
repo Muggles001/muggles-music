@@ -231,12 +231,8 @@ public class SearchActivity extends AppCompatActivity {
         });
         
         songAdapter.setOnFullscreenClickListener((song, position) -> {
-            Intent intent = new Intent(this, top.boluofan.musictv.PlayerActivity.class);
-            intent.putExtra("song", song.getName());
-            intent.putExtra("artist", song.getSinger());
-            intent.putExtra("source", song.getSource());
-            intent.putExtra("songmid", song.getSongmid());
-            startActivity(intent);
+            playSong(song);
+            startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
         });
 
         songAdapter.setOnFavClickListener((song, position) -> {

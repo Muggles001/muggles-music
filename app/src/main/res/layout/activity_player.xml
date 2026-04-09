@@ -408,7 +408,6 @@
                 android:src="@drawable/ic_scrape"
                 android:scaleType="centerInside"
                 android:padding="12dp"
-                android:alpha="0.8"
                 android:contentDescription="Scrape"
                 android:focusable="true"
                 android:nextFocusUp="@+id/progressBar"

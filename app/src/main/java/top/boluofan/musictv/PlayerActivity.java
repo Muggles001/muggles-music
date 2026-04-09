@@ -73,6 +73,10 @@ public class PlayerActivity extends AppCompatActivity {
     private boolean hasArtwork = false;
     private final Runnable scrapeTimeoutRunnable = () -> {
         Log.e(TAG, "Scrape Timeout!");
+        runOnUiThread(() -> {
+            Toast.makeText(PlayerActivity.this, "刮削超时", Toast.LENGTH_SHORT).show();
+            stopScrapeAnimation();
+        });
         if (lyricAdapter.getItemCount() <= 0) {
             showNoLyrics("暂无歌词 (请求超时)");
         }
@@ -281,6 +285,7 @@ public class PlayerActivity extends AppCompatActivity {
         btnScrape.setOnClickListener(v -> {
             String songName = tvBigTitle.getText().toString();
             if (!songName.isEmpty() && !songName.equals("Song Title")) {
+                startScrapeAnimation();
                 startExternalScrapeFlow(songName);
             }
             resetControlsTimer();
@@ -847,6 +852,22 @@ public class PlayerActivity extends AppCompatActivity {
                     }
                     handler.removeCallbacks(scrapeTimeoutRunnable);
                     Log.d(TAG, "第三方刮削成功，正在更新 UI。图片地址: " + picUrl);
+                    
+                    boolean hasCover = picUrl != null && !picUrl.isEmpty();
+                    boolean hasLyrics = lyrics != null && !lyrics.isEmpty();
+                    String resultMsg = "";
+                    if (hasCover && hasLyrics) {
+                        resultMsg = "刮削成功：封面+歌词";
+                    } else if (hasCover) {
+                        resultMsg = "刮削成功：封面";
+                    } else if (hasLyrics) {
+                        resultMsg = "刮削成功：歌词";
+                    } else {
+                        resultMsg = "刮削结果：无有效信息";
+                    }
+                    Toast.makeText(PlayerActivity.this, resultMsg, Toast.LENGTH_SHORT).show();
+                    stopScrapeAnimation();
+                    
                     // 更新歌手
                     if (artist != null && !artist.isEmpty()) {
                         tvBigArtist.setText(artist);
@@ -901,10 +922,35 @@ public class PlayerActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     handler.removeCallbacks(scrapeTimeoutRunnable);
                     Log.e(TAG, "第三方刮削出错: " + msg);
+                    Toast.makeText(PlayerActivity.this, "刮削失败：" + msg, Toast.LENGTH_SHORT).show();
+                    stopScrapeAnimation();
                     showNoLyrics("暂无歌词");
                 });
             }
         });
+    }
+    
+    private void startScrapeAnimation() {
+        if (btnScrape != null) {
+            android.animation.ObjectAnimator animator = android.animation.ObjectAnimator.ofFloat(btnScrape, "rotation", 0f, 360f);
+            animator.setDuration(1000);
+            animator.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+            animator.setRepeatMode(android.animation.ObjectAnimator.RESTART);
+            animator.start();
+            btnScrape.setTag(animator);
+        }
+    }
+    
+    private void stopScrapeAnimation() {
+        if (btnScrape != null) {
+            ObjectAnimator animator = (ObjectAnimator) btnScrape.getTag();
+            if (animator != null) {
+                animator.cancel();
+                animator.end();
+                btnScrape.setRotation(0f);
+                btnScrape.setTag(null);
+            }
+        }
     }
 
 
