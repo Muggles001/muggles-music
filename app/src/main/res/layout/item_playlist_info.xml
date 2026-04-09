@@ -24,18 +24,12 @@
             tools:src="@drawable/ic_playlist_music"
             android:contentDescription="cover"/>
 
-    </FrameLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingTop="4dp">
-
         <TextView
             android:id="@+id/tvPlayCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="bottom|start"
+            android:layout_margin="6dp"
             android:paddingHorizontal="4dp"
             android:paddingVertical="1dp"
             android:background="@drawable/bg_play_count_overlay"
@@ -48,6 +42,14 @@
             app:drawableSize="12dp"
             app:drawableTint="#FFFFFF"
             tools:text="123万"/>
+
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="4dp">
 
         <TextView
             android:id="@+id/tvName"
