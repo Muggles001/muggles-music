@@ -35,10 +35,16 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release-keystore.jks
+
       - name: Build release APK
         run: ./gradlew assembleRelease --no-daemon
         env:
           GRADLE_CONNECT_TIMEOUT_MAX: 120
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_ALIAS_PASSWORD: ${{ secrets.KEYSTORE_ALIAS_PASSWORD }}
 
       - name: Upload APK files
         uses: actions/upload-artifact@v4

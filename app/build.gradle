@@ -24,11 +24,20 @@ android {
             }
         }
         release {
+            signingConfigs {
+                release {
+                    storeFile file("release-keystore.jks")
+                    storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
+                    keyAlias System.getenv("KEYSTORE_ALIAS") ?: ""
+                    keyPassword System.getenv("KEYSTORE_ALIAS_PASSWORD") ?: ""
+                }
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             lintOptions {
                 abortOnError true
             }
+            signingConfig signingConfigs.release
         }
     }
 
