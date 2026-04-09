@@ -20,9 +20,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.view.Gravity;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
@@ -104,6 +106,9 @@ public class SearchActivity extends AppCompatActivity {
     private ImageButton btnScan;
     private RecyclerView.Adapter<?> hotSearchAdapter;
 
+    private CustomKeyboardPopup customKeyboardPopup;
+    private boolean isKeyboardVisible = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -112,6 +117,7 @@ public class SearchActivity extends AppCompatActivity {
         initViews();
         setupRecyclerViews();
         setupListeners();
+        setupCustomKeyboard();
         updateResults();
     }
 
@@ -133,7 +139,13 @@ public class SearchActivity extends AppCompatActivity {
         rvSearchResults.setLayoutManager(new LinearLayoutManager(this));
         
         ImageButton btnBack = findViewById(R.id.btnBack);
-        btnBack.setOnClickListener(v -> finish());
+        btnBack.setOnClickListener(v -> {
+            if (isKeyboardVisible) {
+                hideCustomKeyboard();
+            } else {
+                finish();
+            }
+        });
     }
 
     private void setupRecyclerViews() {
@@ -191,6 +203,7 @@ public class SearchActivity extends AppCompatActivity {
                 String hotWord = hotSearchWords.size() > position ? hotSearchWords.get(position) : "";
                 holder.tv.setText(hotWord);
                 holder.tv.setOnClickListener(v -> {
+                    hideCustomKeyboard();
                     etSearch.setText(hotWord);
                     search(hotWord);
                 });
@@ -307,7 +320,7 @@ public class SearchActivity extends AppCompatActivity {
                 Toast.makeText(this, "请输入搜索关键词", Toast.LENGTH_SHORT).show();
                 return;
             }
-            hideKeyboard();
+            hideCustomKeyboard();
             search(keyword);
         });
         
@@ -318,15 +331,83 @@ public class SearchActivity extends AppCompatActivity {
             updateResults();
         });
         
+        etSearch.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
+                    if (!isKeyboardVisible) {
+                        showCustomKeyboard();
+                        return true;
+                    }
+                }
+            }
+            return false;
+        });
+        
         etSearch.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                btnSearch.performClick();
+                if (!isKeyboardVisible) {
+                    showCustomKeyboard();
+                } else {
+                    String keyword = etSearch.getText().toString().trim();
+                    if (!keyword.isEmpty()) {
+                        hideCustomKeyboard();
+                        search(keyword);
+                    }
+                }
                 return true;
             }
             return false;
         });
         
         btnScan.setOnClickListener(v -> showScanSearchDialog());
+    }
+    
+    private void setupCustomKeyboard() {
+        customKeyboardPopup = new CustomKeyboardPopup(this);
+        customKeyboardPopup.setSource(currentSource);
+        customKeyboardPopup.setOnSearchListener(new CustomKeyboardPopup.OnSearchListener() {
+            @Override
+            public void onSearch(String keyword) {
+                search(keyword);
+            }
+            
+            @Override
+            public void onInputChanged(String text) {
+                etSearch.setText(text);
+                etSearch.setSelection(text.length());
+            }
+        });
+    }
+    
+    private void showCustomKeyboard() {
+        if (customKeyboardPopup == null) {
+            customKeyboardPopup = new CustomKeyboardPopup(this);
+            customKeyboardPopup.setOnSearchListener(new CustomKeyboardPopup.OnSearchListener() {
+                @Override
+                public void onSearch(String keyword) {
+                    search(keyword);
+                }
+                
+                @Override
+                public void onInputChanged(String text) {
+                    etSearch.setText(text);
+                    etSearch.setSelection(text.length());
+                }
+            });
+        }
+        if (customKeyboardPopup.isShowing()) {
+            return;
+        }
+        isKeyboardVisible = true;
+        customKeyboardPopup.setSource(currentSource);
+        customKeyboardPopup.show(etSearch.getText().toString());
+    }
+    
+    private void hideCustomKeyboard() {
+        isKeyboardVisible = false;
+        if (customKeyboardPopup != null) {
+            customKeyboardPopup.dismiss();
+        }
     }
     
     private void showScanSearchDialog() {
@@ -443,6 +524,7 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void search(String keyword) {
+        hideCustomKeyboard();
         lastKeyword = keyword;
         currentPage = 1;
         hasMore = true;
@@ -715,6 +797,25 @@ public class SearchActivity extends AppCompatActivity {
     
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (isKeyboardVisible) {
+                hideCustomKeyboard();
+                return true;
+            }
+        }
+        
+        if ((keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) && !isKeyboardVisible) {
+            View currentFocus = getCurrentFocus();
+            if (currentFocus == etSearch || currentFocus == btnSearch || currentFocus == btnClear) {
+                showCustomKeyboard();
+                return true;
+            }
+            if (currentFocus != null) {
+                showCustomKeyboard();
+                return true;
+            }
+        }
+        
         if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
             View currentFocus = getCurrentFocus();
             if (currentFocus != null && floatingPlayerWindow != null) {
