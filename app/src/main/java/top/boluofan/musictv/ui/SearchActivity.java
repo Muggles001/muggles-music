@@ -386,7 +386,7 @@ public class SearchActivity extends AppCompatActivity {
                 public void onSearch(String keyword) {
                     search(keyword);
                 }
-                
+
                 @Override
                 public void onInputChanged(String text) {
                     etSearch.setText(text);
@@ -398,6 +398,13 @@ public class SearchActivity extends AppCompatActivity {
             return;
         }
         isKeyboardVisible = true;
+
+        // 阻止系统输入法管理器干扰
+        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (imm != null && etSearch != null) {
+            imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
+        }
+
         customKeyboardPopup.setSource(currentSource);
         customKeyboardPopup.show(etSearch.getText().toString());
     }
@@ -406,6 +413,15 @@ public class SearchActivity extends AppCompatActivity {
         isKeyboardVisible = false;
         if (customKeyboardPopup != null) {
             customKeyboardPopup.dismiss();
+        }
+        // 清除 EditText 的焦点，防止 InputMethodManager 继续尝试管理它
+        if (etSearch != null) {
+            etSearch.clearFocus();
+        }
+        // 使用 post 确保焦点转移在 UI 线程正常执行
+        ImageButton btnBack = findViewById(R.id.btnBack);
+        if (btnBack != null) {
+            btnBack.post(() -> btnBack.requestFocus());
         }
     }
     
