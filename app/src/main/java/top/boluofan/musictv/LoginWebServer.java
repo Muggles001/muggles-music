@@ -14,15 +14,28 @@ public class LoginWebServer extends NanoHTTPD {
     private static final String TAG = "LoginWebServer";
     private Context context;
     private OnLoginDataReceivedListener listener;
+    private String initialUrl;
+    private String initialUsername;
+    private String initialPassword;
+    private String initialToken;
 
     public interface OnLoginDataReceivedListener {
         void onDataReceived(String url, String username, String password, String token);
     }
 
-    public LoginWebServer(Context context, int port, OnLoginDataReceivedListener listener) {
+    public LoginWebServer(Context context, int port, OnLoginDataReceivedListener listener,
+                          String initialUrl, String initialUsername, String initialPassword, String initialToken) {
         super(port);
         this.context = context;
         this.listener = listener;
+        this.initialUrl = initialUrl != null ? initialUrl : "";
+        this.initialUsername = initialUsername != null ? initialUsername : "";
+        this.initialPassword = initialPassword != null ? initialPassword : "";
+        this.initialToken = initialToken != null ? initialToken : "";
+    }
+
+    public LoginWebServer(Context context, int port, OnLoginDataReceivedListener listener) {
+        this(context, port, listener, null, null, null, null);
     }
 
     @Override
@@ -58,7 +71,21 @@ public class LoginWebServer extends NanoHTTPD {
         return newFixedLengthResponse(Response.Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "Not Found");
     }
 
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("'", "&#39;");
+    }
+
     private String getHtml() {
+        String urlValue = escapeHtml(initialUrl);
+        String usernameValue = escapeHtml(initialUsername);
+        String passwordValue = escapeHtml(initialPassword);
+        String tokenValue = escapeHtml(initialToken);
+
         return "<!DOCTYPE html>\n" +
                 "<html>\n" +
                 "<head>\n" +
@@ -83,19 +110,19 @@ public class LoginWebServer extends NanoHTTPD {
                 "        <p class=\"desc\">在手机上输入 lxserver 服务器信息推送到电视</p>\n" +
                 "        <div class=\"field\">\n" +
                 "            <label>服务地址</label>\n" +
-                "            <input type=\"url\" id=\"url\" placeholder=\"http://192.168.x.x:58090\" required>\n" +
+                "            <input type=\"url\" id=\"url\" placeholder=\"http://192.168.x.x:58090\" value=\"" + urlValue + "\" required>\n" +
                 "        </div>\n" +
                 "        <div class=\"field\">\n" +
                 "            <label>用户名 (可选)</label>\n" +
-                "            <input type=\"text\" id=\"username\" placeholder=\"Username\">\n" +
+                "            <input type=\"text\" id=\"username\" placeholder=\"Username\" value=\"" + usernameValue + "\">\n" +
                 "        </div>\n" +
                 "        <div class=\"field\">\n" +
                 "            <label>密码 (可选)</label>\n" +
-                "            <input type=\"password\" id=\"password\" placeholder=\"Password\">\n" +
+                "            <input type=\"password\" id=\"password\" placeholder=\"Password\" value=\"" + passwordValue + "\">\n" +
                 "        </div>\n" +
                 "        <div class=\"field\">\n" +
                 "            <label>Token (可选)</label>\n" +
-                "            <input type=\"text\" id=\"token\" placeholder=\"User Token\">\n" +
+                "            <input type=\"text\" id=\"token\" placeholder=\"User Token\" value=\"" + tokenValue + "\">\n" +
                 "        </div>\n" +
                 "        <button onclick=\"submitLogin()\" id=\"btn\">推送到电视</button>\n" +
                 "        <div id=\"status\"></div>\n" +

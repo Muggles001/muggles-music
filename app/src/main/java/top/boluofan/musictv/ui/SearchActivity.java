@@ -146,6 +146,9 @@ public class SearchActivity extends AppCompatActivity {
                 finish();
             }
         });
+
+        // 禁用系统键盘弹出，由自定义键盘处理输入
+        etSearch.setShowSoftInputOnFocus(false);
     }
 
     private void setupRecyclerViews() {
