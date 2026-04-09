@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.KeyEvent;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -20,6 +21,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.R;
+import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.api.model.Playlist;
@@ -47,6 +49,10 @@ public class SongSquareFragment extends Fragment {
     private boolean hasMore = true;
     private boolean isLoading = false;
     private boolean isLoadingMore = false;
+    
+    private FloatingPlayerWindow floatingPlayerWindow;
+    private GridLayoutManager gridLayoutManager;
+    private int spanCount = 6;
 
     @Nullable
     @Override
@@ -60,6 +66,11 @@ public class SongSquareFragment extends Fragment {
         
         initViews(view);
         setupRecyclerViews();
+        
+        if (getActivity() != null) {
+            floatingPlayerWindow = new FloatingPlayerWindow(getActivity());
+            floatingPlayerWindow.connectToService();
+        }
         
         loadSources();
     }
@@ -100,7 +111,7 @@ public class SongSquareFragment extends Fragment {
         
         playlistAdapter = new SquarePlaylistAdapter();
         rvPlaylists.setAdapter(playlistAdapter);
-        GridLayoutManager gridLayoutManager = new GridLayoutManager(requireContext(), 6);
+        gridLayoutManager = new GridLayoutManager(requireContext(), spanCount);
         rvPlaylists.setLayoutManager(gridLayoutManager);
         
         rvPlaylists.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -297,5 +308,54 @@ public class SongSquareFragment extends Fragment {
             tvSourceName = view.findViewById(R.id.tvSourceName);
             ivRadio = view.findViewById(R.id.ivRadio);
         }
+    }
+    
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+            if (rvPlaylists != null && gridLayoutManager != null) {
+                View focusedView = rvPlaylists.findFocus();
+                if (focusedView != null) {
+                    int position = gridLayoutManager.getPosition(focusedView);
+                    if (position != RecyclerView.NO_POSITION && position % spanCount == spanCount - 1) {
+                        View tabSettings = getActivity().findViewById(R.id.tabSettings);
+                        if (tabSettings != null) {
+                            return tabSettings.requestFocus();
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+            if (rvPlaylists != null && gridLayoutManager != null) {
+                View focusedView = rvPlaylists.findFocus();
+                if (focusedView != null) {
+                    int position = gridLayoutManager.getPosition(focusedView);
+                    if (position != RecyclerView.NO_POSITION && position % spanCount == 0) {
+                        if (floatingPlayerWindow != null && floatingPlayerWindow.getContainer().getVisibility() == View.VISIBLE) {
+                            if (floatingPlayerWindow.requestFocus()) {
+                                return true;
+                            }
+                        }
+                        View fragmentView = getView();
+                        if (fragmentView != null) {
+                            RecyclerView sourceListRv = fragmentView.findViewById(R.id.rvSourceList);
+                            if (sourceListRv != null) {
+                                RecyclerView.LayoutManager sourceLm = sourceListRv.getLayoutManager();
+                                if (sourceLm != null) {
+                                    View firstSource = sourceLm.findViewByPosition(0);
+                                    if (firstSource != null) {
+                                        firstSource.setFocusable(true);
+                                        return firstSource.requestFocus();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return false;
     }
 }
