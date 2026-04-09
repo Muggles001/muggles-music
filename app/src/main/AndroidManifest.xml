@@ -42,10 +42,6 @@
             android:label="搜索" />
 
         <activity
-            android:name="top.boluofan.musictv.ui.SongSquareActivity"
-            android:label="歌单广场" />
-
-        <activity
             android:name="top.boluofan.musictv.ui.RankingActivity"
             android:label="排行榜" />
 
