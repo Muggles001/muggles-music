@@ -50,7 +50,7 @@ public class PlayerActivity extends AppCompatActivity {
     private TextView tvCurrentTime, tvDuration;
     private TextView tvTooltip, tvSeekProgress, tvPlaylistName, tvPlaylistCount;
     private android.widget.LinearLayout layoutTooltip, layoutSeekProgress;
-    private ImageButton btnRepeat, btnPrev, btnPlayPause, btnNext, btnFav, btnQueue;
+    private ImageButton btnRepeat, btnPrev, btnPlayPause, btnNext, btnScrape, btnQueue;
     private android.view.View layoutDrawer;
     private android.view.ViewGroup layoutMainContent;
     private RecyclerView rvDrawerSongs;
@@ -60,18 +60,23 @@ public class PlayerActivity extends AppCompatActivity {
     private PlayerOptionAdapter optionAdapter;
     private String scrapedPicUrl = ""; // 用于保存刮削到的封面地址
     private String scrapedArtist = ""; // 用于保存刮削到的歌手名
-    private boolean isFavorited = false;
-    private java.util.Set<String> favoritesSet = new java.util.HashSet<>();
 
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
     private LyricAdapter lyricAdapter;
-    private ApiService apiService;
+    private top.boluofan.musictv.api.LxApiService apiService;
     private String baseUrl;
     private SongScraper songScraper;
-    private String currentScrapingId = ""; // 防止重复刮削同一个 ID
+    private String currentScrapingId = "";
+    private String currentSongSource = "mg";
+    private String currentSongMid = "";
+    private boolean hasArtwork = false;
     private final Runnable scrapeTimeoutRunnable = () -> {
         Log.e(TAG, "Scrape Timeout!");
+        runOnUiThread(() -> {
+            Toast.makeText(PlayerActivity.this, "刮削超时", Toast.LENGTH_SHORT).show();
+            stopScrapeAnimation();
+        });
         if (lyricAdapter.getItemCount() <= 0) {
             showNoLyrics("暂无歌词 (请求超时)");
         }
@@ -171,7 +176,7 @@ public class PlayerActivity extends AppCompatActivity {
         btnPrev = findViewById(R.id.btnPrev);
         btnPlayPause = findViewById(R.id.btnPlayPause);
         btnNext = findViewById(R.id.btnNext);
-        btnFav = findViewById(R.id.btnFav);
+        btnScrape = findViewById(R.id.btnScrape);
         btnQueue = findViewById(R.id.btnQueue);
         layoutDrawer = findViewById(R.id.layoutDrawer);
         layoutMainContent = findViewById(R.id.layoutMainContent);
@@ -215,9 +220,9 @@ public class PlayerActivity extends AppCompatActivity {
         // Optimize Marquee performance and isolation
         // Removed Hardware Layer to prevent artifacts during layout updates
 
-        SharedPreferences settings = getSharedPreferences("XiaoMusicPrefs", 0);
+        SharedPreferences settings = getSharedPreferences("LxMusicPrefs", 0);
         baseUrl = settings.getString("server_url", "");
-        apiService = RetrofitClient.getClient(this).create(ApiService.class);
+        apiService = top.boluofan.musictv.api.LxRetrofitClient.getApiService(this);
 
         // Enable marquee
         tvBigTitle.setSelected(true);
@@ -277,8 +282,12 @@ public class PlayerActivity extends AppCompatActivity {
             }
         });
 
-        btnFav.setOnClickListener(v -> {
-            toggleFavorite();
+        btnScrape.setOnClickListener(v -> {
+            String songName = tvBigTitle.getText().toString();
+            if (!songName.isEmpty() && !songName.equals("Song Title")) {
+                startScrapeAnimation();
+                startExternalScrapeFlow(songName);
+            }
             resetControlsTimer();
         });
 
@@ -315,8 +324,6 @@ public class PlayerActivity extends AppCompatActivity {
             updateControlsUI();
             resetControlsTimer();
         });
-
-        loadFavorites();
     }
 
     private void toggleDrawer(boolean show) {
@@ -328,9 +335,14 @@ public class PlayerActivity extends AppCompatActivity {
             }
             // Prepare data from current player queue
             if (player != null) {
-                List<String> queue = new ArrayList<>();
+                List<top.boluofan.musictv.DrawerSongAdapter.DrawerSongItem> queue = new ArrayList<>();
                 for (int i = 0; i < player.getMediaItemCount(); i++) {
-                    queue.add(player.getMediaItemAt(i).mediaMetadata.title.toString());
+                    androidx.media3.common.MediaItem item = player.getMediaItemAt(i);
+                    String title = item.mediaMetadata.title != null ? item.mediaMetadata.title.toString() : "";
+                    String artist = item.mediaMetadata.artist != null ? item.mediaMetadata.artist.toString() : "";
+                    String coverUrl = item.mediaMetadata.artworkUri != null ? item.mediaMetadata.artworkUri.toString() : "";
+                    
+                    queue.add(new top.boluofan.musictv.DrawerSongAdapter.DrawerSongItem(title, artist, coverUrl, "", ""));
                 }
                 drawerSongAdapter.setSongs(queue);
                 drawerSongAdapter.setPlayingIndex(player.getCurrentMediaItemIndex());
@@ -338,7 +350,7 @@ public class PlayerActivity extends AppCompatActivity {
             }
 
             // Show current playlist name from prefs
-            SharedPreferences prefs = getSharedPreferences("XiaoMusicPrefs", 0);
+        SharedPreferences prefs = getSharedPreferences("LxMusicPrefs", 0);
             String playlistName = prefs.getString("last_playlist_name", "");
             if (tvPlaylistName != null) {
                 tvPlaylistName.setText(playlistName.isEmpty() ? "" : "[" + playlistName + "]");
@@ -509,7 +521,7 @@ public class PlayerActivity extends AppCompatActivity {
                 if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
                     // If focus is already on bottom row, hide
                     View focused = getCurrentFocus();
-                    if (focused == btnPlayPause || focused == btnPrev || focused == btnNext || focused == btnFav || focused == btnRepeat || focused == btnQueue) {
+                    if (focused == btnPlayPause || focused == btnPrev || focused == btnNext || focused == btnScrape || focused == btnRepeat || focused == btnQueue) {
                         hideBottomControls();
                         return true;
                     }
@@ -602,89 +614,9 @@ public class PlayerActivity extends AppCompatActivity {
             btnRepeat.setAlpha(1.0f);
         }
         
-        updateFavUI();
         if (layoutDrawer.getVisibility() == View.VISIBLE) {
             drawerSongAdapter.setPlayingIndex(player.getCurrentMediaItemIndex());
             drawerSongAdapter.setPlayerPlaying(player.isPlaying());
-        }
-    }
-
-    private void loadFavorites() {
-        // Fetch favorites from server instead of local cache
-        apiService.getMusicList().enqueue(new Callback<java.util.Map<String, java.util.List<String>>>() {
-            @Override
-            public void onResponse(Call<java.util.Map<String, java.util.List<String>>> call,
-                                   Response<java.util.Map<String, java.util.List<String>>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    java.util.List<String> favList = response.body().get("我的收藏");
-                    favoritesSet = (favList != null)
-                            ? new java.util.HashSet<>(favList)
-                            : new java.util.HashSet<>();
-                    updateFavUI();
-                }
-            }
-            @Override
-            public void onFailure(Call<java.util.Map<String, java.util.List<String>>> call, Throwable t) {
-                // Keep empty set on failure
-            }
-        });
-    }
-
-    private void updateFavUI() {
-        if (player == null || player.getCurrentMediaItem() == null) return;
-        
-        String songName = tvBigTitle.getText().toString(); // Use current displayed title
-        isFavorited = favoritesSet.contains(songName);
-        
-        btnFav.setImageResource(isFavorited ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
-        btnFav.setColorFilter(isFavorited ? android.graphics.Color.RED : android.graphics.Color.WHITE);
-        btnFav.setAlpha(1.0f);
-    }
-
-    private void toggleFavorite() {
-        if (player == null || player.getCurrentMediaItem() == null) return;
-        
-        String songName = tvBigTitle.getText().toString();
-        if (songName.isEmpty()) return;
-
-        java.util.Map<String, Object> body = new java.util.HashMap<>();
-        body.put("name", "我的收藏");
-        java.util.List<String> songs = new java.util.ArrayList<>();
-        songs.add(songName);
-        body.put("music_list", songs);
-
-        if (isFavorited) {
-            // Remove
-            apiService.removeFromPlaylist(body).enqueue(new Callback<ResponseBody>() {
-                @Override
-                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                    if (response.isSuccessful()) {
-                        favoritesSet.remove(songName);
-                        updateFavUI();
-                        Toast.makeText(PlayerActivity.this, "已从收藏中移除", Toast.LENGTH_SHORT).show();
-                    }
-                }
-                @Override
-                public void onFailure(Call<ResponseBody> call, Throwable t) {
-                    Toast.makeText(PlayerActivity.this, "操作失败", Toast.LENGTH_SHORT).show();
-                }
-            });
-        } else {
-            // Add
-            apiService.addToPlaylist(body).enqueue(new Callback<ResponseBody>() {
-                @Override
-                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                    if (response.isSuccessful()) {
-                        favoritesSet.add(songName);
-                        updateFavUI();
-                        Toast.makeText(PlayerActivity.this, "已加入收藏", Toast.LENGTH_SHORT).show();
-                    }
-                }
-                @Override
-                public void onFailure(Call<ResponseBody> call, Throwable t) {
-                    Toast.makeText(PlayerActivity.this, "操作失败", Toast.LENGTH_SHORT).show();
-                }
-            });
         }
     }
 
@@ -747,6 +679,10 @@ public class PlayerActivity extends AppCompatActivity {
         if (mediaItem.mediaMetadata.extras != null) {
             originalName = mediaItem.mediaMetadata.extras.getString("original_name");
             lyrics = mediaItem.mediaMetadata.extras.getString("lyrics");
+            currentSongSource = mediaItem.mediaMetadata.extras.getString("source");
+            currentSongMid = mediaItem.mediaMetadata.extras.getString("songmid");
+            if (currentSongSource == null) currentSongSource = "mg";
+            if (currentSongMid == null) currentSongMid = "";
         }
         
         SharedPreferences prefs = getSharedPreferences("XiaoMusicPrefs", 0);
@@ -782,7 +718,7 @@ public class PlayerActivity extends AppCompatActivity {
         }
 
         // 2. 处理封面状态
-        boolean hasArtwork = false;
+        hasArtwork = false;
         if (mediaItem.mediaMetadata.artworkData != null) {
             byte[] data = mediaItem.mediaMetadata.artworkData;
             Glide.with(this).load(data)
@@ -812,14 +748,15 @@ public class PlayerActivity extends AppCompatActivity {
             }
         }
 
-        // 3. 触发抓取补全逻辑：只要缺封面 或 缺歌词，就去尝试抓取
-        if (!hasArtwork || lyrics == null || lyrics.isEmpty()) {
+        // 3. 触发抓取补全逻辑：只要缺歌词，就去尝试获取
+        // 封面如果已存在，则不刮削
+        if (lyrics == null || lyrics.isEmpty()) {
             // 只有当歌曲 ID 变化时（或者之前没记录到 ID）才重新触发
             if (!isCurrentlyScraping) {
                 fetchMusicInfoForScraping(queryName, false);
             }
         } else {
-            // 如果都全了，重置状态
+            // 如果歌词已获取到，重置状态
             currentScrapingId = "";
         }
     }
@@ -847,56 +784,35 @@ public class PlayerActivity extends AppCompatActivity {
             return;
         }
         
-        // 1. 尝试从 XiaoMusic 获取
-        apiService.getMusicInfo(songName, true).enqueue(new Callback<JsonObject>() {
-            @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    JsonObject json = response.body();
-                    if (json.has("tags")) {
-                        JsonObject tags = json.getAsJsonObject("tags");
-                        String artist = tags.has("artist") && !tags.get("artist").isJsonNull() ? tags.get("artist").getAsString() : "";
-                        String pic = tags.has("picture") && !tags.get("picture").isJsonNull() ? tags.get("picture").getAsString() : null;
-                        String lyrics = tags.has("lyrics") && !tags.get("lyrics").isJsonNull() ? tags.get("lyrics").getAsString() : null;
-                        
-                        // 判定是否真的有数据（有些空标签返回的是空字符串）
-                        if (artist.isEmpty() && (pic == null || pic.isEmpty()) && (lyrics == null || lyrics.isEmpty())) {
-                            startExternalScrapeFlow(songName);
-                            return;
-                        }
+        // 1. 尝试从 lxserver 获取歌词
+        String source = currentSongSource != null ? currentSongSource : "mg";
+        String songmid = currentSongMid != null ? currentSongMid : "";
 
-                        // 更新 UI：歌手
-                        if (!artist.isEmpty()) tvBigArtist.setText(artist);
-                        
-                        // 更新 UI：封面
-                        if (pic != null && !pic.isEmpty()) {
-                            String finalPic = pic;
-                            if (!finalPic.startsWith("http")) {
-                                String base = baseUrl;
-                                if (!base.endsWith("/")) base += "/";
-                                finalPic = base + (finalPic.startsWith("/") ? finalPic.substring(1) : finalPic);
-                            }
-                            Glide.with(PlayerActivity.this).load(finalPic)
-                                .placeholder(R.drawable.ic_cover_placeholder)
-                                .transform(new RoundedCorners(80)).into(ivBigCover);
-                            Glide.with(PlayerActivity.this).load(finalPic)
-                                .transform(new jp.wasabeef.glide.transformations.BlurTransformation(20, 3))
-                                .into(ivBlurBackground);
-                        } else {
-                            // 缺封面，去第三方补
-                            startExternalScrapeFlow(songName);
-                            return;
-                        }
-                        
-                        // 更新 UI：歌词
-                        if (lyrics != null && !lyrics.isEmpty()) {
-                            parseLyrics(lyrics);
-                        } else {
-                            // 缺歌词，去第三方补
-                            startExternalScrapeFlow(songName);
-                        }
-                    } else {
+        if (songmid.isEmpty()) {
+            startExternalScrapeFlow(songName);
+            return;
+        }
+
+        String quality = top.boluofan.musictv.api.LxRetrofitClient.getQuality(this);
+
+        apiService.getLyric(source, songmid, quality).enqueue(new retrofit2.Callback<top.boluofan.musictv.api.model.LyricInfo>() {
+            @Override
+            public void onResponse(retrofit2.Call<top.boluofan.musictv.api.model.LyricInfo> call,
+                                   retrofit2.Response<top.boluofan.musictv.api.model.LyricInfo> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    top.boluofan.musictv.api.model.LyricInfo lyricInfo = response.body();
+                    String lyrics = lyricInfo.getLyric();
+                    String tlyrics = lyricInfo.getTlyric();
+
+                    if ((lyrics == null || lyrics.isEmpty()) && (tlyrics == null || tlyrics.isEmpty())) {
                         startExternalScrapeFlow(songName);
+                        return;
+                    }
+
+                    if (lyrics != null && !lyrics.isEmpty()) {
+                        parseLyrics(lyrics);
+                    } else if (tlyrics != null && !tlyrics.isEmpty()) {
+                        parseLyrics(tlyrics);
                     }
                 } else {
                     startExternalScrapeFlow(songName);
@@ -904,7 +820,8 @@ public class PlayerActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
+            public void onFailure(retrofit2.Call<top.boluofan.musictv.api.model.LyricInfo> call, Throwable t) {
+                Log.e(TAG, "获取歌词失败: " + t.getMessage());
                 startExternalScrapeFlow(songName);
             }
         });
@@ -930,15 +847,34 @@ public class PlayerActivity extends AppCompatActivity {
             @Override
             public void onSuccess(String artist, String picUrl, String lyrics) {
                 runOnUiThread(() -> {
+                    if (isDestroyed() || isFinishing()) {
+                        return;
+                    }
                     handler.removeCallbacks(scrapeTimeoutRunnable);
                     Log.d(TAG, "第三方刮削成功，正在更新 UI。图片地址: " + picUrl);
+                    
+                    boolean hasCover = picUrl != null && !picUrl.isEmpty();
+                    boolean hasLyrics = lyrics != null && !lyrics.isEmpty();
+                    String resultMsg = "";
+                    if (hasCover && hasLyrics) {
+                        resultMsg = "刮削成功：封面+歌词";
+                    } else if (hasCover) {
+                        resultMsg = "刮削成功：封面";
+                    } else if (hasLyrics) {
+                        resultMsg = "刮削成功：歌词";
+                    } else {
+                        resultMsg = "刮削结果：无有效信息";
+                    }
+                    Toast.makeText(PlayerActivity.this, resultMsg, Toast.LENGTH_SHORT).show();
+                    stopScrapeAnimation();
+                    
                     // 更新歌手
                     if (artist != null && !artist.isEmpty()) {
                         tvBigArtist.setText(artist);
                     }
                     
-                    // 更新封面
-                    if (picUrl != null && !picUrl.isEmpty()) {
+                    // 更新封面：只有当封面不存在时才更新
+                    if (!hasArtwork && picUrl != null && !picUrl.isEmpty()) {
                         Glide.with(PlayerActivity.this)
                             .load(picUrl)
                             .apply(new RequestOptions()
@@ -964,18 +900,17 @@ public class PlayerActivity extends AppCompatActivity {
                             .apply(new RequestOptions()
                                 .transform(new jp.wasabeef.glide.transformations.BlurTransformation(20, 3)))
                             .into(ivBlurBackground);
-                    } else {
-                         ivBigCover.setImageResource(R.drawable.ic_cover_placeholder);
-                         ivBlurBackground.setImageResource(android.R.color.black);
                     }
                     
                     // 更新歌词
                     if (lyrics != null && !lyrics.isEmpty()) {
                         parseLyrics(lyrics);
                         // 刮削到歌词或封面，启用保存功能
-                        scrapedPicUrl = picUrl;
-                        scrapedArtist = artist;
-                        if (optionAdapter != null) optionAdapter.setOptionDisabled("保存当前歌词", false);
+                        if (!hasArtwork && picUrl != null && !picUrl.isEmpty()) {
+                            scrapedPicUrl = picUrl;
+                            scrapedArtist = artist;
+                            if (optionAdapter != null) optionAdapter.setOptionDisabled("保存当前歌词", false);
+                        }
                     } else {
                         showNoLyrics("暂无当前歌曲歌词");
                     }
@@ -987,10 +922,35 @@ public class PlayerActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     handler.removeCallbacks(scrapeTimeoutRunnable);
                     Log.e(TAG, "第三方刮削出错: " + msg);
+                    Toast.makeText(PlayerActivity.this, "刮削失败：" + msg, Toast.LENGTH_SHORT).show();
+                    stopScrapeAnimation();
                     showNoLyrics("暂无歌词");
                 });
             }
         });
+    }
+    
+    private void startScrapeAnimation() {
+        if (btnScrape != null) {
+            android.animation.ObjectAnimator animator = android.animation.ObjectAnimator.ofFloat(btnScrape, "rotation", 0f, 360f);
+            animator.setDuration(1000);
+            animator.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+            animator.setRepeatMode(android.animation.ObjectAnimator.RESTART);
+            animator.start();
+            btnScrape.setTag(animator);
+        }
+    }
+    
+    private void stopScrapeAnimation() {
+        if (btnScrape != null) {
+            ObjectAnimator animator = (ObjectAnimator) btnScrape.getTag();
+            if (animator != null) {
+                animator.cancel();
+                animator.end();
+                btnScrape.setRotation(0f);
+                btnScrape.setTag(null);
+            }
+        }
     }
 
 
@@ -1273,130 +1233,28 @@ public class PlayerActivity extends AppCompatActivity {
         editText.setText(defaultValue);
         if (defaultValue != null) editText.setSelection(defaultValue.length());
 
-        new androidx.appcompat.app.AlertDialog.Builder(this, androidx.appcompat.R.style.Theme_AppCompat_Dialog_Alert)
-            .setTitle(title)
-            .setView(editText)
-            .setPositiveButton("保存", (dialog, which) -> {
-                String value = editText.getText().toString().trim();
-                if (!value.isEmpty()) {
-                    listener.onSubmit(value);
-                }
-            })
-            .setNegativeButton("取消", null)
-            .show();
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(editText)
+                .setPositiveButton("保存", (dialog, which) -> {
+                    String value = editText.getText().toString().trim();
+                    if (!value.isEmpty()) {
+                        listener.onSubmit(value);
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
 
     private void updateSongTag(String fileName, String key, String value) {
-        // 第一步：先获取当前完整的 Tags
-        apiService.getMusicInfo(fileName, true).enqueue(new Callback<JsonObject>() {
-            @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    JsonObject json = response.body();
-                    JsonObject tags = json.has("tags") ? json.getAsJsonObject("tags") : new JsonObject();
-                    
-                    // 第二步：构建完整的请求体
-                    java.util.Map<String, Object> body = new java.util.HashMap<>();
-                    body.put("musicname", fileName); // 接口要求的必填项
-                    
-                    // 预填原有数据
-                    body.put("title", getStringOrEmpty(tags, "title"));
-                    body.put("artist", getStringOrEmpty(tags, "artist"));
-                    body.put("album", getStringOrEmpty(tags, "album"));
-                    body.put("year", getStringOrEmpty(tags, "year"));
-                    body.put("genre", getStringOrEmpty(tags, "genre"));
-                    body.put("lyrics", getStringOrEmpty(tags, "lyrics"));
-                    body.put("picture", getStringOrEmpty(tags, "picture"));
-                    
-                    // 覆写需要修改的那个字段
-                    body.put(key, value);
-                    
-                    // 第三步：提交更新
-                    apiService.setMusicTag(body).enqueue(new Callback<ResponseBody>() {
-                        @Override
-                        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                            runOnUiThread(() -> {
-                                if (response.isSuccessful()) {
-                                    Toast.makeText(PlayerActivity.this, "更新成功", Toast.LENGTH_SHORT).show();
-                                    if (key.equals("title")) tvBigTitle.setText(value);
-                                    if (key.equals("artist")) tvBigArtist.setText(value);
-                                } else {
-                                    Toast.makeText(PlayerActivity.this, "更新失败: " + response.code(), Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        }
-                        @Override
-                        public void onFailure(Call<ResponseBody> call, Throwable t) {
-                            runOnUiThread(() -> Toast.makeText(PlayerActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show());
-                        }
-                    });
-                }
-            }
-
-            @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
-                runOnUiThread(() -> Toast.makeText(PlayerActivity.this, "同步标签失败", Toast.LENGTH_SHORT).show());
-            }
-        });
+        Toast.makeText(PlayerActivity.this, "lxserver 不支持此功能", Toast.LENGTH_SHORT).show();
     }
 
     private void updateSongTagsBundle(String fileName, java.util.Map<String, String> updates) {
-        apiService.getMusicInfo(fileName, true).enqueue(new Callback<JsonObject>() {
-            @Override
-            public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    JsonObject json = response.body();
-                    JsonObject tags = json.has("tags") ? json.getAsJsonObject("tags") : new JsonObject();
-                    
-                    java.util.Map<String, Object> body = new java.util.HashMap<>();
-                    body.put("musicname", fileName);
-                    
-                    body.put("title", getStringOrEmpty(tags, "title"));
-                    body.put("artist", getStringOrEmpty(tags, "artist"));
-                    body.put("album", getStringOrEmpty(tags, "album"));
-                    body.put("year", getStringOrEmpty(tags, "year"));
-                    body.put("genre", getStringOrEmpty(tags, "genre"));
-                    body.put("lyrics", getStringOrEmpty(tags, "lyrics"));
-                    body.put("picture", getStringOrEmpty(tags, "picture"));
-                    
-                    // 应用所有更新
-                    for (java.util.Map.Entry<String, String> entry : updates.entrySet()) {
-                        if (entry.getKey().equals("scraped_artist")) {
-                            // 只有当原始 artist 为空或未知时，才覆盖
-                            String oldArtist = getStringOrEmpty(tags, "artist");
-                            if (oldArtist.isEmpty() || oldArtist.equals("未知艺术家")) {
-                                body.put("artist", entry.getValue());
-                            }
-                        } else {
-                            body.put(entry.getKey(), entry.getValue());
-                        }
-                    }
-                    
-                    apiService.setMusicTag(body).enqueue(new Callback<ResponseBody>() {
-                        @Override
-                        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                            runOnUiThread(() -> {
-                                if (response.isSuccessful()) {
-                                    Toast.makeText(PlayerActivity.this, "已保存歌词", Toast.LENGTH_SHORT).show();
-                                    // 保存成功后再次禁用，防止重复提交
-                                    optionAdapter.setOptionDisabled("保存当前歌词", true);
-                                } else {
-                                    Toast.makeText(PlayerActivity.this, "更新失败: " + response.code(), Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        }
-                        @Override
-                        public void onFailure(Call<ResponseBody> call, Throwable t) {
-                            runOnUiThread(() -> Toast.makeText(PlayerActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show());
-                        }
-                    });
-                }
-            }
-            @Override
-            public void onFailure(Call<JsonObject> call, Throwable t) {
-                runOnUiThread(() -> Toast.makeText(PlayerActivity.this, "同步标签失败", Toast.LENGTH_SHORT).show());
-            }
-        });
+        Toast.makeText(PlayerActivity.this, "歌词已加载，请在播放器中查看", Toast.LENGTH_SHORT).show();
+        if (optionAdapter != null) {
+            optionAdapter.setOptionDisabled("保存当前歌词", true);
+        }
     }
 
     private String getStringOrEmpty(JsonObject obj, String key) {

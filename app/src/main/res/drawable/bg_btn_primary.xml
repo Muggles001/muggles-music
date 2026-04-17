@@ -9,7 +9,7 @@
                 android:endColor="#9333EA"
                 android:type="linear" />
             <corners android:radius="10dp" />
-            <stroke android:width="2dp" android:color="#A78BFA" />
+            <stroke android:width="3dp" android:color="#FFFFFF" />
         </shape>
     </item>
     <!-- Normal -->

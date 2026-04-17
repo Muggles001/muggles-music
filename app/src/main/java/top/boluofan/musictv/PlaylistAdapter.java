@@ -93,11 +93,7 @@ public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.ViewHo
         }
         
         // Strict Focus Trapping for TV Remote
-        if (position == playlists.size() - 1) {
-            holder.itemView.setNextFocusDownId(R.id.btnOpenPlayer);
-        } else {
-            holder.itemView.setNextFocusDownId(View.NO_ID); // Default Recycler behavior
-        }
+        holder.itemView.setNextFocusDownId(View.NO_ID);
     }
 
     @Override

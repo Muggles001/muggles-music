@@ -5,18 +5,21 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="8dp"
-    android:layout_marginBottom="4dp"
+    android:padding="4dp"
+    android:layout_marginBottom="2dp"
     android:gravity="center_vertical"
     android:background="@drawable/selector_item_bg"
     android:clickable="true"
     android:focusable="true"
     android:nextFocusLeft="@+id/rvPlaylists"
-    android:descendantFocusability="afterDescendants">
+    android:descendantFocusability="afterDescendants"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:minHeight="48dp">
 
     <FrameLayout
-        android:layout_width="32dp"
-        android:layout_height="32dp">
+        android:layout_width="24dp"
+        android:layout_height="24dp">
         
         <TextView
             android:id="@+id/tvIndex"
@@ -26,12 +29,12 @@
             android:text="1"
             android:textColor="#6B7280"
             android:fontFamily="monospace"
-            android:textSize="14sp"/>
+            android:textSize="12sp"/>
 
         <ImageView
             android:id="@+id/ivEqualizer"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
             android:layout_gravity="center"
             android:src="@drawable/ic_equalizer"
             android:visibility="gone"
@@ -40,11 +43,11 @@
     </FrameLayout>
 
     <androidx.cardview.widget.CardView
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginStart="8dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="6dp"
         app:cardBackgroundColor="@android:color/transparent"
-        app:cardCornerRadius="8dp"
+        app:cardCornerRadius="4dp"
         app:cardElevation="0dp">
         <ImageView
             android:id="@+id/ivCover"
@@ -59,7 +62,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="8dp"
         android:gravity="center_vertical">
 
         <TextView
@@ -68,7 +71,7 @@
             android:layout_height="wrap_content"
             android:text="Song Title"
             android:textColor="#F3F4F6"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:maxLines="1"
             android:ellipsize="end"/>
@@ -79,9 +82,17 @@
             android:layout_height="wrap_content"
             android:text="Unknown Artist"
             android:textColor="#6B7280"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:maxLines="1"
             android:ellipsize="end"/>
+
+        <TextView
+            android:id="@+id/tvSource"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#3B82F6"
+            android:textSize="10sp"
+            android:layout_marginTop="0dp"/>
 
     </LinearLayout>
 
@@ -90,55 +101,55 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginStart="8dp">
+        android:layout_marginStart="4dp">
 
         <ImageButton
             android:id="@+id/btnItemPlay"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginEnd="4dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="2dp"
             android:background="@drawable/btn_focused_circle"
             android:src="@drawable/ic_play"
             android:scaleType="fitCenter"
-            android:padding="6dp"
+            android:padding="4dp"
             android:tint="#E5E7EB"
             android:focusable="true"
             android:contentDescription="play"/>
 
         <ImageButton
             android:id="@+id/btnItemFullscreen"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginEnd="4dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="2dp"
             android:background="@drawable/btn_focused_circle"
             android:src="@drawable/ic_fullscreen"
             android:scaleType="fitCenter"
-            android:padding="6dp"
+            android:padding="4dp"
             android:tint="#E5E7EB"
             android:focusable="true"
             android:contentDescription="fullscreen"/>
 
         <ImageButton
             android:id="@+id/btnItemFav"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginEnd="4dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="2dp"
             android:background="@drawable/btn_focused_circle"
             android:src="@drawable/ic_favorite_border"
             android:scaleType="fitCenter"
-            android:padding="6dp"
+            android:padding="4dp"
             android:tint="#E5E7EB"
             android:focusable="true"
             android:contentDescription="favorite"/>
 
         <ImageButton
             android:id="@+id/btnItemDelete"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             android:background="@drawable/btn_focused_circle"
             android:src="@drawable/ic_delete"
             android:scaleType="fitCenter"
-            android:padding="6dp"
+            android:padding="4dp"
             android:tint="#E5E7EB"
             android:focusable="true"
             android:contentDescription="delete"/>

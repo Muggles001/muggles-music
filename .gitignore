@@ -99,3 +99,6 @@ app/release/baselineProfiles/0/app-release.dm
 app/release/baselineProfiles/1/app-release.dm
 app/.DS_Store
 .DS_Store
+/reference/
+/docs/
+/AGENTS.md

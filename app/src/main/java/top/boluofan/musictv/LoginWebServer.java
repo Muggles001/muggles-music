@@ -14,15 +14,28 @@ public class LoginWebServer extends NanoHTTPD {
     private static final String TAG = "LoginWebServer";
     private Context context;
     private OnLoginDataReceivedListener listener;
+    private String initialUrl;
+    private String initialUsername;
+    private String initialPassword;
+    private String initialToken;
 
     public interface OnLoginDataReceivedListener {
-        void onDataReceived(String url, String username, String password);
+        void onDataReceived(String url, String username, String password, String token);
     }
 
-    public LoginWebServer(Context context, int port, OnLoginDataReceivedListener listener) {
+    public LoginWebServer(Context context, int port, OnLoginDataReceivedListener listener,
+                          String initialUrl, String initialUsername, String initialPassword, String initialToken) {
         super(port);
         this.context = context;
         this.listener = listener;
+        this.initialUrl = initialUrl != null ? initialUrl : "";
+        this.initialUsername = initialUsername != null ? initialUsername : "";
+        this.initialPassword = initialPassword != null ? initialPassword : "";
+        this.initialToken = initialToken != null ? initialToken : "";
+    }
+
+    public LoginWebServer(Context context, int port, OnLoginDataReceivedListener listener) {
+        this(context, port, listener, null, null, null, null);
     }
 
     @Override
@@ -43,9 +56,10 @@ public class LoginWebServer extends NanoHTTPD {
                 String url = params.get("url");
                 String username = params.get("username");
                 String password = params.get("password");
+                String token = params.get("token");
 
                 if (listener != null) {
-                    listener.onDataReceived(url, username, password);
+                    listener.onDataReceived(url, username, password, token);
                 }
 
                 return newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "SUCCESS");
@@ -57,13 +71,27 @@ public class LoginWebServer extends NanoHTTPD {
         return newFixedLengthResponse(Response.Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "Not Found");
     }
 
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("'", "&#39;");
+    }
+
     private String getHtml() {
+        String urlValue = escapeHtml(initialUrl);
+        String usernameValue = escapeHtml(initialUsername);
+        String passwordValue = escapeHtml(initialPassword);
+        String tokenValue = escapeHtml(initialToken);
+
         return "<!DOCTYPE html>\n" +
                 "<html>\n" +
                 "<head>\n" +
                 "    <meta charset=\"UTF-8\">\n" +
                 "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
-                "    <title>肉肉音乐 - 扫码登录</title>\n" +
+                "    <title>菠萝音乐 - 扫码登录</title>\n" +
                 "    <style>\n" +
                 "        body { font-family: -apple-system, sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }\n" +
                 "        .card { background: #1e293b; padding: 24px; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }\n" +
@@ -78,19 +106,23 @@ public class LoginWebServer extends NanoHTTPD {
                 "</head>\n" +
                 "<body>\n" +
                 "    <div class=\"card\">\n" +
-                "        <h2>肉肉音乐 - 快速登录 TV</h2>\n" +
-                "        <p class=\"desc\">在手机上输入 XiaoMusic 服务器信息推送到电视</p>\n" +
+                "        <h2>洛雪音乐 TV - 快速配置</h2>\n" +
+                "        <p class=\"desc\">在手机上输入 lxserver 服务器信息推送到电视</p>\n" +
                 "        <div class=\"field\">\n" +
                 "            <label>服务地址</label>\n" +
-                "            <input type=\"url\" id=\"url\" placeholder=\"http://192.168.x.x:58090\" required>\n" +
+                "            <input type=\"url\" id=\"url\" placeholder=\"http://192.168.x.x:58090\" value=\"" + urlValue + "\" required>\n" +
                 "        </div>\n" +
                 "        <div class=\"field\">\n" +
                 "            <label>用户名 (可选)</label>\n" +
-                "            <input type=\"text\" id=\"username\" placeholder=\"Username\">\n" +
+                "            <input type=\"text\" id=\"username\" placeholder=\"Username\" value=\"" + usernameValue + "\">\n" +
                 "        </div>\n" +
                 "        <div class=\"field\">\n" +
                 "            <label>密码 (可选)</label>\n" +
-                "            <input type=\"password\" id=\"password\" placeholder=\"Password\">\n" +
+                "            <input type=\"password\" id=\"password\" placeholder=\"Password\" value=\"" + passwordValue + "\">\n" +
+                "        </div>\n" +
+                "        <div class=\"field\">\n" +
+                "            <label>Token (可选)</label>\n" +
+                "            <input type=\"text\" id=\"token\" placeholder=\"User Token\" value=\"" + tokenValue + "\">\n" +
                 "        </div>\n" +
                 "        <button onclick=\"submitLogin()\" id=\"btn\">推送到电视</button>\n" +
                 "        <div id=\"status\"></div>\n" +
@@ -112,6 +144,7 @@ public class LoginWebServer extends NanoHTTPD {
                 "            formData.append('url', url);\n" +
                 "            formData.append('username', username);\n" +
                 "            formData.append('password', password);\n" +
+                "            formData.append('token', document.getElementById('token').value);\n" +
                 "\n" +
                 "            fetch('/login', {\n" +
                 "                method: 'POST',\n" +
