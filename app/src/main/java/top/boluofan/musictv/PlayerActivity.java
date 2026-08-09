@@ -862,13 +862,19 @@ public class PlayerActivity extends AppCompatActivity {
                 lyricCall = null;
                 if (response.isSuccessful() && response.body() != null) {
                     top.boluofan.musictv.api.model.LyricInfo lyricInfo = response.body();
-                    String bestLyric = lyricInfo.getBestLyric();
+                    String primaryLyric = LyricParser.chooseMoreComplete(
+                            lyricInfo.getPrimaryLyric(),
+                            lyricInfo.getLxlyric()
+                    );
 
-                    if (bestLyric.isEmpty()) {
+                    if (primaryLyric.isEmpty()) {
                         startExternalScrapeFlow(songName, requestGeneration, requestSource, requestSongMid);
                         return;
                     }
-                    parseLyrics(bestLyric);
+                    String translatedLyric = primaryLyric.equals(lyricInfo.getTlyric())
+                            ? ""
+                            : lyricInfo.getTlyric();
+                    parseLyrics(primaryLyric, translatedLyric);
                 } else {
                     startExternalScrapeFlow(songName, requestGeneration, requestSource, requestSongMid);
                 }
@@ -1065,9 +1071,13 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void parseLyrics(String lrc) {
+        parseLyrics(lrc, "");
+    }
+
+    private void parseLyrics(String lrc, String translatedLrc) {
         Log.d(TAG, "Parsing lyrics length: " + lrc.length());
         List<LyricAdapter.LyricLine> lines = new ArrayList<>();
-        for (LyricParser.Line parsedLine : LyricParser.parse(lrc)) {
+        for (LyricParser.Line parsedLine : LyricParser.parse(lrc, translatedLrc)) {
             lines.add(new LyricAdapter.LyricLine(
                     parsedLine.timeMs,
                     parsedLine.text,

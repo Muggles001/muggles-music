@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 
 /** Parses standard LRC and LX/KRC-style millisecond lyric timelines. */
 public final class LyricParser {
+    private static final long TRANSLATION_MATCH_TOLERANCE_MS = 1200L;
     private static final Pattern OFFSET_PATTERN = Pattern.compile("(?i)\\[offset:([+-]?\\d+)]");
     private static final Pattern LRC_TIME_PATTERN = Pattern.compile(
             "\\[(\\d{1,3}):(\\d{1,2})(?:[.:](\\d{1,3}))?]"
@@ -19,6 +20,83 @@ public final class LyricParser {
     }
 
     public static List<Line> parse(String rawLyrics) {
+        return parseSingle(rawLyrics);
+    }
+
+    public static String chooseMoreComplete(String preferredLyrics, String alternativeLyrics) {
+        if (preferredLyrics == null || preferredLyrics.trim().isEmpty()) {
+            return alternativeLyrics == null ? "" : alternativeLyrics;
+        }
+        if (alternativeLyrics == null || alternativeLyrics.trim().isEmpty()) return preferredLyrics;
+        return parseSingle(alternativeLyrics).size() > parseSingle(preferredLyrics).size()
+                ? alternativeLyrics
+                : preferredLyrics;
+    }
+
+    public static List<Line> parse(String rawLyrics, String translatedLyrics) {
+        List<Line> primary = parseSingle(rawLyrics);
+        List<Line> translated = parseSingle(translatedLyrics);
+        if (primary.isEmpty()) return translated;
+        if (translated.isEmpty()) return primary;
+
+        List<TranslationCandidate> candidates = new ArrayList<>();
+        for (int primaryIndex = 0; primaryIndex < primary.size(); primaryIndex++) {
+            for (int translationIndex = 0; translationIndex < translated.size(); translationIndex++) {
+                long distance = Math.abs(
+                        translated.get(translationIndex).timeMs - primary.get(primaryIndex).timeMs
+                );
+                if (distance <= TRANSLATION_MATCH_TOLERANCE_MS) {
+                    candidates.add(new TranslationCandidate(primaryIndex, translationIndex, distance));
+                }
+                if (translated.get(translationIndex).timeMs
+                        > primary.get(primaryIndex).timeMs + TRANSLATION_MATCH_TOLERANCE_MS) {
+                    break;
+                }
+            }
+        }
+        candidates.sort(Comparator.comparingLong(candidate -> candidate.distanceMs));
+
+        int[] translationForPrimary = new int[primary.size()];
+        for (int i = 0; i < translationForPrimary.length; i++) translationForPrimary[i] = -1;
+        boolean[] usedTranslations = new boolean[translated.size()];
+        for (TranslationCandidate candidate : candidates) {
+            if (translationForPrimary[candidate.primaryIndex] >= 0
+                    || usedTranslations[candidate.translationIndex]) {
+                continue;
+            }
+            translationForPrimary[candidate.primaryIndex] = candidate.translationIndex;
+            usedTranslations[candidate.translationIndex] = true;
+        }
+
+        List<Line> merged = new ArrayList<>(primary.size());
+        for (int primaryIndex = 0; primaryIndex < primary.size(); primaryIndex++) {
+            Line primaryLine = primary.get(primaryIndex);
+            String displayText = primaryLine.text;
+            int bestIndex = translationForPrimary[primaryIndex];
+            if (bestIndex >= 0) {
+                String translatedText = translated.get(bestIndex).text;
+                if (!translatedText.isEmpty() && !translatedText.equals(primaryLine.text)) {
+                    displayText += "\n" + translatedText;
+                }
+            }
+            merged.add(new Line(primaryLine.timeMs, displayText, primaryLine.rawLine));
+        }
+        return merged;
+    }
+
+    private static final class TranslationCandidate {
+        final int primaryIndex;
+        final int translationIndex;
+        final long distanceMs;
+
+        TranslationCandidate(int primaryIndex, int translationIndex, long distanceMs) {
+            this.primaryIndex = primaryIndex;
+            this.translationIndex = translationIndex;
+            this.distanceMs = distanceMs;
+        }
+    }
+
+    private static List<Line> parseSingle(String rawLyrics) {
         List<Line> result = new ArrayList<>();
         if (rawLyrics == null || rawLyrics.trim().isEmpty()) return result;
 

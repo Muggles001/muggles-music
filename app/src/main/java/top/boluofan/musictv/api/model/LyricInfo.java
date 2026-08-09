@@ -59,6 +59,18 @@ public class LyricInfo {
         return lxlyric != null && !lxlyric.isEmpty();
     }
 
+    public boolean hasRlyric() {
+        return rlyric != null && !rlyric.isEmpty();
+    }
+
+    public String getPrimaryLyric() {
+        if (hasText(lyric)) return lyric;
+        if (hasText(lxlyric)) return lxlyric.replaceAll("<-?\\d+,-?\\d+>", "");
+        if (hasText(rlyric)) return rlyric;
+        if (hasText(tlyric)) return tlyric;
+        return "";
+    }
+
     public String getBestLyric() {
         if (hasText(lyric)) return lyric;
         if (hasText(lxlyric)) return lxlyric.replaceAll("<-?\\d+,-?\\d+>", "");
