@@ -1,5 +1,6 @@
 package top.boluofan.musictv.api.model;
 
+import android.os.Bundle;
 import com.google.gson.annotations.SerializedName;
 import java.util.List;
 import java.util.Map;
@@ -8,10 +9,10 @@ public class MusicInfo {
     @SerializedName("id")
     private String id;
 
-    @SerializedName("name")
+    @SerializedName(value = "name", alternate = {"songName", "songname"})
     private String name;
 
-    @SerializedName("singer")
+    @SerializedName(value = "singer", alternate = {"singerName", "singername", "artist"})
     private String singer;
 
     @SerializedName("source")
@@ -20,23 +21,35 @@ public class MusicInfo {
     @SerializedName("interval")
     private String interval;
 
-    @SerializedName("img")
+    @SerializedName(value = "img", alternate = {"picUrl"})
     private String img;
 
     @SerializedName("albumId")
     private String albumId;
 
-    @SerializedName("albumName")
+    @SerializedName(value = "albumName", alternate = {"album"})
     private String albumName;
 
     @SerializedName("songmid")
     private String songmid;
+
+    @SerializedName("songId")
+    private String songId;
 
     @SerializedName("hash")
     private String hash;
 
     @SerializedName("copyrightId")
     private String copyrightId;
+
+    @SerializedName(value = "lrcUrl", alternate = {"lyricUrl"})
+    private String lrcUrl;
+
+    @SerializedName(value = "mrcUrl", alternate = {"mrcurl"})
+    private String mrcUrl;
+
+    @SerializedName("trcUrl")
+    private String trcUrl;
 
     @SerializedName("types")
     private List<QualityInfo> types;
@@ -66,6 +79,8 @@ public class MusicInfo {
     }
 
     public String getName() {
+        if (hasText(name)) return name;
+        if (meta != null && hasText(meta.name)) return meta.name;
         return name;
     }
 
@@ -74,6 +89,8 @@ public class MusicInfo {
     }
 
     public String getSinger() {
+        if (hasText(singer)) return singer;
+        if (meta != null && hasText(meta.singer)) return meta.singer;
         return singer;
     }
 
@@ -82,6 +99,8 @@ public class MusicInfo {
     }
 
     public String getSource() {
+        if (hasText(source)) return source;
+        if (meta != null && hasText(meta.source)) return meta.source;
         return source;
     }
 
@@ -90,6 +109,8 @@ public class MusicInfo {
     }
 
     public String getInterval() {
+        if (hasText(interval)) return interval;
+        if (meta != null && hasText(meta.interval)) return meta.interval;
         return interval;
     }
 
@@ -130,6 +151,8 @@ public class MusicInfo {
     }
 
     public String getAlbumId() {
+        if (hasText(albumId)) return albumId;
+        if (meta != null && hasText(meta.albumId)) return meta.albumId;
         return albumId;
     }
 
@@ -149,13 +172,9 @@ public class MusicInfo {
 
     public String getSongmid() {
         if (songmid != null && !songmid.isEmpty()) return songmid;
+        if (songId != null && !songId.isEmpty()) return songId;
         if (meta != null && meta.songId != null) {
-            Object songId = meta.songId;
-            if (songId instanceof Number) {
-                long longVal = ((Number) songId).longValue();
-                return String.valueOf(longVal);
-            }
-            return String.valueOf(songId);
+            return meta.songId;
         }
         return id;
     }
@@ -165,6 +184,8 @@ public class MusicInfo {
     }
 
     public String getHash() {
+        if (hasText(hash)) return hash;
+        if (meta != null && hasText(meta.hash)) return meta.hash;
         return hash;
     }
 
@@ -173,11 +194,69 @@ public class MusicInfo {
     }
 
     public String getCopyrightId() {
+        if (hasText(copyrightId)) return copyrightId;
+        if (meta != null && hasText(meta.copyrightId)) return meta.copyrightId;
         return copyrightId;
     }
 
     public void setCopyrightId(String copyrightId) {
         this.copyrightId = copyrightId;
+    }
+
+    public String getLrcUrl() {
+        if (hasText(lrcUrl)) return lrcUrl;
+        if (meta != null && hasText(meta.lrcUrl)) return meta.lrcUrl;
+        return lrcUrl;
+    }
+
+    public void setLrcUrl(String lrcUrl) {
+        this.lrcUrl = lrcUrl;
+    }
+
+    public String getMrcUrl() {
+        if (hasText(mrcUrl)) return mrcUrl;
+        if (meta != null && hasText(meta.mrcUrl)) return meta.mrcUrl;
+        return mrcUrl;
+    }
+
+    public void setMrcUrl(String mrcUrl) {
+        this.mrcUrl = mrcUrl;
+    }
+
+    public String getTrcUrl() {
+        if (hasText(trcUrl)) return trcUrl;
+        if (meta != null && hasText(meta.trcUrl)) return meta.trcUrl;
+        return trcUrl;
+    }
+
+    public void setTrcUrl(String trcUrl) {
+        this.trcUrl = trcUrl;
+    }
+
+    public Bundle toPlaybackExtras() {
+        Bundle extras = new Bundle();
+        putString(extras, "song_id", getId());
+        putString(extras, "source", getSource());
+        putString(extras, "songmid", getSongmid());
+        putString(extras, "pic_url", getPicUrl());
+        putString(extras, "original_name", getName());
+        putString(extras, "singer", getSinger());
+        putString(extras, "hash", getHash());
+        putString(extras, "interval", getInterval());
+        putString(extras, "copyrightId", getCopyrightId());
+        putString(extras, "albumId", getAlbumId());
+        putString(extras, "lrcUrl", getLrcUrl());
+        putString(extras, "mrcUrl", getMrcUrl());
+        putString(extras, "trcUrl", getTrcUrl());
+        return extras;
+    }
+
+    private static void putString(Bundle extras, String key, String value) {
+        extras.putString(key, value == null ? "" : value);
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     public Map<String, QualityDetail> get_types() {
@@ -195,8 +274,38 @@ public class MusicInfo {
     }
 
     public static class MusicMeta {
-        @SerializedName("songId")
-        private Object songId;
+        @SerializedName(value = "songId", alternate = {"songmid"})
+        private String songId;
+
+        @SerializedName(value = "name", alternate = {"songName", "songname"})
+        private String name;
+
+        @SerializedName(value = "singer", alternate = {"singerName", "singername", "artist"})
+        private String singer;
+
+        @SerializedName("source")
+        private String source;
+
+        @SerializedName("hash")
+        private String hash;
+
+        @SerializedName("interval")
+        private String interval;
+
+        @SerializedName("copyrightId")
+        private String copyrightId;
+
+        @SerializedName("albumId")
+        private String albumId;
+
+        @SerializedName(value = "lrcUrl", alternate = {"lyricUrl"})
+        private String lrcUrl;
+
+        @SerializedName(value = "mrcUrl", alternate = {"mrcurl"})
+        private String mrcUrl;
+
+        @SerializedName("trcUrl")
+        private String trcUrl;
 
         @SerializedName("albumName")
         private String albumName;
@@ -210,11 +319,11 @@ public class MusicInfo {
         @SerializedName("_qualitys")
         private Map<String, QualityDetail> _qualitys;
 
-        public Object getSongId() {
+        public String getSongId() {
             return songId;
         }
 
-        public void setSongId(Object songId) {
+        public void setSongId(String songId) {
             this.songId = songId;
         }
 

@@ -34,7 +34,9 @@ import java.io.StringReader;
 import java.util.ArrayList;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -74,17 +76,10 @@ public class PlayerActivity extends AppCompatActivity {
     private String currentScrapingId = "";
     private String currentSongSource = "mg";
     private String currentSongMid = "";
+    private retrofit2.Call<top.boluofan.musictv.api.model.LyricInfo> lyricCall;
     private boolean hasArtwork = false;
-    private final Runnable scrapeTimeoutRunnable = () -> {
-        Log.e(TAG, "Scrape Timeout!");
-        runOnUiThread(() -> {
-            Toast.makeText(PlayerActivity.this, "刮削超时", Toast.LENGTH_SHORT).show();
-            stopScrapeAnimation();
-        });
-        if (lyricAdapter.getItemCount() <= 0) {
-            showNoLyrics("暂无歌词 (请求超时)");
-        }
-    };
+    private long lyricRequestGeneration = 0;
+    private Runnable scrapeTimeoutRunnable;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable progressUpdater = new Runnable() {
@@ -821,42 +816,105 @@ public class PlayerActivity extends AppCompatActivity {
             return;
         }
 
-        String quality = top.boluofan.musictv.api.LxRetrofitClient.getQuality(this);
+        final long requestGeneration = ++lyricRequestGeneration;
+        if (scrapeTimeoutRunnable != null) {
+            handler.removeCallbacks(scrapeTimeoutRunnable);
+            scrapeTimeoutRunnable = null;
+        }
 
-        apiService.getLyric(source, songmid, quality).enqueue(new retrofit2.Callback<top.boluofan.musictv.api.model.LyricInfo>() {
+        Bundle extras = current != null && current.mediaMetadata.extras != null
+                ? current.mediaMetadata.extras
+                : Bundle.EMPTY;
+        String singer = extras.getString("singer", "");
+        if (singer.isEmpty() && current != null && current.mediaMetadata.artist != null) {
+            singer = current.mediaMetadata.artist.toString();
+        }
+
+        Map<String, String> params = new HashMap<>();
+        putLyricParam(params, "source", source);
+        putLyricParam(params, "songmid", songmid);
+        putLyricParam(params, "songId", extras.getString("song_id", ""));
+        putLyricParam(params, "name", extras.getString("original_name", songName));
+        putLyricParam(params, "singer", singer);
+        putLyricParam(params, "hash", extras.getString("hash", ""));
+        putLyricParam(params, "interval", extras.getString("interval", ""));
+        putLyricParam(params, "copyrightId", extras.getString("copyrightId", ""));
+        putLyricParam(params, "albumId", extras.getString("albumId", ""));
+        putLyricParam(params, "lrcUrl", extras.getString("lrcUrl", ""));
+        putLyricParam(params, "mrcUrl", extras.getString("mrcUrl", ""));
+        putLyricParam(params, "trcUrl", extras.getString("trcUrl", ""));
+        putLyricParam(params, "quality", top.boluofan.musictv.api.LxRetrofitClient.getQuality(this));
+
+        String username = top.boluofan.musictv.api.LxRetrofitClient.getUsername(this);
+        String password = top.boluofan.musictv.api.LxRetrofitClient.getPassword(this);
+        String token = top.boluofan.musictv.api.LxRetrofitClient.getToken(this);
+        final String requestSource = source;
+        final String requestSongMid = songmid;
+
+        if (lyricCall != null) lyricCall.cancel();
+        lyricCall = apiService.getLyric(username, password, token, params);
+        lyricCall.enqueue(new retrofit2.Callback<top.boluofan.musictv.api.model.LyricInfo>() {
             @Override
             public void onResponse(retrofit2.Call<top.boluofan.musictv.api.model.LyricInfo> call,
                                    retrofit2.Response<top.boluofan.musictv.api.model.LyricInfo> response) {
+                if (!isCurrentLyricRequest(requestGeneration, requestSource, requestSongMid)) return;
+                lyricCall = null;
                 if (response.isSuccessful() && response.body() != null) {
                     top.boluofan.musictv.api.model.LyricInfo lyricInfo = response.body();
-                    String lyrics = lyricInfo.getLyric();
-                    String tlyrics = lyricInfo.getTlyric();
+                    String bestLyric = lyricInfo.getBestLyric();
 
-                    if ((lyrics == null || lyrics.isEmpty()) && (tlyrics == null || tlyrics.isEmpty())) {
-                        startExternalScrapeFlow(songName);
+                    if (bestLyric.isEmpty()) {
+                        startExternalScrapeFlow(songName, requestGeneration, requestSource, requestSongMid);
                         return;
                     }
-
-                    if (lyrics != null && !lyrics.isEmpty()) {
-                        parseLyrics(lyrics);
-                    } else if (tlyrics != null && !tlyrics.isEmpty()) {
-                        parseLyrics(tlyrics);
-                    }
+                    parseLyrics(bestLyric);
                 } else {
-                    startExternalScrapeFlow(songName);
+                    startExternalScrapeFlow(songName, requestGeneration, requestSource, requestSongMid);
                 }
             }
 
             @Override
             public void onFailure(retrofit2.Call<top.boluofan.musictv.api.model.LyricInfo> call, Throwable t) {
+                if (call.isCanceled() || !isCurrentLyricRequest(requestGeneration, requestSource, requestSongMid)) return;
+                lyricCall = null;
                 Log.e(TAG, "获取歌词失败: " + t.getMessage());
-                startExternalScrapeFlow(songName);
+                startExternalScrapeFlow(songName, requestGeneration, requestSource, requestSongMid);
             }
         });
     }
 
+    private void putLyricParam(Map<String, String> params, String key, String value) {
+        if (value != null && !value.trim().isEmpty()) params.put(key, value);
+    }
+
+    private boolean isCurrentLyricRequest(long generation, String source, String songmid) {
+        if (generation != lyricRequestGeneration) return false;
+        if (player == null || player.getCurrentMediaItem() == null) return false;
+        MediaItem current = player.getCurrentMediaItem();
+        Bundle extras = current.mediaMetadata.extras;
+        String currentSource = extras != null ? extras.getString("source", "") : "";
+        String currentMid = extras != null ? extras.getString("songmid", "") : "";
+        if (currentMid.isEmpty()) currentMid = current.mediaId;
+        return source.equals(currentSource) && songmid.equals(currentMid);
+    }
+
     private void startExternalScrapeFlow(String songName) {
-        if (songScraper == null) return;
+        if (player == null || player.getCurrentMediaItem() == null) return;
+        MediaItem current = player.getCurrentMediaItem();
+        Bundle extras = current.mediaMetadata.extras;
+        String source = extras != null ? extras.getString("source", currentSongSource) : currentSongSource;
+        String songmid = extras != null ? extras.getString("songmid", currentSongMid) : currentSongMid;
+        if (songmid == null || songmid.isEmpty()) songmid = current.mediaId;
+        long generation = ++lyricRequestGeneration;
+        if (lyricCall != null) {
+            lyricCall.cancel();
+            lyricCall = null;
+        }
+        startExternalScrapeFlow(songName, generation, source == null ? "" : source, songmid == null ? "" : songmid);
+    }
+
+    private void startExternalScrapeFlow(String songName, long generation, String source, String songmid) {
+        if (songScraper == null || !isCurrentLyricRequest(generation, source, songmid)) return;
         
         // 获取当前的歌手信息作为提示
         String artistHint = tvBigArtist.getText().toString();
@@ -866,19 +924,33 @@ public class PlayerActivity extends AppCompatActivity {
 
         Log.d(TAG, "开始第三方刮削流程 | 歌曲名: " + songName + " | 歌手提示: " + artistHint);
         
-        // 增加 15 秒超时保护
-        handler.removeCallbacks(scrapeTimeoutRunnable);
-        handler.postDelayed(scrapeTimeoutRunnable, 15000);
+        // 增加 15 秒超时保护，每个请求只管理自己的计时器
+        if (scrapeTimeoutRunnable != null) handler.removeCallbacks(scrapeTimeoutRunnable);
+        final Runnable requestTimeout = () -> {
+            if (!isCurrentLyricRequest(generation, source, songmid)) return;
+            Log.e(TAG, "Scrape Timeout!");
+            lyricRequestGeneration++;
+            scrapeTimeoutRunnable = null;
+            Toast.makeText(PlayerActivity.this, "刮削超时", Toast.LENGTH_SHORT).show();
+            stopScrapeAnimation();
+            if (lyricAdapter.getItemCount() <= 0) {
+                showNoLyrics("暂无歌词 (请求超时)");
+            }
+        };
+        scrapeTimeoutRunnable = requestTimeout;
+        handler.postDelayed(requestTimeout, 15000);
 
         final String finalArtistHint = artistHint;
         songScraper.scrape(songName, finalArtistHint, new SongScraper.ScrapeCallback() {
             @Override
             public void onSuccess(String artist, String picUrl, String lyrics) {
                 runOnUiThread(() -> {
-                    if (isDestroyed() || isFinishing()) {
+                    if (isDestroyed() || isFinishing()
+                            || !isCurrentLyricRequest(generation, source, songmid)) {
                         return;
                     }
-                    handler.removeCallbacks(scrapeTimeoutRunnable);
+                    handler.removeCallbacks(requestTimeout);
+                    if (scrapeTimeoutRunnable == requestTimeout) scrapeTimeoutRunnable = null;
                     Log.d(TAG, "第三方刮削成功，正在更新 UI。图片地址: " + picUrl);
                     
                     boolean hasCover = picUrl != null && !picUrl.isEmpty();
@@ -948,7 +1020,9 @@ public class PlayerActivity extends AppCompatActivity {
             @Override
             public void onError(String msg) {
                 runOnUiThread(() -> {
-                    handler.removeCallbacks(scrapeTimeoutRunnable);
+                    if (!isCurrentLyricRequest(generation, source, songmid)) return;
+                    handler.removeCallbacks(requestTimeout);
+                    if (scrapeTimeoutRunnable == requestTimeout) scrapeTimeoutRunnable = null;
                     Log.e(TAG, "第三方刮削出错: " + msg);
                     Toast.makeText(PlayerActivity.this, "刮削失败：" + msg, Toast.LENGTH_SHORT).show();
                     stopScrapeAnimation();
@@ -1293,6 +1367,17 @@ public class PlayerActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        lyricRequestGeneration++;
+        if (lyricCall != null) {
+            lyricCall.cancel();
+            lyricCall = null;
+        }
+        if (scrapeTimeoutRunnable != null) {
+            handler.removeCallbacks(scrapeTimeoutRunnable);
+            scrapeTimeoutRunnable = null;
+        }
+        currentScrapingId = "";
+        stopScrapeAnimation();
         if (controllerFuture != null) {
             MediaController.releaseFuture(controllerFuture);
         }

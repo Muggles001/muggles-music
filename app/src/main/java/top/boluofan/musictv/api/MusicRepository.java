@@ -153,7 +153,16 @@ public class MusicRepository {
     }
 
     public void getLyric(String source, String songmid, String quality, RepositoryCallback<LyricInfo> callback) {
-        apiService.getLyric(source, songmid, quality).enqueue(new retrofit2.Callback<LyricInfo>() {
+        Map<String, String> params = new HashMap<>();
+        params.put("source", source == null ? "" : source);
+        params.put("songmid", songmid == null ? "" : songmid);
+        params.put("quality", quality == null ? "" : quality);
+
+        String username = LxRetrofitClient.getUsername(context);
+        String password = LxRetrofitClient.getPassword(context);
+        String token = LxRetrofitClient.getToken(context);
+
+        apiService.getLyric(username, password, token, params).enqueue(new retrofit2.Callback<LyricInfo>() {
             @Override
             public void onResponse(Call<LyricInfo> call, Response<LyricInfo> response) {
                 if (response.isSuccessful() && response.body() != null) {

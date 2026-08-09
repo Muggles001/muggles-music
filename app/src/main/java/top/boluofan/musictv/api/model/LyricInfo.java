@@ -3,7 +3,7 @@ package top.boluofan.musictv.api.model;
 import com.google.gson.annotations.SerializedName;
 
 public class LyricInfo {
-    @SerializedName("lyric")
+    @SerializedName(value = "lyric", alternate = {"lrc"})
     private String lyric;
 
     @SerializedName("tlyric")
@@ -12,7 +12,7 @@ public class LyricInfo {
     @SerializedName("rlyric")
     private String rlyric;
 
-    @SerializedName("lxlyric")
+    @SerializedName(value = "lxlyric", alternate = {"klyric"})
     private String lxlyric;
 
     public String getLyric() {
@@ -57,5 +57,17 @@ public class LyricInfo {
 
     public boolean hasLxlyric() {
         return lxlyric != null && !lxlyric.isEmpty();
+    }
+
+    public String getBestLyric() {
+        if (hasText(lyric)) return lyric;
+        if (hasText(lxlyric)) return lxlyric.replaceAll("<-?\\d+,-?\\d+>", "");
+        if (hasText(tlyric)) return tlyric;
+        if (hasText(rlyric)) return rlyric;
+        return "";
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

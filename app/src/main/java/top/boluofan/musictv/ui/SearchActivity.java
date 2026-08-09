@@ -706,12 +706,7 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private MediaItem createMediaItem(MusicInfo song) {
-        Bundle extras = new Bundle();
-        extras.putString("song_id", song.getId());
-        extras.putString("source", song.getSource());
-        extras.putString("songmid", song.getSongmid());
-        extras.putString("pic_url", song.getPicUrl());
-        extras.putString("original_name", song.getName());
+        Bundle extras = song.toPlaybackExtras();
         
         Uri artworkUri = null;
         String coverUrl = song.getPicUrl();

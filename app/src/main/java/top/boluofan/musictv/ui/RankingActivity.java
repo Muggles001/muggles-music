@@ -602,15 +602,10 @@ public class RankingActivity extends AppCompatActivity {
                         if (list != null) {
                             for (int i = 0; i < list.size(); i++) {
                                 JsonObject item = list.get(i).getAsJsonObject();
-                                MusicInfo music = new MusicInfo();
-                                music.setId(item.has("id") ? item.get("id").getAsString() : "");
-                                music.setName(item.has("name") ? item.get("name").getAsString() : "");
-                                music.setSinger(item.has("singer") ? item.get("singer").getAsString() : "");
-                                music.setSource(currentSource);
-                                music.setSongmid(item.has("songmid") ? item.get("songmid").getAsString() : "");
-                                music.setPicUrl(item.has("img") ? item.get("img").getAsString() : 
-                                    (item.has("picUrl") ? item.get("picUrl").getAsString() : ""));
-                                music.setAlbumName(item.has("album") ? item.get("album").getAsString() : "");
+                                MusicInfo music = gson.fromJson(item, MusicInfo.class);
+                                if (music.getSource() == null || music.getSource().isEmpty()) {
+                                    music.setSource(currentSource);
+                                }
                                 songs.add(music);
                             }
                         }
@@ -669,12 +664,7 @@ public class RankingActivity extends AppCompatActivity {
     }
     
     private MediaItem createMediaItem(MusicInfo song) {
-        Bundle extras = new Bundle();
-        extras.putString("song_id", song.getId());
-        extras.putString("source", song.getSource());
-        extras.putString("songmid", song.getSongmid());
-        extras.putString("pic_url", song.getPicUrl());
-        extras.putString("original_name", song.getName());
+        Bundle extras = song.toPlaybackExtras();
         
         Uri artworkUri = song.getPicUrl() != null ? Uri.parse(song.getPicUrl()) : null;
         Uri resolveUri = MusicService.buildResolveUri(song.getSource(), song.getSongmid(), song.getName());

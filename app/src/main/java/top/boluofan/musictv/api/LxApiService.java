@@ -9,6 +9,7 @@ import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.POST;
 import retrofit2.http.Query;
+import retrofit2.http.QueryMap;
 import top.boluofan.musictv.api.model.HotListResponse;
 import top.boluofan.musictv.api.model.ListData;
 import top.boluofan.musictv.api.model.LoginResponse;
@@ -58,7 +59,12 @@ public interface LxApiService {
     );
 
     @GET("api/music/lyric")
-    Call<LyricInfo> getLyric(@Query("source") String source, @Query("songmid") String songmid, @Query("quality") String quality);
+    Call<LyricInfo> getLyric(
+            @Header("x-user-name") String username,
+            @Header("x-user-password") String password,
+            @Header("x-user-token") String token,
+            @QueryMap Map<String, String> params
+    );
 
     @GET("api/music/hotSearch")
     Call<ResponseBody> getHotSearch(@Query("source") String source);
