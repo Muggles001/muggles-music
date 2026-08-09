@@ -86,7 +86,9 @@ public class PlayerActivity extends AppCompatActivity {
         @Override
         public void run() {
             updateProgress();
-            handler.postDelayed(this, 1000);
+            // Keep the lyric clock alive while the player screen exists. MediaController's
+            // isPlaying flag can briefly toggle during buffering even though playback resumes.
+            handler.postDelayed(this, 250);
         }
     };
 
@@ -627,8 +629,7 @@ public class PlayerActivity extends AppCompatActivity {
             }
             @Override
             public void onIsPlayingChanged(boolean isPlaying) {
-                if (isPlaying) startProgressUpdater();
-                else stopProgressUpdater();
+                startProgressUpdater();
                 updateControlsUI();
             }
             @Override
@@ -663,7 +664,7 @@ public class PlayerActivity extends AppCompatActivity {
         if (player.getCurrentMediaItem() != null) {
             updateMetadata(player.getCurrentMediaItem());
         }
-        if (player.isPlaying()) startProgressUpdater();
+        startProgressUpdater();
         updateControlsUI();
     }
 
@@ -1066,33 +1067,12 @@ public class PlayerActivity extends AppCompatActivity {
     private void parseLyrics(String lrc) {
         Log.d(TAG, "Parsing lyrics length: " + lrc.length());
         List<LyricAdapter.LyricLine> lines = new ArrayList<>();
-        
-        // Try to parse timestamps
-        try (BufferedReader reader = new BufferedReader(new StringReader(lrc))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                int closing = line.indexOf(']');
-                if (closing > 0 && line.startsWith("[")) {
-                     String timePart = line.substring(1, closing);
-                     String textPart = line.substring(closing + 1).trim();
-                     
-                     try {
-                         String[] parts = timePart.split(":");
-                         if (parts.length >= 2) {
-                             long min = Long.parseLong(parts[0].trim());
-                             double sec = Double.parseDouble(parts[1].trim());
-                             long timeMs = (long) ((min * 60 + sec) * 1000);
-                             if (!textPart.isEmpty()) { 
-                                 lines.add(new LyricAdapter.LyricLine(timeMs, textPart, line));
-                             }
-                         }
-                     } catch (Exception e) {
-                         // ignore invalid line
-                     }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        for (LyricParser.Line parsedLine : LyricParser.parse(lrc)) {
+            lines.add(new LyricAdapter.LyricLine(
+                    parsedLine.timeMs,
+                    parsedLine.text,
+                    parsedLine.rawLine
+            ));
         }
         
         Log.d(TAG, "Parsed lines: " + lines.size());
@@ -1109,9 +1089,9 @@ public class PlayerActivity extends AppCompatActivity {
         } else {
              rvLyrics.setVisibility(View.VISIBLE);
              tvNoLyrics.setVisibility(View.GONE);
-             lyricAdapter.setCurrentIndex(-1);
-             rvLyrics.scrollToPosition(0);
              lyricAdapter.setLyrics(lines);
+             rvLyrics.scrollToPosition(0);
+             updateLyric(player != null ? player.getCurrentPosition() : 0L);
              // Toast.makeText(this, "Loaded " + lines.size() + " lines", Toast.LENGTH_SHORT).show();
         }
     }
@@ -1176,33 +1156,28 @@ public class PlayerActivity extends AppCompatActivity {
         List<LyricAdapter.LyricLine> rawLyrics = lyricAdapter.getLyrics();
         if (rawLyrics.size() < 3) return; // 只有空行，没有实际歌词
 
+        int low = 1;
+        int high = rawLyrics.size() - 2;
         int activeIdx = -1;
-        // 注意：i 从 1 开始，避开前置空行；i 到 size-1 结束，避开后置空行
-        for (int i = 1; i < rawLyrics.size() - 1; i++) {
-            if (currentPos >= rawLyrics.get(i).timeMs) {
-                activeIdx = i;
+        while (low <= high) {
+            int mid = low + (high - low) / 2;
+            if (currentPos >= rawLyrics.get(mid).timeMs) {
+                activeIdx = mid;
+                low = mid + 1;
             } else {
-                break;
+                high = mid - 1;
             }
         }
         
         if (activeIdx != -1 && activeIdx != lyricAdapter.getCurrentIndex()) {
             lyricAdapter.setCurrentIndex(activeIdx);
             
-            androidx.recyclerview.widget.LinearSmoothScroller smoothScroller = new androidx.recyclerview.widget.LinearSmoothScroller(this) {
-                @Override
-                public int calculateDtToFit(int viewStart, int viewEnd, int boxStart, int boxEnd, int snapPreference) {
-                    return (boxStart + (boxEnd - boxStart) / 2) - (viewStart + (viewEnd - viewStart) / 2);
-                }
-                @Override
-                protected float calculateSpeedPerPixel(android.util.DisplayMetrics displayMetrics) {
-                    return 200f / displayMetrics.densityDpi; // Slower smooth scroll
-                }
-            };
-            
-            smoothScroller.setTargetPosition(activeIdx);
-            if (rvLyrics.getLayoutManager() != null) {
-                rvLyrics.getLayoutManager().startSmoothScroll(smoothScroller);
+            RecyclerView.LayoutManager layoutManager = rvLyrics.getLayoutManager();
+            if (layoutManager instanceof LinearLayoutManager) {
+                int centerOffset = Math.max(0, rvLyrics.getHeight() / 2);
+                ((LinearLayoutManager) layoutManager).scrollToPositionWithOffset(activeIdx, centerOffset);
+            } else if (layoutManager != null) {
+                rvLyrics.scrollToPosition(activeIdx);
             }
         }
     }

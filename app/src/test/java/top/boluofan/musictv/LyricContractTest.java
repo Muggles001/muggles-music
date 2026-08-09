@@ -3,6 +3,7 @@ package top.boluofan.musictv;
 import static org.junit.Assert.assertEquals;
 
 import com.google.gson.Gson;
+import java.util.List;
 import org.junit.Test;
 import top.boluofan.musictv.api.model.LyricInfo;
 import top.boluofan.musictv.api.model.MusicInfo;
@@ -64,5 +65,52 @@ public class LyricContractTest {
 
         assertEquals("0039MnYb0qxYhV", numericFirst.getSongmid());
         assertEquals("0039MnYb0qxYhV", midFirst.getSongmid());
+    }
+
+    @Test
+    public void lyricParser_supportsMixedCreditsAndMillisecondTimeline() {
+        String lyric = "[00:00.00]作词：某某\n"
+                + "[00:01.20]编曲：某某\n"
+                + "[15440,3530]<0,300>第<300,300>一<600,300>句\n"
+                + "[19000,2800]<0,300>第<300,300>二<600,300>句";
+
+        List<LyricParser.Line> lines = LyricParser.parse(lyric);
+
+        assertEquals(4, lines.size());
+        assertEquals(15440L, lines.get(2).timeMs);
+        assertEquals("第一句", lines.get(2).text);
+        assertEquals(19000L, lines.get(3).timeMs);
+        assertEquals("第二句", lines.get(3).text);
+    }
+
+    @Test
+    public void lyricParser_sortsUnorderedLinesAndExpandsRepeatedTimestamps() {
+        String lyric = "[00:05.50]后一句\n[00:01.2][00:03.250]重复句";
+
+        List<LyricParser.Line> lines = LyricParser.parse(lyric);
+
+        assertEquals(3, lines.size());
+        assertEquals(1200L, lines.get(0).timeMs);
+        assertEquals(3250L, lines.get(1).timeMs);
+        assertEquals(5500L, lines.get(2).timeMs);
+    }
+
+    @Test
+    public void lyricParser_appliesOffset() {
+        List<LyricParser.Line> lines = LyricParser.parse("[offset:-500]\n[00:02.00]歌词");
+
+        assertEquals(1, lines.size());
+        assertEquals(1500L, lines.get(0).timeMs);
+    }
+
+    @Test
+    public void lyricParser_acceptsBomAndWhitespaceBeforeMillisecondTimeline() {
+        List<LyricParser.Line> lines = LyricParser.parse(
+                "\uFEFF  [15440,3530]<0,300>带<300,300>空<600,300>格"
+        );
+
+        assertEquals(1, lines.size());
+        assertEquals(15440L, lines.get(0).timeMs);
+        assertEquals("带空格", lines.get(0).text);
     }
 }

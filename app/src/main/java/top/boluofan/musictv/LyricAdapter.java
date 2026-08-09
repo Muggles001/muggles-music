@@ -39,6 +39,7 @@ public class LyricAdapter extends RecyclerView.Adapter<LyricAdapter.LyricViewHol
             padded.add(new LyricLine(Long.MAX_VALUE, ""));
         }
         this.lyrics = padded;
+        this.currentIndex = -1;
         notifyDataSetChanged();
     }
 
