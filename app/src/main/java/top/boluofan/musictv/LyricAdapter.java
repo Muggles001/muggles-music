@@ -1,5 +1,11 @@
 package top.boluofan.musictv;
 
+import android.graphics.Typeface;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -70,13 +76,14 @@ public class LyricAdapter extends RecyclerView.Adapter<LyricAdapter.LyricViewHol
     @Override
     public void onBindViewHolder(@NonNull LyricViewHolder holder, int position) {
         LyricLine line = lyrics.get(position);
-        holder.tvLyric.setText(line.text);
+        boolean isCurrent = position == currentIndex;
+        holder.tvLyric.setText(formatLyricText(line.text, isCurrent));
 
-        if (position == currentIndex) {
+        if (isCurrent) {
             // 当前行：最亮，粗体大字
             holder.tvLyric.setTextColor(0xFFFFFFFF);
             holder.tvLyric.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30f);
-            holder.tvLyric.setTypeface(null, android.graphics.Typeface.BOLD);
+            holder.tvLyric.setTypeface(null, android.graphics.Typeface.NORMAL);
             holder.tvLyric.setShadowLayer(12, 0, 4, 0xE0000000);
             holder.itemView.setAlpha(1.0f);
             holder.itemView.setScaleX(1.04f);
@@ -95,6 +102,32 @@ public class LyricAdapter extends RecyclerView.Adapter<LyricAdapter.LyricViewHol
             holder.itemView.setScaleY(0.96f);
             holder.itemView.setBackgroundColor(android.graphics.Color.TRANSPARENT);
         }
+    }
+
+    private CharSequence formatLyricText(String text, boolean isCurrent) {
+        if (text == null) return "";
+        SpannableString styled = new SpannableString(text);
+        int translationStart = text.indexOf('\n');
+        int originalEnd = translationStart >= 0 ? translationStart : text.length();
+        if (isCurrent && originalEnd > 0) {
+            styled.setSpan(
+                    new StyleSpan(Typeface.BOLD),
+                    0,
+                    originalEnd,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            );
+        }
+        if (translationStart < 0 || translationStart >= text.length() - 1) return styled;
+
+        int spanStart = translationStart + 1;
+        styled.setSpan(new RelativeSizeSpan(0.70f), spanStart, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        styled.setSpan(
+                new ForegroundColorSpan(isCurrent ? 0xCCFFFFFF : 0xAFFFFFFF),
+                spanStart,
+                text.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        );
+        return styled;
     }
 
     @Override
