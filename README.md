@@ -2,11 +2,11 @@
 
 面向 Android TV / 电视盒子的 LXserver 音乐客户端，针对遥控器操作和长时间播放进行了适配。
 
-> 本项目是 [boluofan/music-tv](https://github.com/boluofan/music-tv) 的独立维护分支，原作者为 [boluofan](https://github.com/boluofan)。本项目与原作者不存在隶属或官方背书关系；原项目仍是本项目的重要基础。
+> 本项目是基于 [boluofan/music-tv](https://github.com/boluofan/music-tv) 开发的独立维护版，原作者为 [boluofan](https://github.com/boluofan)。本项目与原作者不存在隶属或官方背书关系；原项目仍是本项目的重要基础。
 
-当前维护仓库：[Muggles001/music-tv](https://github.com/Muggles001/music-tv)
+当前维护仓库：[Muggles001/muggles-music](https://github.com/Muggles001/muggles-music)
 
-当前维护分支：[`muggles-music`](https://github.com/Muggles001/music-tv/tree/muggles-music)
+默认分支：[`main`](https://github.com/Muggles001/muggles-music/tree/main)
 
 ## 主要功能
 
@@ -24,7 +24,7 @@
 2. 原项目说明其基于 [GanHuaLin/rouroumusic-tv](https://github.com/GanHuaLin/rouroumusic-tv)（RouRouMusic）开发。
 3. 后端服务使用 [XCQ0607/lxserver](https://github.com/XCQ0607/lxserver)。
 
-本分支当前主要修改包括：
+本项目当前主要修改包括：
 
 - 修复 LXserver 地址、登录 Token 与音乐 URL 请求链路。
 - 改善 TV 端播放稳定性、生命周期清理和错误信息展示。
@@ -45,9 +45,8 @@
 ## 自行构建
 
 ```bash
-git clone https://github.com/Muggles001/music-tv.git
-cd music-tv
-git checkout muggles-music
+git clone https://github.com/Muggles001/muggles-music.git
+cd muggles-music
 ./gradlew assembleDebug
 ```
 
@@ -55,7 +54,7 @@ git checkout muggles-music
 
 ## AI 创作声明
 
-麻瓜音乐维护分支的代码与文档修改由 OpenAI Codex 纯 AI 生成和实施，功能由项目维护者进行实机验证。上游项目及其既有代码不属于该声明范围。
+麻瓜音乐独立维护版的代码与文档修改由 OpenAI Codex 纯 AI 生成和实施，功能由项目维护者进行实机验证。上游项目及其既有代码不属于该声明范围。
 
 ## 开源协议
 

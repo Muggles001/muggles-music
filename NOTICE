@@ -16,16 +16,17 @@ Muggles Music changes the application identity and branding and includes
 LXserver authentication/playback fixes, playback lifecycle hardening,
 diagnostic improvements, and D-pad-friendly playlist pagination.
 
-The Muggles Music maintained fork is not affiliated with or endorsed by
-the original authors. The original project and author links are retained
-for attribution and to make the derivative relationship explicit.
+The independently maintained Muggles Music derivative is not affiliated
+with or endorsed by the original authors. The original project and author
+links are retained for attribution and to make the derivative relationship
+explicit.
 
 Maintenance repository:
-  https://github.com/Muggles001/music-tv
+  https://github.com/Muggles001/muggles-music
 
 Backend project used by this client:
   https://github.com/XCQ0607/lxserver
 
-The modifications in the Muggles Music maintenance branch were generated
+The modifications in the Muggles Music independent edition were generated
 and implemented entirely by OpenAI Codex, with runtime validation by the
 project maintainer. This statement does not apply to upstream code.
