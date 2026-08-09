@@ -23,6 +23,9 @@ public interface LxApiService {
     @POST("api/user/verify")
     Call<LoginResponse> verifyUser(@Body Map<String, String> body);
 
+    @POST("api/user/login")
+    Call<LoginResponse> loginUser(@Body Map<String, String> body);
+
     @GET("api/user/list")
     Call<ListData> getUserList(
             @Header("x-user-name") String username,
@@ -47,7 +50,12 @@ public interface LxApiService {
     );
 
     @POST("api/music/url")
-    Call<MusicUrlResponse> getMusicUrl(@Body Map<String, Object> body);
+    Call<MusicUrlResponse> getMusicUrl(
+            @Header("x-user-name") String username,
+            @Header("x-user-password") String password,
+            @Header("x-user-token") String token,
+            @Body Map<String, Object> body
+    );
 
     @GET("api/music/lyric")
     Call<LyricInfo> getLyric(@Query("source") String source, @Query("songmid") String songmid, @Query("quality") String quality);

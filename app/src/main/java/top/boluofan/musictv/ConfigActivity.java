@@ -176,13 +176,14 @@ public class ConfigActivity extends AppCompatActivity {
             body.put("username", username);
             body.put("password", password);
 
-            apiService.verifyUser(body).enqueue(new retrofit2.Callback<LoginResponse>() {
+            apiService.loginUser(body).enqueue(new retrofit2.Callback<LoginResponse>() {
                 @Override
                 public void onResponse(retrofit2.Call<LoginResponse> call, retrofit2.Response<LoginResponse> response) {
                     btnConnect.setEnabled(true);
                     btnConnect.setText("连　接");
 
                     if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                        LxRetrofitClient.saveToken(ConfigActivity.this, response.body().getToken());
                         Toast.makeText(ConfigActivity.this, "登录成功", Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(ConfigActivity.this, "用户名或密码错误，将以游客身份使用", Toast.LENGTH_LONG).show();
