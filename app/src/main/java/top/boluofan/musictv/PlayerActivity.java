@@ -688,7 +688,7 @@ public class PlayerActivity extends AppCompatActivity {
                     ClipboardManager clipboard =
                             (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     if (clipboard != null) {
-                        clipboard.setPrimaryClip(ClipData.newPlainText("music-tv playback error", fullMessage));
+                        clipboard.setPrimaryClip(ClipData.newPlainText("muggles-music playback error", fullMessage));
                         Toast.makeText(PlayerActivity.this, "完整错误已复制", Toast.LENGTH_SHORT).show();
                     }
                 })

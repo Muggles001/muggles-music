@@ -28,7 +28,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="菠萝音乐"
+            android:text="麻瓜音乐"
             android:textColor="#FFFFFF"
             android:textSize="40sp"
             android:textStyle="bold"
@@ -37,7 +37,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="洛雪音乐 TV 客户端"
+            android:text="LXserver TV 音乐客户端"
             android:textColor="#9CA3AF"
             android:textSize="16sp"
             android:gravity="center"

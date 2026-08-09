@@ -1,86 +1,62 @@
-# TV端音乐播放器
+# 麻瓜音乐（Muggles Music）
 
-基于RouRouMusic (肉肉音乐) 基础进行开发
-肉肉音乐: https://github.com/GanHuaLin/rouroumusic-tv
+面向 Android TV / 电视盒子的 LXserver 音乐客户端，针对遥控器操作和长时间播放进行了适配。
 
----
+> 本项目是 [boluofan/music-tv](https://github.com/boluofan/music-tv) 的独立维护分支，原作者为 [boluofan](https://github.com/boluofan)。本项目与原作者不存在隶属或官方背书关系；原项目仍是本项目的重要基础。
 
-## ✨ 功能特点
+当前维护仓库：[Muggles001/music-tv](https://github.com/Muggles001/music-tv)
 
-- 📺 **电视原生界面**：针对大屏幕高度优化的 UI，大字体、清晰的焦点提示。
-- 🎮 **全遥控器支持**：完全适配 D-Pad 操作，流畅的导航切换体验。
-- 🎵 **沉浸式播放器**：
-  - 基于专辑封面的动态毛玻璃背景。
-  - 实时同步歌词显示。
-  - 播放列表抽屉，支持快速切歌。
-- 📡 **智能音乐刮削**：播放时若服务端缺失封面或歌词，自动调用第三方接口进行补全，并支持手动永久保存到服务端。
-- 🔗 **便捷连接**：支持输入服务器地址，配合 `xiaomusic` 后端使用。
-- 🚀 **原生性能**：基于 Android 原生 Java 开发，启动快、运行稳、占用低。
-- ✅ **已测试设备**：小米TV澎湃OS2、小米TV澎湃OS3。
+当前维护分支：[`muggles-music`](https://github.com/Muggles001/music-tv/tree/muggles-music)
 
----
+## 主要功能
 
-## 📸 界面预览
+- 适配 Android TV 与 D-Pad 遥控器操作。
+- 连接 [XCQ0607/lxserver](https://github.com/XCQ0607/lxserver)，支持登录、歌单、搜索、排行榜与播放。
+- 专辑封面背景、播放队列和同步歌词界面。
+- 歌单广场使用每页 12 项的遥控器翻页模式，避免无限滚动导致焦点无法进入底部导航。
+- 播放链路支持 LXserver Token、直连媒体地址、网络唤醒及较完整的错误诊断。
 
-| 快速登录 | 歌曲列表 | 播放界面 |
-| :---: | :---: | :---: |
-| <img src="1.login-page.png" width="300"> | <img src="2.list-page.png" width="300"> | <img src="3.player-page.png" width="300"> |
+## 与原版的关系
 
----
+麻瓜音乐基于以下开源项目继续开发：
 
-## 🛠️ 安装与使用
+1. [boluofan/music-tv](https://github.com/boluofan/music-tv)，作者 [boluofan](https://github.com/boluofan)。
+2. 原项目说明其基于 [GanHuaLin/rouroumusic-tv](https://github.com/GanHuaLin/rouroumusic-tv)（RouRouMusic）开发。
+3. 后端服务使用 [XCQ0607/lxserver](https://github.com/XCQ0607/lxserver)。
 
-### 下载运行
-1. 前往本仓库的 [Releases](https://github.com/GanHuaLin/rouroumusic-tv/releases) 页面下载最新的 APK 文件。
-2. 将 APK 安装到您的 Android TV 或电视盒子上。
+本分支当前主要修改包括：
 
-### 初次配置
-应用提供了两种配置方式：
+- 修复 LXserver 地址、登录 Token 与音乐 URL 请求链路。
+- 改善 TV 端播放稳定性、生命周期清理和错误信息展示。
+- 将歌单广场的无限滚动调整为适合遥控器的 12 项翻页。
+- 使用独立应用 ID `io.github.muggles001.mugglesmusic`，可与原版并存安装。
+- 应用显示名称改为“麻瓜音乐”；首版暂时保留原图标。
 
-1. **手机快速配置（推荐）**：
-   - 启动应用后，电视屏幕会显示一个二维码或 IP 地址。
-   - 使用手机浏览器访问该地址，即可在手机上输入服务器信息并一键推送到电视，免去遥控器输入的烦恼。
-2. **手动输入**：
-   - 使用遥控器直接在电视端输入您的 **XiaoMusic 服务端地址**（例如 `http://192.168.1.100:58090`）。
+完整来源及修改声明见 [NOTICE](NOTICE)。
 
----
+## 安装与配置
 
-## 🏗️ 编译指南
+1. 从本仓库发布页下载 APK，或按照下方说明自行构建。
+2. 安装到 Android TV 或电视盒子。
+3. 在首次启动页填写 LXserver 地址、用户名和密码，也可以使用手机扫码配置。
 
-如果您想自行编译此项目：
+服务地址示例：`http://192.168.1.100:9527`。请确保电视可以访问该地址。
 
-1. 克隆本仓库：
-   ```bash
-   git clone https://github.com/GanHuaLin/rouroumusic-tv.git
-   ```
-2. 使用 **Android Studio** 打开项目。
-3. 等待 Gradle 同步完成。
-4. 使用 Android Studio 的 `Build -> Build Bundle(s) / APK(s) -> Build APK(s)` 生成 APK。
+## 自行构建
 
-**项目要求：**
-- Android SDK 21 (Android 5.0) 或更高。
-- Android Studio Chipmunk 或更高版本。
+```bash
+git clone https://github.com/Muggles001/music-tv.git
+cd music-tv
+git checkout muggles-music
+./gradlew assembleDebug
+```
 
----
+建议使用 JDK 17 或更高版本，并安装项目所需的 Android SDK。构建生成的通用 APK 位于 `app/build/outputs/apk/debug/app-universal-debug.apk`。
 
-## 🤝 贡献与感谢
+## AI 创作声明
 
-欢迎提交 Issue 或 Pull Request 来改进本项目。
+麻瓜音乐维护分支的代码与文档修改由 OpenAI Codex 纯 AI 生成和实施，功能由项目维护者进行实机验证。上游项目及其既有代码不属于该声明范围。
 
-- 特别感谢 [XiaoMusic](https://github.com/hanxi/xiaomusic) 提供的核心后端支持。
+## 开源协议
 
----
-
-## ☕ 赞赏支持
-
-如果您觉得这个项目对您有所帮助，欢迎请作者喝杯奶茶。您的支持是我持续维护和开发新功能的动力！
-
-<div align="left">
-  <img src="donate.png" width="250" title="请喝杯奶茶">
-</div>
-
----
-
-## 📄 开源协议
-
-本项目采用 [MIT License](LICENSE) 协议。
+本项目沿用原项目的 [Apache License 2.0](LICENSE)。再发布或修改时请保留许可证、版权与来源说明。

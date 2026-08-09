@@ -91,7 +91,7 @@ public class LoginWebServer extends NanoHTTPD {
                 "<head>\n" +
                 "    <meta charset=\"UTF-8\">\n" +
                 "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
-                "    <title>菠萝音乐 - 扫码登录</title>\n" +
+                "    <title>麻瓜音乐 - 扫码登录</title>\n" +
                 "    <style>\n" +
                 "        body { font-family: -apple-system, sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }\n" +
                 "        .card { background: #1e293b; padding: 24px; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }\n" +
@@ -106,7 +106,7 @@ public class LoginWebServer extends NanoHTTPD {
                 "</head>\n" +
                 "<body>\n" +
                 "    <div class=\"card\">\n" +
-                "        <h2>洛雪音乐 TV - 快速配置</h2>\n" +
+                "        <h2>麻瓜音乐 - 快速配置</h2>\n" +
                 "        <p class=\"desc\">在手机上输入 lxserver 服务器信息推送到电视</p>\n" +
                 "        <div class=\"field\">\n" +
                 "            <label>服务地址</label>\n" +

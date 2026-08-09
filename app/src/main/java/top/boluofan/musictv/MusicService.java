@@ -102,7 +102,7 @@ public class MusicService extends MediaSessionService {
 
         mediaSession = new MediaSession.Builder(this, player)
                 .setSessionActivity(pendingIntent)
-                .setId("top.boluofan.musictv.session")
+                .setId("io.github.muggles001.mugglesmusic.session")
                 .build();
 
         DefaultMediaNotificationProvider notificationProvider = new DefaultMediaNotificationProvider.Builder(this).build();

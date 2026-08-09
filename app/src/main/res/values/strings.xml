@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">菠萝音乐</string>
-    <string name="title_activity_main">菠萝音乐</string>
-    <string name="package_name">top.boluofan.musictv</string>
-    <string name="custom_url_scheme">top.boluofan.musictv</string>
+    <string name="app_name">麻瓜音乐</string>
+    <string name="title_activity_main">麻瓜音乐</string>
+    <string name="package_name">io.github.muggles001.mugglesmusic</string>
+    <string name="custom_url_scheme">io.github.muggles001.mugglesmusic</string>
 </resources>

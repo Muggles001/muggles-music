@@ -1,0 +1,31 @@
+麻瓜音乐（Muggles Music）
+Copyright 2026 Muggles001
+
+This product is an independently maintained derivative of:
+
+  music-tv
+  Original author: boluofan
+  https://github.com/boluofan/music-tv
+
+The upstream project is licensed under the Apache License, Version 2.0.
+The upstream project states that it is based on RouRouMusic:
+
+  https://github.com/GanHuaLin/rouroumusic-tv
+
+Muggles Music changes the application identity and branding and includes
+LXserver authentication/playback fixes, playback lifecycle hardening,
+diagnostic improvements, and D-pad-friendly playlist pagination.
+
+The Muggles Music maintained fork is not affiliated with or endorsed by
+the original authors. The original project and author links are retained
+for attribution and to make the derivative relationship explicit.
+
+Maintenance repository:
+  https://github.com/Muggles001/music-tv
+
+Backend project used by this client:
+  https://github.com/XCQ0607/lxserver
+
+The modifications in the Muggles Music maintenance branch were generated
+and implemented entirely by OpenAI Codex, with runtime validation by the
+project maintainer. This statement does not apply to upstream code.
