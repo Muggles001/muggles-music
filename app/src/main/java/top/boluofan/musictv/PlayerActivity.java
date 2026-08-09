@@ -79,6 +79,7 @@ public class PlayerActivity extends AppCompatActivity {
     private retrofit2.Call<top.boluofan.musictv.api.model.LyricInfo> lyricCall;
     private boolean hasArtwork = false;
     private long lyricRequestGeneration = 0;
+    private long lyricTimingAdjustmentMs = 0L;
     private Runnable scrapeTimeoutRunnable;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -88,7 +89,7 @@ public class PlayerActivity extends AppCompatActivity {
             updateProgress();
             // Keep the lyric clock alive while the player screen exists. MediaController's
             // isPlaying flag can briefly toggle during buffering even though playback resumes.
-            handler.postDelayed(this, 250);
+            handler.postDelayed(this, 100);
         }
     };
 
@@ -197,6 +198,9 @@ public class PlayerActivity extends AppCompatActivity {
         List<String> options = new ArrayList<>();
         options.add("修改歌手名");
         options.add("重新刮削歌词");
+        options.add("歌词提前 0.25 秒");
+        options.add("歌词延后 0.25 秒");
+        options.add("重置歌词时间");
         options.add("保存当前歌词");
         
         optionAdapter = new PlayerOptionAdapter(options, (option, position) -> {
@@ -699,15 +703,18 @@ public class PlayerActivity extends AppCompatActivity {
         String title = titleSeq != null ? titleSeq.toString() : null;
         String originalName = null;
         String lyrics = null;
+        currentSongSource = "mg";
+        currentSongMid = mediaItem.mediaId;
 
         if (mediaItem.mediaMetadata.extras != null) {
             originalName = mediaItem.mediaMetadata.extras.getString("original_name");
             lyrics = mediaItem.mediaMetadata.extras.getString("lyrics");
-            currentSongSource = mediaItem.mediaMetadata.extras.getString("source");
-            currentSongMid = mediaItem.mediaMetadata.extras.getString("songmid");
-            if (currentSongSource == null) currentSongSource = "mg";
-            if (currentSongMid == null) currentSongMid = "";
+            currentSongSource = mediaItem.mediaMetadata.extras.getString("source", currentSongSource);
+            currentSongMid = mediaItem.mediaMetadata.extras.getString("songmid", currentSongMid);
         }
+        if (currentSongSource == null || currentSongSource.trim().isEmpty()) currentSongSource = "mg";
+        if (currentSongMid == null || currentSongMid.trim().isEmpty()) currentSongMid = mediaItem.mediaId;
+        loadLyricTimingAdjustment();
         
         SharedPreferences prefs = getSharedPreferences("XiaoMusicPrefs", 0);
         String savedName = prefs.getString("current_song_name", null);
@@ -1101,7 +1108,8 @@ public class PlayerActivity extends AppCompatActivity {
              tvNoLyrics.setVisibility(View.GONE);
              lyricAdapter.setLyrics(lines);
              rvLyrics.scrollToPosition(0);
-             updateLyric(player != null ? player.getCurrentPosition() : 0L);
+             long currentPosition = player != null ? player.getCurrentPosition() : 0L;
+             updateLyric(Math.max(0L, currentPosition + lyricTimingAdjustmentMs));
              // Toast.makeText(this, "Loaded " + lines.size() + " lines", Toast.LENGTH_SHORT).show();
         }
     }
@@ -1155,7 +1163,7 @@ public class PlayerActivity extends AppCompatActivity {
         }
 
         // Sync Lyric
-        updateLyric(current);
+        updateLyric(Math.max(0L, current + lyricTimingAdjustmentMs));
     }
 
     private void updateLyric(long currentPos) {
@@ -1181,14 +1189,29 @@ public class PlayerActivity extends AppCompatActivity {
         
         if (activeIdx != -1 && activeIdx != lyricAdapter.getCurrentIndex()) {
             lyricAdapter.setCurrentIndex(activeIdx);
-            
-            RecyclerView.LayoutManager layoutManager = rvLyrics.getLayoutManager();
-            if (layoutManager instanceof LinearLayoutManager) {
-                int centerOffset = Math.max(0, rvLyrics.getHeight() / 2);
-                ((LinearLayoutManager) layoutManager).scrollToPositionWithOffset(activeIdx, centerOffset);
-            } else if (layoutManager != null) {
-                rvLyrics.scrollToPosition(activeIdx);
-            }
+            centerActiveLyric(activeIdx, true);
+        }
+    }
+
+    private void centerActiveLyric(int adapterPosition, boolean retryAfterLayout) {
+        RecyclerView.LayoutManager layoutManager = rvLyrics.getLayoutManager();
+        if (!(layoutManager instanceof LinearLayoutManager)) {
+            if (layoutManager != null) rvLyrics.scrollToPosition(adapterPosition);
+            return;
+        }
+
+        LinearLayoutManager linearLayoutManager = (LinearLayoutManager) layoutManager;
+        View activeView = linearLayoutManager.findViewByPosition(adapterPosition);
+        int itemHeight = activeView != null ? activeView.getHeight() : 0;
+        int viewportHeight = Math.max(0,
+                rvLyrics.getHeight() - rvLyrics.getPaddingTop() - rvLyrics.getPaddingBottom());
+        // scrollToPositionWithOffset is relative to startAfterPadding. Do not add the
+        // RecyclerView's top padding again, otherwise the active row lands near the bottom.
+        int offsetFromStartPadding = Math.max(0, (viewportHeight - itemHeight) / 2);
+        linearLayoutManager.scrollToPositionWithOffset(adapterPosition, offsetFromStartPadding);
+
+        if (retryAfterLayout) {
+            rvLyrics.post(() -> centerActiveLyric(adapterPosition, false));
         }
     }
 
@@ -1236,6 +1259,18 @@ public class PlayerActivity extends AppCompatActivity {
             case "重新刮削歌词":
                 currentScrapingId = ""; 
                 fetchMusicInfoForScraping(songTitle, true);
+                break;
+            case "歌词提前 0.25 秒":
+                adjustLyricTiming(250L);
+                break;
+            case "歌词延后 0.25 秒":
+                adjustLyricTiming(-250L);
+                break;
+            case "重置歌词时间":
+                lyricTimingAdjustmentMs = 0L;
+                saveLyricTimingAdjustment();
+                updateLyricNow();
+                Toast.makeText(this, "已重置当前歌曲的歌词时间", Toast.LENGTH_SHORT).show();
                 break;
             case "保存当前歌词":
                 // 拼合歌词
@@ -1309,6 +1344,43 @@ public class PlayerActivity extends AppCompatActivity {
                 }
                 break;
         }
+    }
+
+    private void adjustLyricTiming(long deltaMs) {
+        lyricTimingAdjustmentMs = Math.max(-5000L, Math.min(5000L, lyricTimingAdjustmentMs + deltaMs));
+        saveLyricTimingAdjustment();
+        updateLyricNow();
+        if (lyricTimingAdjustmentMs == 0L) {
+            Toast.makeText(this, "当前歌曲已恢复原始歌词时间", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String direction = lyricTimingAdjustmentMs >= 0 ? "提前" : "延后";
+        String seconds = String.format(java.util.Locale.US, "%.2f", Math.abs(lyricTimingAdjustmentMs) / 1000f);
+        Toast.makeText(this, "当前歌曲歌词已" + direction + " " + seconds + " 秒", Toast.LENGTH_SHORT).show();
+    }
+
+    private void updateLyricNow() {
+        if (player != null) {
+            updateLyric(Math.max(0L, player.getCurrentPosition() + lyricTimingAdjustmentMs));
+        }
+    }
+
+    private void loadLyricTimingAdjustment() {
+        lyricTimingAdjustmentMs = getSharedPreferences("LyricTimingPrefs", MODE_PRIVATE)
+                .getLong(getLyricTimingPreferenceKey(), 0L);
+    }
+
+    private void saveLyricTimingAdjustment() {
+        getSharedPreferences("LyricTimingPrefs", MODE_PRIVATE)
+                .edit()
+                .putLong(getLyricTimingPreferenceKey(), lyricTimingAdjustmentMs)
+                .apply();
+    }
+
+    private String getLyricTimingPreferenceKey() {
+        String source = currentSongSource == null ? "" : currentSongSource;
+        String songmid = currentSongMid == null ? "" : currentSongMid;
+        return "lyric_timing_" + source + "_" + songmid;
     }
 
     private interface OnSubmitListener {

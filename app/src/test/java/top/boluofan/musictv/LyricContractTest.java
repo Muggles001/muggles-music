@@ -96,11 +96,14 @@ public class LyricContractTest {
     }
 
     @Test
-    public void lyricParser_appliesOffset() {
-        List<LyricParser.Line> lines = LyricParser.parse("[offset:-500]\n[00:02.00]歌词");
+    public void lyricParser_appliesOffsetWithWebLinePlayerDirection() {
+        List<LyricParser.Line> advanced = LyricParser.parse("[offset:500]\n[00:02.00]提前歌词");
+        List<LyricParser.Line> delayed = LyricParser.parse("[offset:-500]\n[00:02.00]延后歌词");
 
-        assertEquals(1, lines.size());
-        assertEquals(1500L, lines.get(0).timeMs);
+        assertEquals(1, advanced.size());
+        assertEquals(1500L, advanced.get(0).timeMs);
+        assertEquals(1, delayed.size());
+        assertEquals(2500L, delayed.get(0).timeMs);
     }
 
     @Test

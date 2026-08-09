@@ -142,7 +142,7 @@ public final class LyricParser {
         Matcher millisecondMatcher = MILLISECOND_LINE_PATTERN.matcher(rawLine);
         if (!millisecondMatcher.find()) return;
         try {
-            long timestamp = Math.max(0L, Long.parseLong(millisecondMatcher.group(1)) + offsetMs);
+            long timestamp = Math.max(0L, Long.parseLong(millisecondMatcher.group(1)) - offsetMs);
             String text = cleanText(rawLine.substring(millisecondMatcher.end()));
             if (!text.isEmpty()) result.add(new Line(timestamp, text, rawLine));
         } catch (NumberFormatException ignored) {
@@ -160,7 +160,9 @@ public final class LyricParser {
             else if (fraction.length() == 2) fractionMs = Long.parseLong(fraction) * 10L;
             else fractionMs = Long.parseLong(fraction.substring(0, 3));
         }
-        return Math.max(0L, (minutes * 60L + seconds) * 1000L + fractionMs + offsetMs);
+        // Match LX Web LinePlayer semantics: a positive [offset] advances the lyric clock,
+        // which is equivalent to moving every lyric timestamp earlier.
+        return Math.max(0L, (minutes * 60L + seconds) * 1000L + fractionMs - offsetMs);
     }
 
     private static String cleanText(String text) {

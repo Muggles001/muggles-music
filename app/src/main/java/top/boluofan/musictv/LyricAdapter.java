@@ -45,13 +45,10 @@ public class LyricAdapter extends RecyclerView.Adapter<LyricAdapter.LyricViewHol
 
     public void setCurrentIndex(int index) {
         if (this.currentIndex != index) {
-            int old = this.currentIndex;
             this.currentIndex = index;
-            // Notify a wide range around both the old and new index so all
-            // visible rows recalculate their distance-based alpha correctly.
-            int rangeStart = Math.max(0, Math.min(old, index) - 3);
-            int rangeEnd   = Math.min(lyrics.size() - 1, Math.max(old, index) + 3);
-            notifyItemRangeChanged(rangeStart, rangeEnd - rangeStart + 1);
+            // A TV can show many lyric rows at once. Rebind all visible rows so recycled
+            // views cannot retain alpha/scale values from a previous active line.
+            notifyDataSetChanged();
         }
     }
 
@@ -80,17 +77,23 @@ public class LyricAdapter extends RecyclerView.Adapter<LyricAdapter.LyricViewHol
             holder.tvLyric.setTextColor(0xFFFFFFFF);
             holder.tvLyric.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30f);
             holder.tvLyric.setTypeface(null, android.graphics.Typeface.BOLD);
-            holder.tvLyric.setShadowLayer(8, 0, 4, 0x80000000);
+            holder.tvLyric.setShadowLayer(12, 0, 4, 0xE0000000);
             holder.itemView.setAlpha(1.0f);
+            holder.itemView.setScaleX(1.04f);
+            holder.itemView.setScaleY(1.04f);
+            holder.itemView.setBackgroundColor(0x18FFFFFF);
         } else {
             // 距离越远透明度越低，自然渐出
             int distance = (currentIndex >= 0) ? Math.abs(position - currentIndex) : position + 1;
-            float alpha = Math.max(0.08f, 1.0f - distance * 0.35f);
+            float alpha = Math.max(0.10f, 0.55f - Math.max(0, distance - 1) * 0.14f);
             holder.tvLyric.setTextColor(0xFFFFFFFF);
             holder.tvLyric.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 22f);
             holder.tvLyric.setTypeface(null, android.graphics.Typeface.NORMAL);
             holder.tvLyric.setShadowLayer(0, 0, 0, 0);
             holder.itemView.setAlpha(alpha);
+            holder.itemView.setScaleX(0.96f);
+            holder.itemView.setScaleY(0.96f);
+            holder.itemView.setBackgroundColor(android.graphics.Color.TRANSPARENT);
         }
     }
 
