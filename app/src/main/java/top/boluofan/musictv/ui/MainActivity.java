@@ -262,6 +262,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
+        boolean directionalKey = keyCode == KeyEvent.KEYCODE_DPAD_UP
+                || keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                || keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT;
+        if (directionalKey && currentSelectedTab == 1 && currentFragment == null) {
+            return true;
+        }
         if (currentFragment instanceof SongSquareFragment) {
             SongSquareFragment songSquareFragment = (SongSquareFragment) currentFragment;
             if (songSquareFragment.onKeyDown(keyCode, event)) {

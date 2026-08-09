@@ -1188,12 +1188,20 @@ public class PlayerActivity extends AppCompatActivity {
         }
         
         if (activeIdx != -1 && activeIdx != lyricAdapter.getCurrentIndex()) {
+            int previousIndex = lyricAdapter.getCurrentIndex();
+            boolean animate = previousIndex >= 0 && Math.abs(activeIdx - previousIndex) <= 2;
             lyricAdapter.setCurrentIndex(activeIdx);
-            centerActiveLyric(activeIdx, true);
+            centerActiveLyric(activeIdx, animate, true);
         }
     }
 
-    private void centerActiveLyric(int adapterPosition, boolean retryAfterLayout) {
+    private void centerActiveLyric(int adapterPosition, boolean animate, boolean afterLayout) {
+        if (lyricAdapter.getCurrentIndex() != adapterPosition) return;
+        if (afterLayout) {
+            rvLyrics.post(() -> centerActiveLyric(adapterPosition, animate, false));
+            return;
+        }
+
         RecyclerView.LayoutManager layoutManager = rvLyrics.getLayoutManager();
         if (!(layoutManager instanceof LinearLayoutManager)) {
             if (layoutManager != null) rvLyrics.scrollToPosition(adapterPosition);
@@ -1202,16 +1210,30 @@ public class PlayerActivity extends AppCompatActivity {
 
         LinearLayoutManager linearLayoutManager = (LinearLayoutManager) layoutManager;
         View activeView = linearLayoutManager.findViewByPosition(adapterPosition);
-        int itemHeight = activeView != null ? activeView.getHeight() : 0;
-        int viewportHeight = Math.max(0,
-                rvLyrics.getHeight() - rvLyrics.getPaddingTop() - rvLyrics.getPaddingBottom());
-        // scrollToPositionWithOffset is relative to startAfterPadding. Do not add the
-        // RecyclerView's top padding again, otherwise the active row lands near the bottom.
-        int offsetFromStartPadding = Math.max(0, (viewportHeight - itemHeight) / 2);
-        linearLayoutManager.scrollToPositionWithOffset(adapterPosition, offsetFromStartPadding);
+        if (activeView == null) {
+            linearLayoutManager.scrollToPositionWithOffset(adapterPosition, 0);
+            rvLyrics.post(() -> centerActiveLyric(adapterPosition, false, false));
+            return;
+        }
 
-        if (retryAfterLayout) {
-            rvLyrics.post(() -> centerActiveLyric(adapterPosition, false));
+        int itemHeight = activeView.getHeight();
+        // The list has 200dp top/bottom padding. Calculating against only the remaining
+        // inner viewport makes percentage changes nearly invisible on TV densities.
+        // Use the full lyrics panel and allow a negative offset from startAfterPadding.
+        int targetCenter = Math.round(rvLyrics.getHeight() * 0.38f);
+        int targetTop = targetCenter - itemHeight / 2;
+        int offsetFromStartPadding = targetTop - rvLyrics.getPaddingTop();
+        int deltaY = activeView.getTop() - targetTop;
+        if (animate && Math.abs(deltaY) > 1) {
+            rvLyrics.stopScroll();
+            rvLyrics.smoothScrollBy(
+                    0,
+                    deltaY,
+                    new android.view.animation.DecelerateInterpolator(1.6f),
+                    360
+            );
+        } else {
+            linearLayoutManager.scrollToPositionWithOffset(adapterPosition, offsetFromStartPadding);
         }
     }
 

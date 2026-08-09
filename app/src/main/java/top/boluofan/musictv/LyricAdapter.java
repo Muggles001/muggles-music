@@ -88,7 +88,7 @@ public class LyricAdapter extends RecyclerView.Adapter<LyricAdapter.LyricViewHol
             holder.itemView.setAlpha(1.0f);
             holder.itemView.setScaleX(1.04f);
             holder.itemView.setScaleY(1.04f);
-            holder.itemView.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            holder.itemView.setBackground(new SoftRoundedBackgroundDrawable(0x0CFFFFFF, 80f));
         } else {
             // 距离越远透明度越低，自然渐出
             int distance = (currentIndex >= 0) ? Math.abs(position - currentIndex) : position + 1;

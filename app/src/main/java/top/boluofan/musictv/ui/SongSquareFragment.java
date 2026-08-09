@@ -22,7 +22,6 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.R;
-import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.api.model.Playlist;
@@ -55,9 +54,9 @@ public class SongSquareFragment extends Fragment {
     private int remotePage = 1;
     private boolean remoteHasMore = true;
     private boolean isLoading = false;
+    private boolean navigationReady = false;
     private Call<okhttp3.ResponseBody> activePageCall;
     
-    private FloatingPlayerWindow floatingPlayerWindow;
     private GridLayoutManager gridLayoutManager;
     private int spanCount = 6;
 
@@ -73,11 +72,6 @@ public class SongSquareFragment extends Fragment {
         
         initViews(view);
         setupRecyclerViews();
-        
-        if (getActivity() != null) {
-            floatingPlayerWindow = new FloatingPlayerWindow(getActivity());
-            floatingPlayerWindow.connectToService();
-        }
         
         loadSources();
     }
@@ -138,6 +132,7 @@ public class SongSquareFragment extends Fragment {
         });
         
         rvSourceList.post(() -> {
+            if (!isAdded() || rvSourceList == null) return;
             if (rvSourceList.getChildCount() > 0) {
                 rvSourceList.getChildAt(0).requestFocus();
             }
@@ -146,6 +141,8 @@ public class SongSquareFragment extends Fragment {
     
     private void selectSource(int position) {
         if (position < 0 || position >= SOURCES.length) return;
+
+        navigationReady = false;
 
         if (activePageCall != null) {
             activePageCall.cancel();
@@ -174,6 +171,7 @@ public class SongSquareFragment extends Fragment {
         loadPlaylists(false);
         
         rvSourceList.post(() -> {
+            if (!isAdded() || rvSourceList == null) return;
             if (rvSourceList.getChildCount() > position) {
                 View itemView = rvSourceList.getChildAt(position);
                 if (itemView != null) {
@@ -223,13 +221,17 @@ public class SongSquareFragment extends Fragment {
                                 }
                             }
                             showCurrentPage();
+                        } else {
+                            navigationReady = true;
                         }
                     } catch (Exception e) {
+                        navigationReady = true;
                         if (isAdded()) {
                             Toast.makeText(requireContext(), "解析失败", Toast.LENGTH_SHORT).show();
                         }
                     }
                 } else {
+                    navigationReady = true;
                     Toast.makeText(requireContext(), "加载失败", Toast.LENGTH_SHORT).show();
                 }
                 updatePager();
@@ -252,6 +254,7 @@ public class SongSquareFragment extends Fragment {
                     remotePage--;
                 }
                 isLoading = false;
+                navigationReady = true;
                 showLoading(false);
                 Toast.makeText(requireContext(), "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                 updatePager();
@@ -289,6 +292,11 @@ public class SongSquareFragment extends Fragment {
         updatePlaylistList();
         if (rvPlaylists != null) {
             rvPlaylists.scrollToPosition(0);
+            rvPlaylists.post(() -> {
+                if (isAdded() && rvPlaylists != null) navigationReady = true;
+            });
+        } else {
+            navigationReady = true;
         }
         updatePager();
     }
@@ -347,6 +355,12 @@ public class SongSquareFragment extends Fragment {
     }
     
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (isDirectionalKey(keyCode)
+                && (!isAdded() || getView() == null || !navigationReady)) {
+            return true;
+        }
+        if (!isAdded() || getView() == null) return false;
+
         if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
             View focusedView = rvPlaylists != null ? rvPlaylists.findFocus() : null;
             if (focusedView != null && gridLayoutManager != null && playlistAdapter != null) {
@@ -374,7 +388,8 @@ public class SongSquareFragment extends Fragment {
                 if (focusedView != null) {
                     int position = gridLayoutManager.getPosition(focusedView);
                     if (position != RecyclerView.NO_POSITION && position % spanCount == spanCount - 1) {
-                        View tabSettings = getActivity().findViewById(R.id.tabSettings);
+                        android.app.Activity activity = getActivity();
+                        View tabSettings = activity != null ? activity.findViewById(R.id.tabSettings) : null;
                         if (tabSettings != null) {
                             return tabSettings.requestFocus();
                         }
@@ -389,11 +404,6 @@ public class SongSquareFragment extends Fragment {
                 if (focusedView != null) {
                     int position = gridLayoutManager.getPosition(focusedView);
                     if (position != RecyclerView.NO_POSITION && position % spanCount == 0) {
-                        if (floatingPlayerWindow != null && floatingPlayerWindow.getContainer().getVisibility() == View.VISIBLE) {
-                            if (floatingPlayerWindow.requestFocus()) {
-                                return true;
-                            }
-                        }
                         View fragmentView = getView();
                         if (fragmentView != null) {
                             RecyclerView sourceListRv = fragmentView.findViewById(R.id.rvSourceList);
@@ -416,15 +426,18 @@ public class SongSquareFragment extends Fragment {
         return false;
     }
 
+    private static boolean isDirectionalKey(int keyCode) {
+        return keyCode == KeyEvent.KEYCODE_DPAD_UP
+                || keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                || keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT;
+    }
+
     @Override
     public void onDestroyView() {
         if (activePageCall != null) {
             activePageCall.cancel();
             activePageCall = null;
-        }
-        if (floatingPlayerWindow != null) {
-            floatingPlayerWindow.release();
-            floatingPlayerWindow = null;
         }
         rvSourceList = null;
         rvPlaylists = null;
@@ -432,6 +445,7 @@ public class SongSquareFragment extends Fragment {
         btnPrevPage = null;
         btnNextPage = null;
         tvPageNumber = null;
+        navigationReady = false;
         super.onDestroyView();
     }
 }
