@@ -12,6 +12,8 @@
 
 当前版本为 [`v1.0.2`](https://github.com/Muggles001/muggles-music/releases/tag/v1.0.2)。本版完成电视端主界面重构，并将歌单、歌词和遥控器操作统一到新的交互体系中。
 
+发布页提供 Android 5.0（API 21）及以上可安装的通用 APK。当前软件包使用 debug 签名，安装前请先卸载已安装的 `v1.0.1` 正式版。
+
 ## 主要功能
 
 - 适配 Android TV 与 D-Pad 遥控器操作。
