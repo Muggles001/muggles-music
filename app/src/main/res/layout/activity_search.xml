@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_app_gradient">
+    android:background="@drawable/bg_app_gradient"
+    android:nextFocusLeft="@id/tabSearch">
 
     <ImageButton
         android:id="@+id/btnBack"
@@ -14,100 +15,130 @@
         android:scaleType="centerInside"
         android:padding="8dp"
         android:contentDescription="返回"
-        android:layout_margin="16dp"
+        android:layout_margin="24dp"
         android:focusable="true"
+        android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:tint="#FFFFFF" />
+        app:tint="@color/lx_text_primary" />
 
     <TextView
         android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="搜索音乐"
-        android:textColor="@android:color/white"
+        android:textColor="@color/lx_text_primary"
         android:textSize="24sp"
         android:textStyle="bold"
-        app:layout_constraintStart_toEndOf="@id/btnBack"
-        app:layout_constraintTop_toTopOf="@id/btnBack"
-        app:layout_constraintBottom_toBottomOf="@id/btnBack"
-        android:layout_marginStart="8dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginStart="@dimen/lx_title_gutter"
+        android:layout_marginTop="@dimen/lx_title_top" />
+
+    <TextView
+        android:id="@+id/tvSearchSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="从多个音乐平台查找歌曲、歌手和专辑"
+        android:textColor="@color/lx_text_secondary"
+        android:textSize="13sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle"
+        android:layout_marginStart="@dimen/lx_title_gutter"
+        android:layout_marginTop="4dp" />
 
     <LinearLayout
         android:id="@+id/layoutSearch"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="12dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginTop="22dp"
+        android:layout_marginStart="@dimen/lx_title_gutter"
+        android:layout_marginEnd="@dimen/lx_title_gutter"
+        android:nextFocusLeft="@id/tabSearch"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnBack">
+        app:layout_constraintTop_toBottomOf="@id/tvSearchSubtitle">
 
         <EditText
             android:id="@+id/etSearch"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="52dp"
             android:layout_weight="1"
             android:background="@drawable/bg_input_field"
+            android:elevation="6dp"
+            android:outlineProvider="background"
             android:hint="输入歌曲名、歌手名..."
-            android:textColor="@android:color/white"
-            android:textColorHint="#4B5563"
-            android:textSize="16sp"
+            android:textColor="@color/lx_text_primary"
+            android:textColorHint="@color/lx_text_muted"
+            android:textSize="17sp"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:imeOptions="actionSearch"
             android:singleLine="true"
             android:focusable="true"
-            android:focusableInTouchMode="true" />
+            android:focusableInTouchMode="true"
+            android:nextFocusLeft="@id/tabSearch"
+            android:nextFocusRight="@id/btnClear" />
 
         <ImageButton
             android:id="@+id/btnClear"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
             android:layout_marginStart="4dp"
             android:background="@drawable/bg_btn_primary"
             android:src="@drawable/ic_delete"
             android:scaleType="centerInside"
             android:padding="10dp"
             android:contentDescription="清空"
-            android:focusable="true" />
+            android:focusable="true"
+            android:nextFocusLeft="@id/etSearch"
+            android:nextFocusRight="@id/btnSearch" />
 
         <Button
             android:id="@+id/btnSearch"
-            android:layout_width="64dp"
-            android:layout_height="44dp"
+            android:layout_width="88dp"
+            android:layout_height="52dp"
             android:layout_marginStart="8dp"
             android:background="@drawable/bg_btn_primary"
             android:text="搜索"
-            android:textColor="@android:color/white"
+            android:textColor="@color/white"
             android:textSize="14sp"
-            android:focusable="true" />
+            android:focusable="true"
+            android:nextFocusLeft="@id/btnClear"
+            android:nextFocusRight="@id/btnScan" />
 
         <ImageButton
             android:id="@+id/btnScan"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
             android:layout_marginStart="8dp"
             android:background="@drawable/bg_btn_primary"
             android:src="@drawable/ic_qr_code"
             android:scaleType="centerInside"
             android:padding="10dp"
             android:contentDescription="扫码搜索"
-            android:focusable="true" />
+            android:focusable="true"
+            android:nextFocusLeft="@id/btnSearch" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvSourceList"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:background="#40000000"
+        android:layout_height="@dimen/lx_secondary_nav_height"
+        android:layout_marginTop="14dp"
+        android:layout_marginStart="@dimen/lx_nav_gutter"
+        android:layout_marginEnd="@dimen/lx_nav_gutter"
+        android:layout_marginBottom="4dp"
+        android:nextFocusLeft="@id/tabSearch"
+        android:paddingStart="@dimen/lx_nav_gutter"
+        android:paddingEnd="@dimen/lx_nav_gutter"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:background="@drawable/bg_floating_glass"
+        android:elevation="8dp"
+        android:outlineProvider="background"
+        android:clipToOutline="true"
         android:clipToPadding="false"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -120,10 +151,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="热搜"
-        android:textColor="#9CA3AF"
+        android:textColor="@color/lx_text_secondary"
         android:textSize="12sp"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginStart="32dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/rvSourceList" />
 
@@ -131,9 +162,9 @@
         android:id="@+id/rvHotSearch"
         android:layout_width="0dp"
         android:layout_height="32dp"
-        android:layout_marginTop="4dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvHotSearchTitle" />
@@ -143,10 +174,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="共 0 首"
-        android:textColor="#9CA3AF"
+        android:textColor="@color/lx_text_secondary"
         android:textSize="12sp"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
+        android:layout_marginTop="14dp"
+        android:layout_marginStart="32dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/rvHotSearch" />
 
@@ -155,7 +186,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="暂无搜索结果"
-        android:textColor="#9CA3AF"
+        android:textColor="@color/lx_text_secondary"
         android:textSize="16sp"
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
@@ -177,11 +208,15 @@
         android:id="@+id/rvSearchResults"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="4dp"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="8dp"
+        android:layout_marginTop="8dp"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="16dp"
         android:clipToPadding="false"
+        android:clipToOutline="true"
+        android:background="@drawable/bg_content_panel"
+        android:nextFocusLeft="@id/tabSearch"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvResultCount"

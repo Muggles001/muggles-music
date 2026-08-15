@@ -20,7 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:scaleType="centerCrop"
-            android:background="#2A2A2A"
+            android:background="@color/lx_bg_focus"
             tools:src="@drawable/ic_playlist_music"
             android:contentDescription="cover"/>
 
@@ -33,7 +33,7 @@
             android:paddingHorizontal="4dp"
             android:paddingVertical="1dp"
             android:background="@drawable/bg_play_count_overlay"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/lx_text_primary"
             android:textSize="9sp"
             android:drawablePadding="2dp"
             android:gravity="center_vertical"
@@ -58,7 +58,7 @@
             android:layout_marginTop="2dp"
             android:ellipsize="end"
             android:maxLines="2"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/lx_text_primary"
             android:textSize="11sp"
             android:textStyle="bold"
             tools:text="歌单名称"/>
@@ -70,7 +70,7 @@
             android:layout_marginTop="1dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:textColor="#9CA3AF"
+            android:textColor="@color/lx_text_secondary"
             android:textSize="9sp"
             tools:text="50首"/>
 
@@ -87,7 +87,7 @@
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#6B7280"
+                android:textColor="@color/lx_text_muted"
                 android:textSize="8sp"
                 tools:text="创建者"/>
 
@@ -98,7 +98,7 @@
                 android:layout_marginStart="8dp"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#6B7280"
+                android:textColor="@color/lx_text_muted"
                 android:textSize="8sp"
                 tools:text="50首"/>
 

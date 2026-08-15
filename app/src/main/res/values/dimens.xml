@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared TV layout tokens keep each navigation tier on the same grid. -->
+    <dimen name="lx_rail_width">216dp</dimen>
+    <dimen name="lx_shell_margin">20dp</dimen>
+    <dimen name="lx_content_gap">16dp</dimen>
+    <dimen name="lx_nav_gutter">24dp</dimen>
+    <dimen name="lx_title_gutter">28dp</dimen>
+    <dimen name="lx_title_top">24dp</dimen>
+    <dimen name="lx_title_height">88dp</dimen>
+    <dimen name="lx_secondary_nav_height">72dp</dimen>
+    <dimen name="lx_secondary_item_width">180dp</dimen>
+    <dimen name="lx_secondary_item_height">56dp</dimen>
+    <dimen name="lx_primary_item_height">58dp</dimen>
+    <dimen name="lx_pager_height">56dp</dimen>
+    <dimen name="lx_glass_radius">24dp</dimen>
+    <dimen name="lx_rail_radius">28dp</dimen>
+</resources>

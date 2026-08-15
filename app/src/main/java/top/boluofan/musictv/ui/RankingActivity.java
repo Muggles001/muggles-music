@@ -117,6 +117,7 @@ public class RankingActivity extends AppCompatActivity {
             public void onBindViewHolder(@NonNull SourceViewHolder holder, int position) {
                 holder.tvSourceName.setText(SOURCE_NAMES[position]);
                 holder.ivRadio.setImageResource(position == currentSourceIndex ? R.drawable.radio_checked : R.drawable.radio_unchecked);
+                holder.itemView.setSelected(position == currentSourceIndex);
                 
                 holder.itemView.setOnClickListener(v -> selectSource(position));
             }
@@ -127,7 +128,7 @@ public class RankingActivity extends AppCompatActivity {
             }
         });
         
-        rvBoards.setLayoutManager(new LinearLayoutManager(this));
+        rvBoards.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvBoards.setAdapter(new androidx.recyclerview.widget.RecyclerView.Adapter<BoardViewHolder>() {
             @NonNull
             @Override
@@ -150,12 +151,11 @@ public class RankingActivity extends AppCompatActivity {
         });
 
         rvBoards.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus && boards.size() > 0 && currentBoardIndex >= 0 && currentBoardIndex < boards.size()) {
+            if (hasFocus && boards.size() > 0) {
                 rvBoards.post(() -> {
-                    if (rvBoards.getChildCount() > currentBoardIndex) {
-                        rvBoards.getChildAt(currentBoardIndex).requestFocus();
-                    } else if (rvBoards.getChildCount() > 0) {
-                        rvBoards.getChildAt(0).requestFocus();
+                    View focused = rvBoards.findFocus();
+                    if (focused == null && currentBoardIndex < rvBoards.getChildCount()) {
+                        rvBoards.getChildAt(Math.max(0, currentBoardIndex)).requestFocus();
                     }
                 });
             }
@@ -728,12 +728,14 @@ public class RankingActivity extends AppCompatActivity {
     
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                || keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                || keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             View currentFocus = getCurrentFocus();
-            if (currentFocus != null && floatingPlayerWindow != null) {
-                if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
-                    return true;
-                }
+            if (floatingPlayerWindow != null
+                    && floatingPlayerWindow.handleDirectionalKey(keyCode, currentFocus)) {
+                return true;
             }
         }
         return super.onKeyDown(keyCode, event);

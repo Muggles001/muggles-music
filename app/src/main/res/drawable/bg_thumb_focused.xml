@@ -2,13 +2,13 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:width="20dp" android:height="20dp" android:gravity="center">
         <shape android:shape="oval">
-            <solid android:color="#40FFFFFF" />
-            <stroke android:width="2dp" android:color="#FF3B82F6" />
+            <solid android:color="@color/lx_brand_soft" />
+            <stroke android:width="2dp" android:color="@color/lx_focus_ring" />
         </shape>
     </item>
     <item android:width="12dp" android:height="12dp" android:gravity="center">
         <shape android:shape="oval">
-            <solid android:color="#FFFFFF" />
+            <solid android:color="@color/lx_brand" />
         </shape>
     </item>
 </layer-list>

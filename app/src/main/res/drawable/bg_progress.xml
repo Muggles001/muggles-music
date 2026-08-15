@@ -3,7 +3,7 @@
     <item android:id="@android:id/background" android:gravity="center_vertical">
         <shape android:shape="rectangle">
             <size android:height="4dp" />
-            <solid android:color="#4DFFFFFF" />
+            <solid android:color="@color/lx_border" />
             <corners android:radius="2dp" />
         </shape>
     </item>
@@ -11,7 +11,7 @@
         <clip>
             <shape android:shape="rectangle">
                 <size android:height="4dp" />
-                <solid android:color="#80FFFFFF" />
+                <solid android:color="@color/lx_border_strong" />
                 <corners android:radius="2dp" />
             </shape>
         </clip>
@@ -20,7 +20,7 @@
         <clip>
             <shape android:shape="rectangle">
                 <size android:height="4dp" />
-                <solid android:color="#FFFFFF" />
+                <solid android:color="@color/lx_brand" />
                 <corners android:radius="2dp" />
             </shape>
         </clip>

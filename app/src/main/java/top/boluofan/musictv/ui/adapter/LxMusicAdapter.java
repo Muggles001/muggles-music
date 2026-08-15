@@ -3,6 +3,8 @@ package top.boluofan.musictv.ui.adapter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
+import android.os.SystemClock;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -26,6 +28,14 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
     private boolean isPlaying = false;
     private boolean showDeleteButton = false;
     private boolean showFavButton = true;
+    private int nextFocusDownId = View.NO_ID;
+    private int nextFocusLeftId = View.NO_ID;
+    private int indexOffset = 0;
+    private OnFirstItemUpListener firstItemUpListener;
+    private RecyclerView pendingPlaybackRecyclerView;
+    private int pendingPlaybackPosition = RecyclerView.NO_POSITION;
+    private int pendingPlaybackTargetId = View.NO_ID;
+    private long pendingPlaybackExpiresAt;
 
     public interface OnItemClickListener {
         void onItemClick(MusicInfo song, int position);
@@ -45,6 +55,10 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
 
     public interface OnFavClickListener {
         void onFavClick(MusicInfo song, int position);
+    }
+
+    public interface OnFirstItemUpListener {
+        boolean onFirstItemUp();
     }
 
     public void setOnItemClickListener(OnItemClickListener listener) {
@@ -75,6 +89,22 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         this.showFavButton = show;
     }
 
+    public void setNextFocusDownId(int id) {
+        nextFocusDownId = id;
+    }
+
+    public void setNextFocusLeftId(int id) {
+        nextFocusLeftId = id;
+    }
+
+    public void setOnFirstItemUpListener(OnFirstItemUpListener listener) {
+        firstItemUpListener = listener;
+    }
+
+    public void setIndexOffset(int offset) {
+        indexOffset = Math.max(0, offset);
+    }
+
     public void setSongs(List<MusicInfo> songs) {
         this.songs = songs != null ? songs : new ArrayList<>();
         notifyDataSetChanged();
@@ -85,6 +115,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         playingIndex = index;
         if (oldIndex >= 0) notifyItemChanged(oldIndex);
         if (index >= 0) notifyItemChanged(index);
+        restorePendingPlaybackFocus();
     }
 
     public void setPlayerPlaying(boolean playing) {
@@ -92,6 +123,30 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
             isPlaying = playing;
             if (playingIndex >= 0) notifyItemChanged(playingIndex);
         }
+        restorePendingPlaybackFocus();
+    }
+
+    /** Reassert the play-button focus after MediaController redraws its row. */
+    public void restorePendingPlaybackFocus() {
+        if (pendingPlaybackRecyclerView == null
+                || pendingPlaybackPosition == RecyclerView.NO_POSITION) return;
+        if (SystemClock.uptimeMillis() > pendingPlaybackExpiresAt) {
+            clearPendingPlaybackFocus();
+            return;
+        }
+        RecyclerView recyclerView = pendingPlaybackRecyclerView;
+        int position = pendingPlaybackPosition;
+        int targetId = pendingPlaybackTargetId;
+        recyclerView.post(() -> {
+            if (SystemClock.uptimeMillis() > pendingPlaybackExpiresAt) {
+                clearPendingPlaybackFocus();
+                return;
+            }
+            RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(position);
+            if (holder == null) return;
+            View target = holder.itemView.findViewById(targetId);
+            if (target != null && target.isShown()) target.requestFocus();
+        });
     }
 
     public int getPlayingIndex() {
@@ -109,16 +164,26 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         MusicInfo song = songs.get(position);
-        holder.bind(song, position == playingIndex, isPlaying);
+        holder.bind(song, position == playingIndex, isPlaying, indexOffset);
         holder.itemView.setOnClickListener(v -> {
+            int adapterPosition = holder.getAdapterPosition();
+            RecyclerView recyclerView = findParentRecyclerView(v);
+            rememberPendingPlaybackFocus(recyclerView, adapterPosition, R.id.item_song_root);
             if (listener != null) {
-                listener.onItemClick(song, holder.getAdapterPosition());
+                listener.onItemClick(song, adapterPosition);
             }
+            restoreFocusAfterAction(recyclerView, v, adapterPosition, R.id.item_song_root, true);
         });
         holder.btnPlay.setOnClickListener(v -> {
+            int adapterPosition = holder.getAdapterPosition();
+            // setPlayingIndex() may synchronously rebind this row, so the
+            // RecyclerView must be captured before invoking the callback.
+            RecyclerView recyclerView = findParentRecyclerView(v);
+            rememberPendingPlaybackFocus(recyclerView, adapterPosition, R.id.btnItemPlay);
             if (playListener != null) {
-                playListener.onPlayClick(song, holder.getAdapterPosition());
+                playListener.onPlayClick(song, adapterPosition);
             }
+            restoreFocusAfterAction(recyclerView, v, adapterPosition, R.id.btnItemPlay, true);
         });
         holder.btnFullscreen.setOnClickListener(v -> {
             if (fullscreenListener != null) {
@@ -128,15 +193,155 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         holder.btnDelete.setVisibility(showDeleteButton ? View.VISIBLE : View.GONE);
         if (showDeleteButton && deleteListener != null) {
             holder.btnDelete.setOnClickListener(v -> {
-                deleteListener.onDeleteClick(song, holder.getAdapterPosition());
+                int adapterPosition = holder.getAdapterPosition();
+                RecyclerView recyclerView = findParentRecyclerView(v);
+                deleteListener.onDeleteClick(song, adapterPosition);
+                restoreFocusAfterAction(recyclerView, v, adapterPosition, R.id.btnItemDelete, false);
             });
+        } else {
+            holder.btnDelete.setOnClickListener(null);
         }
         holder.btnFav.setVisibility(showFavButton ? View.VISIBLE : View.GONE);
         if (showFavButton && favListener != null) {
             holder.btnFav.setOnClickListener(v -> {
-                favListener.onFavClick(song, holder.getAdapterPosition());
+                int adapterPosition = holder.getAdapterPosition();
+                RecyclerView recyclerView = findParentRecyclerView(v);
+                favListener.onFavClick(song, adapterPosition);
+                restoreFocusAfterAction(recyclerView, v, adapterPosition, R.id.btnItemFav, false);
             });
+        } else {
+            holder.btnFav.setOnClickListener(null);
         }
+        configureRowFocus(holder, position);
+    }
+
+    private void configureRowFocus(ViewHolder holder, int position) {
+        int downId = nextFocusDownId != View.NO_ID && position == getItemCount() - 1
+                ? nextFocusDownId : View.NO_ID;
+        // The old layout pointed every song row to a synthetic rvPlaylists id.
+        // On pages without that view Android fell back to the primary rail.
+        holder.itemView.setNextFocusLeftId(nextFocusLeftId);
+        holder.itemView.setNextFocusDownId(downId);
+
+        holder.btnPlay.setNextFocusLeftId(R.id.item_song_root);
+        holder.btnPlay.setNextFocusRightId(R.id.btnItemFullscreen);
+        holder.btnFullscreen.setNextFocusLeftId(R.id.btnItemPlay);
+        holder.btnFullscreen.setNextFocusRightId(showFavButton
+                ? R.id.btnItemFav : (showDeleteButton ? R.id.btnItemDelete : View.NO_ID));
+        holder.btnFav.setNextFocusLeftId(R.id.btnItemFullscreen);
+        holder.btnFav.setNextFocusRightId(showDeleteButton ? R.id.btnItemDelete : View.NO_ID);
+        holder.btnDelete.setNextFocusLeftId(showFavButton
+                ? R.id.btnItemFav : R.id.btnItemFullscreen);
+        holder.btnDelete.setNextFocusRightId(View.NO_ID);
+
+        holder.btnPlay.setNextFocusDownId(downId);
+        holder.btnFullscreen.setNextFocusDownId(downId);
+        holder.btnFav.setNextFocusDownId(downId);
+        holder.btnDelete.setNextFocusDownId(downId);
+
+        View.OnKeyListener verticalNavigation = (view, keyCode, event) -> {
+            if (event.getAction() != android.view.KeyEvent.ACTION_DOWN
+                    || (keyCode != android.view.KeyEvent.KEYCODE_DPAD_UP
+                    && keyCode != android.view.KeyEvent.KEYCODE_DPAD_DOWN)) {
+                return false;
+            }
+            return moveVerticalWithinList(view, holder.getAdapterPosition(), keyCode);
+        };
+        holder.itemView.setOnKeyListener(verticalNavigation);
+        holder.btnPlay.setOnKeyListener(verticalNavigation);
+        holder.btnFullscreen.setOnKeyListener(verticalNavigation);
+        holder.btnFav.setOnKeyListener(verticalNavigation);
+        holder.btnDelete.setOnKeyListener(verticalNavigation);
+    }
+
+    private boolean moveVerticalWithinList(View source, int position, int keyCode) {
+        if (position == RecyclerView.NO_POSITION) return true;
+        RecyclerView recyclerView = findParentRecyclerView(source);
+        if (recyclerView == null) return true;
+
+        if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP) {
+            if (position == 0) {
+                return firstItemUpListener == null || firstItemUpListener.onFirstItemUp();
+            }
+            return focusRowControl(recyclerView, position - 1, source.getId());
+        }
+
+        if (position < getItemCount() - 1) {
+            return focusRowControl(recyclerView, position + 1, source.getId());
+        }
+        if (nextFocusDownId != View.NO_ID) {
+            View target = source.getRootView().findViewById(nextFocusDownId);
+            if (target != null && target.isShown() && target.requestFocus()) return true;
+        }
+        // The final row is a hard lower boundary even if a page has no next
+        // pager button. This keeps a held Down from leaking into the rail.
+        return true;
+    }
+
+    private boolean focusRowControl(RecyclerView recyclerView, int position, int controlId) {
+        RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(position);
+        if (holder != null) {
+            View target = holder.itemView.findViewById(controlId);
+            return (target != null && target.isShown() ? target : holder.itemView).requestFocus();
+        }
+        recyclerView.scrollToPosition(position);
+        recyclerView.post(() -> {
+            RecyclerView.ViewHolder targetHolder = recyclerView.findViewHolderForAdapterPosition(position);
+            if (targetHolder == null) return;
+            View target = targetHolder.itemView.findViewById(controlId);
+            (target != null && target.isShown() ? target : targetHolder.itemView).requestFocus();
+        });
+        return true;
+    }
+
+    private void restoreFocusAfterAction(RecyclerView recyclerView, View source, int position, int targetId,
+                                         boolean confirmAfterPlayerRefresh) {
+        if (position == RecyclerView.NO_POSITION) return;
+        if (recyclerView == null) {
+            FocusAnimationHelper.keepFocusAfterClick(source);
+            return;
+        }
+        Runnable restoreFocus = () -> {
+            RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(position);
+            if (holder != null) {
+                View target = holder.itemView.findViewById(targetId);
+                if (target != null && target.isShown() && target.requestFocus()) return;
+            }
+            FocusAnimationHelper.keepFocusAfterClick(source);
+        };
+        recyclerView.post(restoreFocus);
+        // MediaController callbacks can rebind the playing row after its click
+        // callback returns. Restore once more after that asynchronous redraw.
+        if (confirmAfterPlayerRefresh) recyclerView.postDelayed(restoreFocus, 320L);
+    }
+
+    private void rememberPendingPlaybackFocus(RecyclerView recyclerView, int position, int targetId) {
+        if (recyclerView == null || position == RecyclerView.NO_POSITION) return;
+        pendingPlaybackRecyclerView = recyclerView;
+        pendingPlaybackPosition = position;
+        pendingPlaybackTargetId = targetId;
+        pendingPlaybackExpiresAt = SystemClock.uptimeMillis() + 1400L;
+        recyclerView.postDelayed(() -> {
+            if (SystemClock.uptimeMillis() >= pendingPlaybackExpiresAt) {
+                clearPendingPlaybackFocus();
+            }
+        }, 1450L);
+    }
+
+    private void clearPendingPlaybackFocus() {
+        pendingPlaybackRecyclerView = null;
+        pendingPlaybackPosition = RecyclerView.NO_POSITION;
+        pendingPlaybackTargetId = View.NO_ID;
+        pendingPlaybackExpiresAt = 0L;
+    }
+
+    private RecyclerView findParentRecyclerView(View view) {
+        ViewParent parent = view.getParent();
+        while (parent instanceof View) {
+            if (parent instanceof RecyclerView) return (RecyclerView) parent;
+            parent = parent.getParent();
+        }
+        return null;
     }
 
     @Override
@@ -171,6 +376,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
+            FocusAnimationHelper.applyFocusAnimation(itemView);
             ivEqualizer = itemView.findViewById(R.id.ivEqualizer);
             tvIndex = itemView.findViewById(R.id.tvIndex);
             ivCover = itemView.findViewById(R.id.ivCover);
@@ -183,7 +389,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
             btnFav = itemView.findViewById(R.id.btnItemFav);
         }
 
-        void bind(MusicInfo song, boolean isCurrentSong, boolean isPlayingNow) {
+        void bind(MusicInfo song, boolean isCurrentSong, boolean isPlayingNow, int indexOffset) {
             tvName.setText(song.getName());
             tvArtist.setText(song.getSinger() != null ? song.getSinger() : "未知歌手");
             
@@ -204,7 +410,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
             } else {
                 ivEqualizer.setVisibility(View.GONE);
                 tvIndex.setVisibility(View.VISIBLE);
-                tvIndex.setText(String.valueOf(getAdapterPosition() + 1));
+                tvIndex.setText(String.valueOf(indexOffset + getAdapterPosition() + 1));
             }
             
             if (song.getPicUrl() != null && !song.getPicUrl().isEmpty()) {

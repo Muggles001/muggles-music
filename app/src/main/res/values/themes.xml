@@ -2,16 +2,25 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+    <style name="AppTheme" parent="Theme.AppCompat">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:colorAccent">@color/lx_brand</item>
+        <item name="android:windowBackground">@color/lx_bg_canvas</item>
+        <item name="android:navigationBarColor">@color/lx_bg_canvas</item>
+        <item name="android:statusBarColor">@color/lx_bg_canvas</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:textColorPrimary">@color/lx_text_primary</item>
+        <item name="android:textColorSecondary">@color/lx_text_secondary</item>
+        <item name="android:windowActionModeOverlay">true</item>
     </style>
 
-    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.NoActionBar">
+    <style name="AppTheme.NoActionBar" parent="AppTheme">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:windowBackground">@null</item>
+        <item name="android:windowBackground">@color/lx_bg_canvas</item>
     </style>
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
@@ -21,12 +30,14 @@
     <!-- Custom AlertDialog Style -->
     <style name="CustomAlertDialog" parent="Theme.AppCompat.Dialog.Alert">
         <item name="android:background">@drawable/bg_dialog</item>
-        <item name="android:textColor">#FFFFFF</item>
-        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColor">@color/lx_text_primary</item>
+        <item name="android:textColorPrimary">@color/lx_text_primary</item>
+        <item name="android:textColorSecondary">@color/lx_text_secondary</item>
+        <item name="colorAccent">@color/lx_brand</item>
     </style>
 
     <style name="CustomDialogButton" parent="Widget.AppCompat.Button">
-        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textColor">@color/white</item>
         <item name="android:background">@drawable/bg_btn_primary</item>
         <item name="android:minWidth">100dp</item>
         <item name="android:paddingLeft">20dp</item>

@@ -1,7 +1,6 @@
 package top.boluofan.musictv;
 
 import android.animation.ObjectAnimator;
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -35,7 +34,8 @@ public class FloatingPlayerWindow {
 
     private static final int FADE_DURATION = 300;
     private static final int AUTO_FADE_DELAY = 3000;
-    private static final int PLAYER_MARGIN_TOP = 0;
+    private static final int PLAYER_MARGIN_BOTTOM = 24;
+    private static final int PLAYER_MARGIN_END = 24;
 
     private final Activity activity;
     private final Context context;
@@ -50,7 +50,6 @@ public class FloatingPlayerWindow {
     private Player.Listener playerListener;
     private ObjectAnimator rotateAnim;
     private ObjectAnimator fadeAnim;
-    private ValueAnimator scaleAnim;
     private Handler fadeHandler;
     private Runnable fadeOutRunnable;
     private boolean isPlaying = false;
@@ -58,12 +57,17 @@ public class FloatingPlayerWindow {
     private boolean isReleased = false;
     private boolean isFadedOut = false;
     private boolean isFocused = false;
-    private int collapsedWidth = 96;
-    private int expandedWidth = 300;
+    /** The view that handed focus to the floating player, used for a clean
+     *  return path when the user presses up/left. */
+    private View focusReturnView;
+    private final int collapsedWidth;
+    private final int expandedWidth;
 
     public FloatingPlayerWindow(Activity activity) {
         this.activity = activity;
         this.context = activity.getApplicationContext();
+        collapsedWidth = dp(56);
+        expandedWidth = dp(220);
 
         LayoutInflater inflater = LayoutInflater.from(activity);
         floatingView = inflater.inflate(R.layout.layout_floating_player, null);
@@ -89,8 +93,8 @@ public class FloatingPlayerWindow {
                 collapsedWidth,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         );
-        params.setMargins(0, PLAYER_MARGIN_TOP, 0, 0);
-        params.gravity = android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL;
+        params.setMargins(0, 0, dp(PLAYER_MARGIN_END), dp(PLAYER_MARGIN_BOTTOM));
+        params.gravity = android.view.Gravity.BOTTOM | android.view.Gravity.END;
         
         container.setLayoutParams(params);
         
@@ -98,7 +102,12 @@ public class FloatingPlayerWindow {
             rootView.addView(container);
         }
         
+        // This view is added to the decor window after the page content. It
+        // must still participate in the TV focus tree, but it should never
+        // steal focus merely because playback starts.
         container.setFocusable(true);
+        container.setFocusableInTouchMode(true);
+        container.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         
         cvCover.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         rotateAnim = ObjectAnimator.ofFloat(cvCover, "rotation", 0f, 360f);
@@ -145,62 +154,30 @@ public class FloatingPlayerWindow {
     }
 
     private void expandPlayer() {
-        if (scaleAnim != null && scaleAnim.isRunning()) {
-            scaleAnim.cancel();
-        }
-
         fadeHandler.removeCallbacks(fadeOutRunnable);
-
+        tvTitle.animate().cancel();
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) container.getLayoutParams();
         if (params.width != expandedWidth) {
-            final FrameLayout.LayoutParams finalParams = params;
-            scaleAnim = ObjectAnimator.ofInt(params.width, expandedWidth);
-            scaleAnim.setDuration(FADE_DURATION);
-            scaleAnim.setEvaluator(new android.animation.IntEvaluator());
-            scaleAnim.addUpdateListener(animation -> {
-                int width = (int) animation.getAnimatedValue();
-                finalParams.width = width;
-                container.setLayoutParams(finalParams);
-            });
-            scaleAnim.start();
+            params.width = expandedWidth;
+            container.setLayoutParams(params);
         }
+        tvTitle.setAlpha(0f);
+        tvTitle.animate().alpha(1f).setDuration(180L).start();
     }
 
     private void collapsePlayer() {
-        if (scaleAnim != null && scaleAnim.isRunning()) {
-            scaleAnim.cancel();
-        }
-
-        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) container.getLayoutParams();
-        if (params.width != collapsedWidth) {
-            final FrameLayout.LayoutParams finalParams = params;
-            scaleAnim = ObjectAnimator.ofInt(params.width, collapsedWidth);
-            scaleAnim.setDuration(FADE_DURATION);
-            scaleAnim.setEvaluator(new android.animation.IntEvaluator());
-            scaleAnim.addUpdateListener(animation -> {
-                int width = (int) animation.getAnimatedValue();
-                finalParams.width = width;
-                container.setLayoutParams(finalParams);
-            });
-            scaleAnim.start();
-        }
+        tvTitle.animate().cancel();
+        tvTitle.animate().alpha(0f).setDuration(120L).withEndAction(() -> {
+            if (!isFocused && container.getParent() != null) {
+                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) container.getLayoutParams();
+                params.width = collapsedWidth;
+                container.setLayoutParams(params);
+            }
+        }).start();
     }
 
-    private static class WidthEvaluator implements java.util.concurrent.Callable<Integer> {
-        private int width;
-
-        public void setWidth(int width) {
-            this.width = width;
-        }
-
-        public int getWidth() {
-            return width;
-        }
-
-        @Override
-        public Integer call() {
-            return width;
-        }
+    private int dp(int value) {
+        return Math.round(value * activity.getResources().getDisplayMetrics().density);
     }
 
     private void fadeIn() {
@@ -384,10 +361,7 @@ public class FloatingPlayerWindow {
         if (isReleased) return;
         isReleased = true;
         isFocused = false;
-        if (scaleAnim != null) {
-            scaleAnim.cancel();
-            scaleAnim = null;
-        }
+        tvTitle.animate().cancel();
         if (rotateAnim != null) {
             rotateAnim.cancel();
             rotateAnim = null;
@@ -439,23 +413,60 @@ public class FloatingPlayerWindow {
         }
         return false;
     }
-    
-    public boolean handleLeftKey(View currentFocus) {
-        if (container == null || container.getVisibility() != View.VISIBLE) {
+
+    /**
+     * The floating player is an overlay, not another row in the content list.
+     * Only an explicit right press from a small lower-right control enters it;
+     * down presses always remain available for ordinary song-list navigation.
+     * Up/left returns to the view that started the jump.
+     */
+    public boolean handleDirectionalKey(int keyCode, View currentFocus) {
+        if (container == null || container.getVisibility() != View.VISIBLE
+                || container.getAlpha() < 0.1f) {
             return false;
         }
-        
-        if (currentFocus == null) {
+
+        if (currentFocus == container) {
+            if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
+                    || keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                if (focusReturnView != null && focusReturnView.isShown()
+                        && focusReturnView.isFocusable()) {
+                    focusReturnView.requestFocus();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        if (currentFocus == null) return false;
+
+        int[] decorLocation = new int[2];
+        int[] focusLocation = new int[2];
+        View decor = activity.getWindow().getDecorView();
+        decor.getLocationOnScreen(decorLocation);
+        currentFocus.getLocationOnScreen(focusLocation);
+        int focusBottom = focusLocation[1] - decorLocation[1] + currentFocus.getHeight();
+        int focusRight = focusLocation[0] - decorLocation[0] + currentFocus.getWidth();
+        int decorHeight = decor.getHeight();
+        int decorWidth = decor.getWidth();
+        boolean nearBottom = focusBottom >= decorHeight - dp(144);
+        boolean nearRight = focusRight >= decorWidth - dp(220);
+
+        boolean rightPressFromBroadRow = keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+                && currentFocus instanceof ViewGroup
+                && currentFocus.getWidth() >= Math.round(decorWidth * 0.65f);
+        boolean shouldEnter = !rightPressFromBroadRow
+                && keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+                && nearBottom && nearRight;
+
+        if (shouldEnter) {
+            focusReturnView = currentFocus;
             return requestFocus();
         }
-        
-        int[] location = new int[2];
-        currentFocus.getLocationOnScreen(location);
-        
-        if (location[0] <= 60) {
-            return requestFocus();
-        }
-        
         return false;
+    }
+
+    public boolean handleLeftKey(View currentFocus) {
+        return handleDirectionalKey(android.view.KeyEvent.KEYCODE_DPAD_LEFT, currentFocus);
     }
 }

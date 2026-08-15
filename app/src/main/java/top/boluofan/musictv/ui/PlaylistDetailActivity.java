@@ -14,6 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
+import androidx.media3.common.Player;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -35,6 +36,7 @@ import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.api.model.Playlist;
 import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
 import top.boluofan.musictv.util.DialogHelper;
+import top.boluofan.musictv.util.FocusAnimationHelper;
 import android.net.Uri;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -42,6 +44,8 @@ import java.util.Locale;
 
 public class PlaylistDetailActivity extends AppCompatActivity {
     private static final String TAG = "PlaylistDetailActivity";
+    public static final String EXTRA_LOCAL_PLAYLIST_ID = "local_playlist_id";
+    public static final String EXTRA_LOCAL_PLAYLIST_NAME = "local_playlist_name";
     
     private ImageButton btnBack;
     private TextView tvTitle;
@@ -55,6 +59,9 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     private ImageButton btnPlayAll;
     private ImageButton btnShuffle;
     private ImageButton btnFavorite;
+    private ImageButton btnPrevPage;
+    private ImageButton btnNextPage;
+    private TextView tvPageNumber;
     private RecyclerView rvSongs;
     private ProgressBar loadingProgress;
     
@@ -62,12 +69,15 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     private String playlistName;
     private String playlistSource;
     private String playlistCover;
+    private boolean isLocalPlaylist;
     
     private LxMusicAdapter songAdapter;
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
     private FloatingPlayerWindow floatingPlayerWindow;
     private List<MusicInfo> songs = new ArrayList<>();
+    private static final int SONGS_PER_PAGE = 8;
+    private int currentPage = 0;
     
     private final String[] SOURCES = {"mg", "kw", "kg", "tx", "wy"};
     private final String[] SOURCE_NAMES = {"咪咕", "酷我", "酷狗", "QQ音乐", "网易云"};
@@ -100,20 +110,60 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         btnPlayAll = findViewById(R.id.btnPlayAll);
         btnShuffle = findViewById(R.id.btnShuffle);
         btnFavorite = findViewById(R.id.btnFavorite);
+        btnPrevPage = findViewById(R.id.btnPlaylistDetailPrevPage);
+        btnNextPage = findViewById(R.id.btnPlaylistDetailNextPage);
+        tvPageNumber = findViewById(R.id.tvPlaylistDetailPageNumber);
         rvSongs = findViewById(R.id.rvSongs);
         loadingProgress = findViewById(R.id.loadingProgress);
         
         songAdapter = new LxMusicAdapter();
+        songAdapter.setNextFocusDownId(R.id.btnPlaylistDetailNextPage);
+        songAdapter.setOnFirstItemUpListener(() -> btnPlayAll != null && btnPlayAll.requestFocus());
         rvSongs.setAdapter(songAdapter);
         rvSongs.setLayoutManager(new LinearLayoutManager(this));
+        rvSongs.setPreserveFocusAfterLayout(true);
     }
     
     private void setupListeners() {
         btnBack.setOnClickListener(v -> finish());
+        btnBack.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                return btnPlayAll.requestFocus();
+            }
+            return false;
+        });
         
-        btnPlayAll.setOnClickListener(v -> playAll(false));
-        btnShuffle.setOnClickListener(v -> playAll(true));
-        btnFavorite.setOnClickListener(v -> collectPlaylist());
+        FocusAnimationHelper.blockDownFocusEscape(btnPrevPage, btnNextPage);
+        btnPlayAll.setOnClickListener(v -> {
+            playAll(false);
+            FocusAnimationHelper.keepFocusAfterPlayback(v);
+        });
+        btnShuffle.setOnClickListener(v -> {
+            playAll(true);
+            FocusAnimationHelper.keepFocusAfterPlayback(v);
+        });
+        btnFavorite.setOnClickListener(v -> {
+            collectPlaylist();
+            FocusAnimationHelper.keepFocusAfterClick(v);
+        });
+        View.OnKeyListener headerDownToSongs = (v, keyCode, event) -> {
+            if (event.getAction() == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                return focusFirstSong();
+            }
+            return false;
+        };
+        btnPlayAll.setOnKeyListener(headerDownToSongs);
+        btnShuffle.setOnKeyListener(headerDownToSongs);
+        btnFavorite.setOnKeyListener(headerDownToSongs);
+        btnPrevPage.setOnClickListener(v -> {
+            changePage(-1);
+            FocusAnimationHelper.keepFocusAfterClick(v);
+        });
+        btnNextPage.setOnClickListener(v -> {
+            changePage(1);
+            FocusAnimationHelper.keepFocusAfterClick(v);
+        });
         
         songAdapter.setOnItemClickListener((song, position) -> {
             playSongAtIndex(position);
@@ -132,8 +182,26 @@ public class PlaylistDetailActivity extends AppCompatActivity {
             collectSingleSong(song);
         });
     }
+
+    private boolean focusFirstSong() {
+        if (rvSongs == null || songAdapter == null || songAdapter.getItemCount() == 0) {
+            return true;
+        }
+        RecyclerView.ViewHolder holder = rvSongs.findViewHolderForAdapterPosition(0);
+        if (holder != null) return holder.itemView.requestFocus();
+        rvSongs.scrollToPosition(0);
+        rvSongs.post(() -> {
+            RecyclerView.ViewHolder target = rvSongs.findViewHolderForAdapterPosition(0);
+            if (target != null) target.itemView.requestFocus();
+        });
+        return true;
+    }
     
     private void collectPlaylist() {
+        if (isLocalPlaylist) {
+            Toast.makeText(this, "该歌单已在我的歌单", Toast.LENGTH_SHORT).show();
+            return;
+        }
         if (!LxRetrofitClient.isLoggedIn(this)) {
             Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(this, top.boluofan.musictv.ConfigActivity.class);
@@ -386,6 +454,13 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         playlistName = getIntent().getStringExtra("playlist_name");
         playlistSource = getIntent().getStringExtra("playlist_source");
         playlistCover = getIntent().getStringExtra("playlist_cover");
+        isLocalPlaylist = getIntent().hasExtra(EXTRA_LOCAL_PLAYLIST_ID);
+        if (isLocalPlaylist) {
+            playlistId = getIntent().getStringExtra(EXTRA_LOCAL_PLAYLIST_ID);
+            playlistName = getIntent().getStringExtra(EXTRA_LOCAL_PLAYLIST_NAME);
+            playlistSource = null;
+            playlistCover = null;
+        }
         
         tvTitle.setText("歌单详情");
         tvPlaylistName.setText(playlistName);
@@ -396,8 +471,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                     .into(ivCover);
         }
         
-        String sourceName = getSourceName(playlistSource);
-        tvPlaylistSource.setText(sourceName);
+        tvPlaylistSource.setText(isLocalPlaylist ? "我的歌单" : getSourceName(playlistSource));
     }
     
     private String getSourceName(String source) {
@@ -411,6 +485,10 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     }
     
     private void loadPlaylistDetail() {
+        if (isLocalPlaylist) {
+            loadLocalPlaylist();
+            return;
+        }
         if (playlistId == null || playlistSource == null) {
             return;
         }
@@ -437,13 +515,80 @@ public class PlaylistDetailActivity extends AppCompatActivity {
             }
         });
     }
+
+    private void loadLocalPlaylist() {
+        if (!LxRetrofitClient.isLoggedIn(this)) {
+            Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        showLoading(true);
+        String username = LxRetrofitClient.getUsername(this);
+        String password = LxRetrofitClient.getPassword(this);
+        String token = LxRetrofitClient.getToken(this);
+        LxRetrofitClient.getApiService(this).getUserList(username, password, token)
+                .enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
+                    @Override
+                    public void onResponse(
+                            Call<top.boluofan.musictv.api.model.ListData> call,
+                            Response<top.boluofan.musictv.api.model.ListData> response) {
+                        showLoading(false);
+                        if (!response.isSuccessful() || response.body() == null
+                                || response.body().getUserList() == null) {
+                            Toast.makeText(PlaylistDetailActivity.this,
+                                    "加载歌单失败", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        Playlist localPlaylist = findLocalPlaylist(response.body().getUserList());
+                        if (localPlaylist == null) {
+                            Toast.makeText(PlaylistDetailActivity.this,
+                                    "歌单不存在或已被删除", Toast.LENGTH_SHORT).show();
+                            finish();
+                            return;
+                        }
+                        playlistName = localPlaylist.getName();
+                        updateUI(localPlaylist);
+                    }
+
+                    @Override
+                    public void onFailure(
+                            Call<top.boluofan.musictv.api.model.ListData> call, Throwable t) {
+                        showLoading(false);
+                        Toast.makeText(PlaylistDetailActivity.this,
+                                "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private Playlist findLocalPlaylist(List<Playlist> playlists) {
+        for (Playlist playlist : playlists) {
+            if (playlistId != null && playlistId.equals(playlist.getId())) {
+                return playlist;
+            }
+        }
+        // Old server data can lack an id. The name remains a compatibility
+        // fallback for those existing playlists.
+        for (Playlist playlist : playlists) {
+            if (playlistName != null && playlistName.equals(playlist.getName())) {
+                return playlist;
+            }
+        }
+        return null;
+    }
     
     private void updateUI(Playlist playlist) {
+        playlistName = playlist.getName();
+        tvPlaylistName.setText(playlistName);
         tvPlaylistInfo.setText(playlist.getSongCount() + " 首歌曲");
         
         String creator = playlist.getCreator();
         if (creator != null && !creator.isEmpty()) {
             tvPlaylistSource.setText("来源: " + creator);
+        }
+        if (isLocalPlaylist) {
+            tvPlaylistSource.setText("我的歌单");
         }
         
         String desc = playlist.getDesc();
@@ -481,10 +626,48 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                     .into(ivCover);
         }
         
-        if (playlist.getSongs() != null) {
-            songs = playlist.getSongs();
-            songAdapter.setSongs(songs);
-        }
+        songs = playlist.getSongs() != null ? playlist.getSongs() : new ArrayList<>();
+        currentPage = 0;
+        updateSongPage();
+    }
+
+    private int getPageCount() {
+        return Math.max(1, (songs.size() + SONGS_PER_PAGE - 1) / SONGS_PER_PAGE);
+    }
+
+    private void updateSongPage() {
+        int from = Math.min(currentPage * SONGS_PER_PAGE, songs.size());
+        int to = Math.min(from + SONGS_PER_PAGE, songs.size());
+        List<MusicInfo> pageSongs = new ArrayList<>();
+        if (from < to) pageSongs.addAll(songs.subList(from, to));
+        songAdapter.setIndexOffset(currentPage * SONGS_PER_PAGE);
+        songAdapter.setSongs(pageSongs);
+        songAdapter.setPlayingIndex(-1);
+        tvPageNumber.setText(String.valueOf(currentPage + 1));
+        boolean hasPrevious = currentPage > 0;
+        boolean hasNext = currentPage + 1 < getPageCount();
+        btnPrevPage.setEnabled(hasPrevious);
+        btnNextPage.setEnabled(hasNext);
+        btnPrevPage.setAlpha(hasPrevious ? 1f : 0.35f);
+        btnNextPage.setAlpha(hasNext ? 1f : 0.35f);
+        requestFirstSongFocus();
+    }
+
+    private void changePage(int delta) {
+        int nextPage = Math.max(0, Math.min(currentPage + delta, getPageCount() - 1));
+        if (nextPage == currentPage) return;
+        currentPage = nextPage;
+        updateSongPage();
+        rvSongs.scrollToPosition(0);
+    }
+
+    private void requestFirstSongFocus() {
+        if (rvSongs == null || songAdapter == null || songAdapter.getItemCount() == 0) return;
+        rvSongs.scrollToPosition(0);
+        rvSongs.post(() -> {
+            RecyclerView.ViewHolder holder = rvSongs.findViewHolderForAdapterPosition(0);
+            if (holder != null) holder.itemView.requestFocus();
+        });
     }
     
     private void playAll(boolean shuffle) {
@@ -517,7 +700,9 @@ public class PlaylistDetailActivity extends AppCompatActivity {
             mediaItems.add(createMediaItem(song));
         }
         
-        player.setMediaItems(mediaItems, position, 0);
+        int globalPosition = currentPage * SONGS_PER_PAGE + position;
+        if (globalPosition < 0 || globalPosition >= mediaItems.size()) return;
+        player.setMediaItems(mediaItems, globalPosition, 0);
         player.prepare();
         player.play();
         songAdapter.setPlayingIndex(position);
@@ -564,6 +749,19 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         controllerFuture.addListener(() -> {
             try {
                 player = controllerFuture.get();
+                player.addListener(new Player.Listener() {
+                    @Override
+                    public void onIsPlayingChanged(boolean isPlaying) {
+                        songAdapter.setPlayerPlaying(isPlaying);
+                        songAdapter.restorePendingPlaybackFocus();
+                    }
+
+                    @Override
+                    public void onMediaItemTransition(MediaItem mediaItem, int reason) {
+                        songAdapter.notifyDataSetChanged();
+                        songAdapter.restorePendingPlaybackFocus();
+                    }
+                });
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -589,12 +787,23 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
             View currentFocus = getCurrentFocus();
-            if (currentFocus != null && floatingPlayerWindow != null) {
-                if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
-                    return true;
-                }
+            if (currentFocus == btnPrevPage || currentFocus == btnNextPage) {
+                // Keep pagination as the vertical endpoint. The detail page
+                // has no navigation rail, so repeated Down should not jump to
+                // the back button either.
+                return true;
+            }
+        }
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                || keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                || keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            View currentFocus = getCurrentFocus();
+            if (floatingPlayerWindow != null
+                    && floatingPlayerWindow.handleDirectionalKey(keyCode, currentFocus)) {
+                return true;
             }
         }
         return super.onKeyDown(keyCode, event);

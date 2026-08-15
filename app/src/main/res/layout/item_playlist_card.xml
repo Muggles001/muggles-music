@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
+    android:layout_margin="6dp"
+    android:paddingBottom="6dp"
     android:orientation="vertical"
     android:background="@drawable/selector_item_bg"
     android:clickable="true"
@@ -12,14 +13,16 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="100dp">
+        android:layout_height="150dp"
+        android:background="@drawable/bg_cover_rounded"
+        android:clipToOutline="true">
 
         <ImageView
             android:id="@+id/ivCover"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:background="#2A2A2A"
+            android:background="@color/lx_bg_focus"
             tools:src="@drawable/ic_playlist_music"
             android:contentDescription="cover"/>
 
@@ -32,7 +35,7 @@
             android:paddingHorizontal="4dp"
             android:paddingVertical="2dp"
             android:background="@drawable/bg_play_count_overlay"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/lx_text_primary"
             android:textSize="10sp"
             android:drawablePadding="2dp"
             app:drawableStartCompat="@drawable/ic_play"
@@ -45,12 +48,13 @@
         android:id="@+id/tvName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:paddingStart="10dp"
+        android:layout_marginTop="10dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:textColor="#FFFFFF"
-        android:textSize="12sp"
+        android:textColor="@color/lx_text_primary"
+        android:textSize="13sp"
         android:textStyle="bold"
         tools:text="歌单名称"/>
 
@@ -61,8 +65,11 @@
         android:layout_marginTop="1dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:textColor="#9CA3AF"
-        android:textSize="10sp"
+        android:textColor="@color/lx_text_secondary"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="4dp"
+        android:textSize="11sp"
         tools:text="创建者"/>
 
 </LinearLayout>

@@ -88,6 +88,9 @@ public class LyricAdapter extends RecyclerView.Adapter<LyricAdapter.LyricViewHol
             holder.itemView.setAlpha(1.0f);
             holder.itemView.setScaleX(1.04f);
             holder.itemView.setScaleY(1.04f);
+            // Keep the visible active block from the formal release. The custom drawable
+            // uses tangent cubic corners, so the arc meets each side smoothly instead of
+            // exposing a sharp transition on a large TV panel.
             holder.itemView.setBackground(new SoftRoundedBackgroundDrawable(0x0CFFFFFF, 80f));
         } else {
             // 距离越远透明度越低，自然渐出

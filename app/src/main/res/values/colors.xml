@@ -1,8 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#6200EE</color>
-    <color name="colorPrimaryDark">#3700B3</color>
-    <color name="colorAccent">#03DAC5</color>
+    <!-- LX Server inspired light / mint design tokens. Surfaces use alpha so the
+         light gradient underneath can show through as a restrained glass effect. -->
+    <color name="lx_bg_canvas">#F3F8F5</color>
+    <color name="lx_bg_panel">#D9FFFFFF</color>
+    <color name="lx_bg_focus">#DFF8ED</color>
+    <color name="lx_bg_header">#B3FFFFFF</color>
+    <color name="lx_bg_overlay">#B3FFFFFF</color>
+
+    <color name="lx_text_primary">#10231B</color>
+    <color name="lx_text_secondary">#4B685A</color>
+    <color name="lx_text_muted">#789187</color>
+
+    <color name="lx_border">#6694B2A2</color>
+    <color name="lx_border_strong">#9990A99A</color>
+    <color name="lx_brand">#00C878</color>
+    <color name="lx_brand_pressed">#00A965</color>
+    <color name="lx_brand_soft">#3320C878</color>
+    <color name="lx_brand_pale">#E9FFF4</color>
+    <color name="lx_focus_ring">#00A965</color>
+
+    <!-- Keep the original public names for source and dependency compatibility. -->
+    <color name="colorPrimary">@color/lx_brand</color>
+    <color name="colorPrimaryDark">@color/lx_brand_pressed</color>
+    <color name="colorAccent">@color/lx_brand</color>
     <color name="white">#FFFFFFFF</color>
     <color name="black">#FF000000</color>
 </resources>

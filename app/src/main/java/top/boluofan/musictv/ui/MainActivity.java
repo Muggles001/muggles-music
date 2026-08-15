@@ -4,12 +4,17 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.lifecycle.Lifecycle;
 import androidx.media3.common.Player;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
@@ -26,6 +31,16 @@ import top.boluofan.musictv.ui.SongSquareFragment;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
+    private static final String STATE_SELECTED_PAGE = "selected_primary_page";
+    public static final int PAGE_SEARCH = 0;
+    public static final int PAGE_SONG_SQUARE = 1;
+    public static final int PAGE_RANKING = 2;
+    public static final int PAGE_LIBRARY = 3;
+    public static final int PAGE_SETTINGS = 4;
+
+    public interface PrimaryPageKeyHandler {
+        boolean onKeyDown(int keyCode, KeyEvent event);
+    }
     private FloatingPlayerWindow floatingPlayerWindow;
     private LinearLayout tabLibrary;
     private LinearLayout tabSearch;
@@ -47,7 +62,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvRanking;
     private TextView tvSettings;
 
-    private int currentSelectedTab = 0;
+    private int currentSelectedTab = -1;
+    private boolean pageTransitionInProgress = false;
+    private View fragmentContainer;
     
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
@@ -71,7 +88,13 @@ public class MainActivity extends AppCompatActivity {
         initViews();
         setupListeners();
         
-        showSongSquare();
+        int initialPage = savedInstanceState != null
+                ? savedInstanceState.getInt(STATE_SELECTED_PAGE, PAGE_SONG_SQUARE)
+                : PAGE_SONG_SQUARE;
+        if (initialPage == PAGE_LIBRARY && !LxRetrofitClient.isLoggedIn(this)) {
+            initialPage = PAGE_SONG_SQUARE;
+        }
+        selectPrimaryPage(initialPage, false);
     }
 
     @Override
@@ -106,6 +129,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initViews() {
+        fragmentContainer = findViewById(R.id.fragmentContainer);
         tabLibrary = findViewById(R.id.tabLibrary);
         tabSearch = findViewById(R.id.tabSearch);
         tabSongSquare = findViewById(R.id.tabSongSquare);
@@ -130,25 +154,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        tabLibrary.setOnClickListener(v -> showLibrary());
-        tabSearch.setOnClickListener(v -> showSearch());
-        tabSongSquare.setOnClickListener(v -> showSongSquare());
-        tabRanking.setOnClickListener(v -> showRanking());
-        tabSettings.setOnClickListener(v -> showSettings());
+        bindPrimaryTab(tabSearch, PAGE_SEARCH);
+        bindPrimaryTab(tabSongSquare, PAGE_SONG_SQUARE);
+        bindPrimaryTab(tabRanking, PAGE_RANKING);
+        bindPrimaryTab(tabLibrary, PAGE_LIBRARY);
+        bindPrimaryTab(tabSettings, PAGE_SETTINGS);
+    }
 
-        View.OnFocusChangeListener focusListener = (v, hasFocus) -> {
+    private void bindPrimaryTab(View tab, int page) {
+        tab.setOnClickListener(v -> selectPrimaryPage(page, true));
+        tab.setOnFocusChangeListener((v, hasFocus) -> {
+            TextView label = getTabLabel(page);
+            if (label != null) label.setActivated(hasFocus);
             if (hasFocus) {
                 FocusAnimationHelper.animateFocusIn(v);
+                selectPrimaryPage(page, true);
             } else {
                 FocusAnimationHelper.animateFocusOut(v);
             }
-        };
-
-        tabLibrary.setOnFocusChangeListener(focusListener);
-        tabSearch.setOnFocusChangeListener(focusListener);
-        tabSongSquare.setOnFocusChangeListener(focusListener);
-        tabRanking.setOnFocusChangeListener(focusListener);
-        tabSettings.setOnFocusChangeListener(focusListener);
+        });
     }
 
     private void clearSelection() {
@@ -157,97 +181,239 @@ public class MainActivity extends AppCompatActivity {
         btnSongSquare.setAlpha(0.5f);
         btnRanking.setAlpha(0.5f);
         btnSettings.setAlpha(0.5f);
+        btnLibrary.setSelected(false);
+        btnSearch.setSelected(false);
+        btnSongSquare.setSelected(false);
+        btnRanking.setSelected(false);
+        btnSettings.setSelected(false);
         
-        tvLibrary.setTextColor(0xFF9CA3AF);
-        tvSearch.setTextColor(0xFF9CA3AF);
-        tvSongSquare.setTextColor(0xFF9CA3AF);
-        tvRanking.setTextColor(0xFF9CA3AF);
-        tvSettings.setTextColor(0xFF9CA3AF);
+        tvLibrary.setTextColor(ContextCompat.getColorStateList(this, R.color.selector_nav_tint));
+        tvSearch.setTextColor(ContextCompat.getColorStateList(this, R.color.selector_nav_tint));
+        tvSongSquare.setTextColor(ContextCompat.getColorStateList(this, R.color.selector_nav_tint));
+        tvRanking.setTextColor(ContextCompat.getColorStateList(this, R.color.selector_nav_tint));
+        tvSettings.setTextColor(ContextCompat.getColorStateList(this, R.color.selector_nav_tint));
+        tvLibrary.setSelected(false);
+        tvSearch.setSelected(false);
+        tvSongSquare.setSelected(false);
+        tvRanking.setSelected(false);
+        tvSettings.setSelected(false);
+
+        tabLibrary.setSelected(false);
+        tabSearch.setSelected(false);
+        tabSongSquare.setSelected(false);
+        tabRanking.setSelected(false);
+        tabSettings.setSelected(false);
     }
 
     private void updateTabSelection(int tabIndex) {
         clearSelection();
-        boolean isLoggedIn = LxRetrofitClient.isLoggedIn(this);
-        
-        if (isLoggedIn) {
-            switch (tabIndex) {
-                case 0:
-                    btnSearch.setAlpha(1.0f);
-                    tvSearch.setTextColor(0xFFFFFFFF);
-                    break;
-                case 1:
-                    btnSongSquare.setAlpha(1.0f);
-                    tvSongSquare.setTextColor(0xFFFFFFFF);
-                    break;
-                case 2:
-                    btnRanking.setAlpha(1.0f);
-                    tvRanking.setTextColor(0xFFFFFFFF);
-                    break;
-                case 3:
-                    btnLibrary.setAlpha(1.0f);
-                    tvLibrary.setTextColor(0xFFFFFFFF);
-                    break;
-                case 4:
-                    btnSettings.setAlpha(1.0f);
-                    tvSettings.setTextColor(0xFFFFFFFF);
-                    break;
-            }
-        } else {
-            switch (tabIndex) {
-                case 0:
-                    btnSearch.setAlpha(1.0f);
-                    tvSearch.setTextColor(0xFFFFFFFF);
-                    break;
-                case 1:
-                    btnSongSquare.setAlpha(1.0f);
-                    tvSongSquare.setTextColor(0xFFFFFFFF);
-                    break;
-                case 2:
-                    btnRanking.setAlpha(1.0f);
-                    tvRanking.setTextColor(0xFFFFFFFF);
-                    break;
-                case 3:
-                    btnSettings.setAlpha(1.0f);
-                    tvSettings.setTextColor(0xFFFFFFFF);
-                    break;
-            }
+        switch (tabIndex) {
+            case PAGE_SEARCH:
+                btnSearch.setAlpha(1.0f);
+                btnSearch.setSelected(true);
+                tabSearch.setSelected(true);
+                tvSearch.setSelected(true);
+                break;
+            case PAGE_SONG_SQUARE:
+                btnSongSquare.setAlpha(1.0f);
+                btnSongSquare.setSelected(true);
+                tabSongSquare.setSelected(true);
+                tvSongSquare.setSelected(true);
+                break;
+            case PAGE_RANKING:
+                btnRanking.setAlpha(1.0f);
+                btnRanking.setSelected(true);
+                tabRanking.setSelected(true);
+                tvRanking.setSelected(true);
+                break;
+            case PAGE_LIBRARY:
+                btnLibrary.setAlpha(1.0f);
+                btnLibrary.setSelected(true);
+                tabLibrary.setSelected(true);
+                tvLibrary.setSelected(true);
+                break;
+            case PAGE_SETTINGS:
+                btnSettings.setAlpha(1.0f);
+                btnSettings.setSelected(true);
+                tabSettings.setSelected(true);
+                tvSettings.setSelected(true);
+                break;
         }
         currentSelectedTab = tabIndex;
     }
 
-    private void showLibrary() {
-        if (!LxRetrofitClient.isLoggedIn(this)) return;
-        
-        updateTabSelection(3);
-        
-        startActivity(new Intent(this, LibraryActivity.class));
+    private TextView getTabLabel(int page) {
+        switch (page) {
+            case PAGE_SEARCH: return tvSearch;
+            case PAGE_SONG_SQUARE: return tvSongSquare;
+            case PAGE_RANKING: return tvRanking;
+            case PAGE_LIBRARY: return tvLibrary;
+            case PAGE_SETTINGS: return tvSettings;
+            default: return null;
+        }
     }
 
-    private void showSearch() {
-        updateTabSelection(0);
-        
-        startActivity(new Intent(this, SearchActivity.class));
+    public void selectPrimaryPage(int page, boolean animate) {
+        if (page == PAGE_LIBRARY && !LxRetrofitClient.isLoggedIn(this)) return;
+        if (page < PAGE_SEARCH || page > PAGE_SETTINGS) return;
+
+        Fragment current = currentSelectedTab >= 0
+                ? getSupportFragmentManager().findFragmentByTag("primary_page_" + currentSelectedTab)
+                : null;
+        Fragment next = getSupportFragmentManager().findFragmentByTag("primary_page_" + page);
+        if (currentSelectedTab == page && next != null && !next.isHidden()) return;
+
+        int previousPage = currentSelectedTab;
+        if (next == null) next = createPrimaryFragment(page);
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction()
+                .setReorderingAllowed(true);
+        if (animate && previousPage >= 0) {
+            if (navigationOrder(page) > navigationOrder(previousPage)) {
+                transaction.setCustomAnimations(
+                        R.anim.page_enter_from_right,
+                        R.anim.page_exit_to_left
+                );
+            } else {
+                transaction.setCustomAnimations(
+                        R.anim.page_enter_from_left,
+                        R.anim.page_exit_to_right
+                );
+            }
+        }
+
+        pageTransitionInProgress = true;
+        updateTabSelection(page);
+        if (current != null && current != next) {
+            transaction.hide(current);
+            transaction.setMaxLifecycle(current, Lifecycle.State.STARTED);
+        }
+        if (next.isAdded()) {
+            transaction.show(next);
+        } else {
+            transaction.add(R.id.fragmentContainer, next, "primary_page_" + page);
+        }
+        transaction.setMaxLifecycle(next, Lifecycle.State.RESUMED);
+        transaction.commit();
+        fragmentContainer.postDelayed(() -> pageTransitionInProgress = false, 300L);
     }
 
-    private void showSongSquare() {
-        updateTabSelection(1);
-        
-        getSupportFragmentManager().beginTransaction()
-            .replace(R.id.fragmentContainer, new SongSquareFragment())
-            .commit();
+    /** The visual rail is ordered Song Square, Search, Ranking, Library, Settings. */
+    private int navigationOrder(int page) {
+        switch (page) {
+            case PAGE_SONG_SQUARE: return 0;
+            case PAGE_SEARCH: return 1;
+            case PAGE_RANKING: return 2;
+            case PAGE_LIBRARY: return 3;
+            case PAGE_SETTINGS: return 4;
+            default: return page;
+        }
     }
 
-    private void showRanking() {
-        updateTabSelection(2);
-        
-        startActivity(new Intent(this, RankingActivity.class));
+    private Fragment createPrimaryFragment(int page) {
+        switch (page) {
+            case PAGE_SEARCH:
+                return new SearchFragment();
+            case PAGE_RANKING:
+                return new RankingFragment();
+            case PAGE_LIBRARY:
+                return new LibraryFragment();
+            case PAGE_SETTINGS:
+                return new SettingsFragment();
+            case PAGE_SONG_SQUARE:
+            default:
+                return new SongSquareFragment();
+        }
     }
 
-    private void showSettings() {
-        boolean isLoggedIn = LxRetrofitClient.isLoggedIn(this);
-        updateTabSelection(isLoggedIn ? 4 : 3);
-        
-        startActivity(new Intent(this, SettingsActivity.class));
+    /**
+     * Primary-page RecyclerViews deliberately keep their containers out of
+     * the focus chain. Sending the rail directly to a visible child avoids
+     * the extra DPAD_RIGHT press that a container focus target requires.
+     */
+    private boolean moveFocusFromRailToPage(Fragment pageFragment) {
+        if (pageFragment == null || pageFragment.getView() == null) return false;
+
+        View root = pageFragment.getView();
+        View target;
+        switch (currentSelectedTab) {
+            case PAGE_SONG_SQUARE:
+                target = root.findViewById(R.id.rvSourceList);
+                break;
+            case PAGE_SEARCH:
+                target = root.findViewById(R.id.etSearch);
+                break;
+            case PAGE_RANKING:
+                target = root.findViewById(R.id.rvBoards);
+                return requestPageTargetFocus(target)
+                        || requestPageTargetFocus(root.findViewById(R.id.rvSourceList));
+            case PAGE_LIBRARY:
+                target = root.findViewById(R.id.tabAllSongs);
+                break;
+            case PAGE_SETTINGS:
+                target = root.findViewById(R.id.layoutServerConfig);
+                break;
+            default:
+                return false;
+        }
+        return requestPageTargetFocus(target);
+    }
+
+    private boolean requestPageTargetFocus(View target) {
+        if (target == null || !target.isShown() || !target.isEnabled()) return false;
+        if (target instanceof RecyclerView) {
+            RecyclerView list = (RecyclerView) target;
+            if (list.getChildCount() > 0) {
+                return list.getChildAt(0).requestFocus();
+            }
+            // A source or ranking strip can finish binding one frame after the
+            // page transition. Consume this key and deliver the focus as soon
+            // as its first actual item exists.
+            list.post(() -> {
+                if (list.isShown() && list.getChildCount() > 0) {
+                    list.getChildAt(0).requestFocus();
+                }
+            });
+            return true;
+        }
+        if (target.isFocusable()) return target.requestFocus();
+        return requestFirstFocusableDescendant(target);
+    }
+
+    private boolean requestFirstFocusableDescendant(View view) {
+        if (!(view instanceof ViewGroup)) return false;
+        ViewGroup group = (ViewGroup) view;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+            if (!child.isShown() || !child.isEnabled()) continue;
+            if (child instanceof RecyclerView) {
+                if (requestPageTargetFocus(child)) return true;
+            } else if (child.isFocusable() && child.requestFocus()) {
+                return true;
+            } else if (requestFirstFocusableDescendant(child)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isRailItem(View view) {
+        return view == tabSongSquare || view == tabSearch || view == tabRanking
+                || view == tabLibrary || view == tabSettings;
+    }
+
+    private void moveFocusFromRailWhenReady() {
+        fragmentContainer.postDelayed(() -> {
+            if (!isRailItem(getCurrentFocus())) return;
+            Fragment readyFragment = getSupportFragmentManager()
+                    .findFragmentByTag("primary_page_" + currentSelectedTab);
+            moveFocusFromRailToPage(readyFragment);
+        }, 80L);
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        outState.putInt(STATE_SELECTED_PAGE, currentSelectedTab);
+        super.onSaveInstanceState(outState);
     }
     
     @Override
@@ -261,12 +427,38 @@ public class MainActivity extends AppCompatActivity {
     
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
+        Fragment currentFragment = getSupportFragmentManager()
+                .findFragmentByTag("primary_page_" + currentSelectedTab);
+        View currentFocus = getCurrentFocus();
         boolean directionalKey = keyCode == KeyEvent.KEYCODE_DPAD_UP
                 || keyCode == KeyEvent.KEYCODE_DPAD_DOWN
                 || keyCode == KeyEvent.KEYCODE_DPAD_LEFT
                 || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT;
-        if (directionalKey && currentSelectedTab == 1 && currentFragment == null) {
+
+        if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && isRailItem(currentFocus)) {
+            if (currentFragment != null && !pageTransitionInProgress
+                    && moveFocusFromRailToPage(currentFragment)) {
+                return true;
+            }
+            // The rail focus itself triggered a page transaction. Preserve a
+            // single right press while the fragment finishes attaching.
+            moveFocusFromRailWhenReady();
+            return true;
+        }
+        if (directionalKey && (currentFragment == null || pageTransitionInProgress)) {
+            return true;
+        }
+
+        // Give the floating player the first chance at edge navigation. Page
+        // fragments may intentionally consume down/left at their own edges;
+        // the player should still be reachable from the bottom-right edge.
+        if (directionalKey && floatingPlayerWindow != null
+                && floatingPlayerWindow.handleDirectionalKey(keyCode, getCurrentFocus())) {
+            return true;
+        }
+
+        if (currentFragment instanceof PrimaryPageKeyHandler
+                && ((PrimaryPageKeyHandler) currentFragment).onKeyDown(keyCode, event)) {
             return true;
         }
         if (currentFragment instanceof SongSquareFragment) {
@@ -276,14 +468,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         
-        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-            View currentFocus = getCurrentFocus();
-            if (currentFocus != null && floatingPlayerWindow != null) {
-                if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
-                    return true;
-                }
-            }
-        }
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastBackPressTime < 2000) {

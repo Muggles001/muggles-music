@@ -18,14 +18,14 @@
         android:focusable="true"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:tint="#FFFFFF" />
+        app:tint="@color/lx_text_primary" />
 
     <TextView
         android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="我的歌单"
-        android:textColor="@android:color/white"
+        android:textColor="@color/lx_text_primary"
         android:textSize="24sp"
         android:textStyle="bold"
         app:layout_constraintStart_toEndOf="@id/btnBack"
@@ -51,7 +51,7 @@
             android:src="@drawable/ic_refresh"
             android:scaleType="centerInside"
             android:padding="8dp"
-            app:tint="#9CA3AF"
+            app:tint="@color/lx_text_secondary"
             android:focusable="true"
             android:contentDescription="刷新" />
 
@@ -63,7 +63,7 @@
             android:src="@drawable/ic_logout"
             android:scaleType="centerInside"
             android:padding="8dp"
-            app:tint="#9CA3AF"
+            app:tint="@color/lx_text_secondary"
             android:focusable="true"
             android:contentDescription="退出登录"
             android:layout_marginStart="8dp" />
@@ -72,21 +72,25 @@
 
     <LinearLayout
         android:id="@+id/leftColumn"
-        android:layout_width="300dp"
-        android:layout_height="0dp"
+        android:layout_width="0dp"
+        android:layout_height="72dp"
         android:orientation="vertical"
-        android:background="#40000000"
+        android:background="@drawable/bg_content_panel"
         android:layout_marginTop="16dp"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTitle"
-        app:layout_constraintBottom_toBottomOf="parent">
+        >
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvPlaylists"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:padding="16dp" />
+            android:layout_height="match_parent"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:clipToPadding="false" />
 
     </LinearLayout>
 
@@ -96,9 +100,9 @@
         android:layout_height="0dp"
         android:orientation="vertical"
         android:layout_marginTop="16dp"
-        app:layout_constraintStart_toEndOf="@+id/leftColumn"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvTitle"
+        app:layout_constraintTop_toBottomOf="@id/leftColumn"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
@@ -119,7 +123,7 @@
                 android:text="所有歌曲"
                 android:textSize="20sp"
                 android:textStyle="bold"
-                android:textColor="#F3F4F6"
+                android:textColor="@color/lx_text_primary"
                 android:focusable="true" 
                 android:focusableInTouchMode="false"/>
 
@@ -129,7 +133,7 @@
                 android:layout_height="wrap_content"
                 android:text="0 首歌曲"
                 android:textSize="14sp"
-                android:textColor="#9CA3AF"
+                android:textColor="@color/lx_text_secondary"
                 android:layout_marginEnd="16dp" />
 
             <ImageButton
@@ -160,8 +164,13 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvSongs"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="24dp" />
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="24dp"
+            android:nextFocusUp="@id/rvPlaylists" />
 
     </LinearLayout>
 

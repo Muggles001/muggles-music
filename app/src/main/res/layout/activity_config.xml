@@ -29,7 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="麻瓜音乐"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/lx_text_primary"
             android:textSize="40sp"
             android:textStyle="bold"
             android:layout_marginBottom="12dp" />
@@ -38,7 +38,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="LXserver TV 音乐客户端"
-            android:textColor="#9CA3AF"
+            android:textColor="@color/lx_text_secondary"
             android:textSize="16sp"
             android:gravity="center"
             android:layout_marginBottom="8dp" />
@@ -47,7 +47,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="连接 lxserver 洛雪音乐服务"
-            android:textColor="#6B7280"
+            android:textColor="@color/lx_text_muted"
             android:textSize="14sp"
             android:gravity="center"
             android:layout_marginBottom="40dp" />
@@ -58,7 +58,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="扫码配置"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/white"
             android:background="@drawable/bg_btn_primary"
             android:paddingStart="24dp"
             android:paddingEnd="24dp"
@@ -72,7 +72,7 @@
         android:id="@+id/divider"
         android:layout_width="1dp"
         android:layout_height="0dp"
-        android:background="#2D2D54"
+        android:background="@color/lx_border"
         android:layout_marginTop="48dp"
         android:layout_marginBottom="48dp"
         app:layout_constraintStart_toEndOf="@+id/panelLeft"
@@ -112,7 +112,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="服务地址"
-                android:textColor="#9CA3AF"
+                android:textColor="@color/lx_text_secondary"
                 android:textSize="13sp"
                 android:layout_marginBottom="6dp" />
 
@@ -125,8 +125,8 @@
                 android:inputType="textUri"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#4B5563"
+                android:textColor="@color/lx_text_primary"
+                android:textColorHint="@color/lx_text_muted"
                 android:textSize="15sp"
                 android:singleLine="true"
                 android:imeOptions="actionNext"
@@ -143,7 +143,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="lxserver 用户名"
-                android:textColor="#9CA3AF"
+                android:textColor="@color/lx_text_secondary"
                 android:textSize="13sp"
                 android:layout_marginBottom="6dp" />
 
@@ -156,8 +156,8 @@
                 android:inputType="textPersonName"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#4B5563"
+                android:textColor="@color/lx_text_primary"
+                android:textColorHint="@color/lx_text_muted"
                 android:textSize="15sp"
                 android:singleLine="true"
                 android:imeOptions="actionNext"
@@ -174,7 +174,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="lxserver 密码"
-                android:textColor="#9CA3AF"
+                android:textColor="@color/lx_text_secondary"
                 android:textSize="13sp"
                 android:layout_marginBottom="6dp" />
 
@@ -187,8 +187,8 @@
                 android:inputType="textPassword"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#4B5563"
+                android:textColor="@color/lx_text_primary"
+                android:textColorHint="@color/lx_text_muted"
                 android:textSize="15sp"
                 android:singleLine="true"
                 android:imeOptions="actionNext"
@@ -205,7 +205,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="用户 Token (选填)"
-                android:textColor="#9CA3AF"
+                android:textColor="@color/lx_text_secondary"
                 android:textSize="13sp"
                 android:layout_marginBottom="6dp" />
 
@@ -218,8 +218,8 @@
                 android:inputType="text"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#4B5563"
+                android:textColor="@color/lx_text_primary"
+                android:textColorHint="@color/lx_text_muted"
                 android:textSize="15sp"
                 android:singleLine="true"
                 android:imeOptions="actionDone"
@@ -238,7 +238,7 @@
                 android:layout_height="56dp"
                 android:background="@drawable/bg_btn_primary"
                 android:text="连接 lxserver"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/white"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:stateListAnimator="@null"
@@ -253,7 +253,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="如何获取服务器地址？\n请运行 lxserver 服务，在控制台查看地址"
-                android:textColor="#6B7280"
+                android:textColor="@color/lx_text_muted"
                 android:textSize="12sp"
                 android:gravity="start"
                 android:layout_marginTop="24dp"
@@ -263,7 +263,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="如何获取账号密码？\n在 lxserver 的[管理控制台]中配置用户"
-                android:textColor="#6B7280"
+                android:textColor="@color/lx_text_muted"
                 android:textSize="12sp"
                 android:gravity="start" />
 
@@ -296,7 +296,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="手机扫码配置服务器"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/lx_text_primary"
                 android:textSize="18sp"
                 android:layout_marginTop="24dp" />
 
@@ -305,7 +305,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="正在获取地址..."
-                android:textColor="#9CA3AF"
+                android:textColor="@color/lx_text_secondary"
                 android:textSize="14sp"
                 android:layout_marginTop="8dp" />
 

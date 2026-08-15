@@ -146,12 +146,14 @@ public class SettingsActivity extends AppCompatActivity {
     
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                || keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                || keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             View currentFocus = getCurrentFocus();
-            if (currentFocus != null && floatingPlayerWindow != null) {
-                if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
-                    return true;
-                }
+            if (floatingPlayerWindow != null
+                    && floatingPlayerWindow.handleDirectionalKey(keyCode, currentFocus)) {
+                return true;
             }
         }
         return super.onKeyDown(keyCode, event);

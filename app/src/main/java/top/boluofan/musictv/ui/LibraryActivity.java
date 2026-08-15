@@ -97,7 +97,7 @@ public class LibraryActivity extends AppCompatActivity {
     private void setupRecyclerViews() {
         playlistAdapter = new PlaylistAdapter();
         rvPlaylists.setAdapter(playlistAdapter);
-        rvPlaylists.setLayoutManager(new LinearLayoutManager(this));
+        rvPlaylists.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         
         songAdapter = new LxMusicAdapter();
         songAdapter.setShowDeleteButton(true);
@@ -248,6 +248,15 @@ public class LibraryActivity extends AppCompatActivity {
         }
         
         if (targetPlaylist != null) {
+            if (!targetPlaylist.isDefault() && !targetPlaylist.isLove()) {
+                Intent intent = new Intent(this, PlaylistDetailActivity.class);
+                intent.putExtra(PlaylistDetailActivity.EXTRA_LOCAL_PLAYLIST_ID,
+                        targetPlaylist.getId());
+                intent.putExtra(PlaylistDetailActivity.EXTRA_LOCAL_PLAYLIST_NAME,
+                        targetPlaylist.getName());
+                startActivity(intent);
+                return;
+            }
             currentPlaylist = targetPlaylist;
             updateSongList();
         }
@@ -496,12 +505,14 @@ public class LibraryActivity extends AppCompatActivity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                || keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                || keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             View currentFocus = getCurrentFocus();
-            if (currentFocus != null && floatingPlayerWindow != null) {
-                if (floatingPlayerWindow.handleLeftKey(currentFocus)) {
-                    return true;
-                }
+            if (floatingPlayerWindow != null
+                    && floatingPlayerWindow.handleDirectionalKey(keyCode, currentFocus)) {
+                return true;
             }
         }
         if (keyCode == KeyEvent.KEYCODE_BACK) {

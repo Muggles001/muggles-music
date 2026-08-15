@@ -6,8 +6,8 @@
     android:gravity="center_vertical"
     android:paddingStart="16dp"
     android:paddingEnd="16dp"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp"
     android:layout_marginStart="4dp"
     android:layout_marginEnd="4dp"
     android:background="@drawable/selector_source_item"
@@ -15,15 +15,15 @@
 
     <ImageView
         android:id="@+id/ivRadio"
-        android:layout_width="16dp"
-        android:layout_height="16dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
         android:src="@drawable/radio_unchecked" />
 
     <TextView
         android:id="@+id/tvSourceName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@android:color/white"
+        android:textColor="@color/lx_text_primary"
         android:textSize="14sp"
         android:layout_marginStart="6dp" />
 
