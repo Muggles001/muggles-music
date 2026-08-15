@@ -1,5 +1,14 @@
 apply plugin: 'com.android.application'
 
+def signingProperties = new Properties()
+def signingPropertiesFile = rootProject.file("signing.properties")
+if (signingPropertiesFile.exists()) {
+    signingPropertiesFile.withInputStream { signingProperties.load(it) }
+}
+def signingValue = { String propertyName, String environmentName ->
+    signingProperties.getProperty(propertyName) ?: System.getenv(environmentName) ?: ""
+}
+
 android {
     namespace = "top.boluofan.musictv"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -26,10 +35,10 @@ android {
         release {
             signingConfigs {
                 release {
-                    storeFile file("release-keystore.jks")
-                    storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
-                    keyAlias System.getenv("KEYSTORE_ALIAS") ?: ""
-                    keyPassword System.getenv("KEYSTORE_ALIAS_PASSWORD") ?: ""
+                    storeFile file(signingProperties.getProperty("storeFile", "release-keystore.jks"))
+                    storePassword signingValue("storePassword", "KEYSTORE_PASSWORD")
+                    keyAlias signingValue("keyAlias", "KEYSTORE_ALIAS")
+                    keyPassword signingValue("keyPassword", "KEYSTORE_ALIAS_PASSWORD")
                 }
             }
             minifyEnabled false

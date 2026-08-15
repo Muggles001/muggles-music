@@ -51,6 +51,7 @@ captures/
 # Always ignore keystore files to prevent accidental leakage of signing keys.
 *.jks
 *.keystore
+signing.properties
 
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild
