@@ -1,5 +1,9 @@
 # 麻瓜音乐（Muggles Music）
 
+<p align="center">
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="麻瓜音乐图标" width="144" />
+</p>
+
 面向 Android TV / 电视盒子的 LXserver 音乐客户端，针对遥控器操作和长时间播放进行了适配。
 
 > 本项目是基于 [boluofan/music-tv](https://github.com/boluofan/music-tv) 开发的独立维护版，原作者为 [boluofan](https://github.com/boluofan)。本项目与原作者不存在隶属或官方背书关系；原项目仍是本项目的重要基础。
