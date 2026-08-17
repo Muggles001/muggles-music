@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.content.res.ColorStateList;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
@@ -139,6 +140,15 @@ public class CustomKeyboardPopup {
         Button btnModeAbc = popupView.findViewById(R.id.btnModeAbc);
         Button btnMode123 = popupView.findViewById(R.id.btnMode123);
 
+        configureModeButton(btnModePinYin);
+        configureModeButton(btnModeAbc);
+        configureModeButton(btnMode123);
+
+        btnModePinYin.setNextFocusRightId(R.id.btnModeAbc);
+        btnModeAbc.setNextFocusLeftId(R.id.btnModePinYin);
+        btnModeAbc.setNextFocusRightId(R.id.btnMode123);
+        btnMode123.setNextFocusLeftId(R.id.btnModeAbc);
+
         btnModePinYin.setOnClickListener(v -> {
             keyboardMode = MODE_PINYIN;
             updateKeyboardMode();
@@ -153,6 +163,37 @@ public class CustomKeyboardPopup {
             keyboardMode = MODE_123;
             updateKeyboardMode();
         });
+
+        updateKeyboardModeButtons(btnModePinYin, btnModeAbc, btnMode123);
+    }
+
+    private void configureModeButton(Button button) {
+        if (button == null) return;
+        button.setAllCaps(false);
+        button.setTextColor(modeTextColors());
+        button.setSelected(false);
+    }
+
+    private ColorStateList modeTextColors() {
+        int primary = context.getResources().getColor(R.color.lx_text_primary);
+        return new ColorStateList(
+                new int[][] {
+                        new int[] { android.R.attr.state_focused },
+                        new int[] { android.R.attr.state_selected },
+                        new int[] {}
+                },
+                new int[] { Color.WHITE, Color.WHITE, primary });
+    }
+
+    private ColorStateList keyTextColors() {
+        int primary = context.getResources().getColor(R.color.lx_text_primary);
+        return new ColorStateList(
+                new int[][] {
+                        new int[] { android.R.attr.state_focused },
+                        new int[] { android.R.attr.state_pressed },
+                        new int[] {}
+                },
+                new int[] { Color.WHITE, Color.WHITE, primary });
     }
 
     private void setupTipCloseButton() {
@@ -226,7 +267,7 @@ public class CustomKeyboardPopup {
         TextView tv = new TextView(context);
         tv.setText(key);
         tv.setTextSize(18);
-        tv.setTextColor(Color.WHITE);
+        tv.setTextColor(keyTextColors());
         tv.setGravity(Gravity.CENTER);
         tv.setBackgroundResource(R.drawable.bg_keyboard_key);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, 80, 1.0f);
@@ -253,6 +294,7 @@ public class CustomKeyboardPopup {
         btn.setText(text);
         btn.setTextSize(14);
         btn.setTextColor(Color.WHITE);
+        btn.setAllCaps(false);
         btn.setBackgroundResource(R.drawable.bg_keyboard_key_action);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, 80, weight);
         params.setMarginStart(4);
@@ -306,6 +348,17 @@ public class CustomKeyboardPopup {
         Button btnModeAbc = popupView.findViewById(R.id.btnModeAbc);
         Button btnMode123 = popupView.findViewById(R.id.btnMode123);
 
+        updateKeyboardModeButtons(btnModePinYin, btnModeAbc, btnMode123);
+    }
+
+    private void updateKeyboardModeButtons(Button btnModePinYin, Button btnModeAbc, Button btnMode123) {
+        if (btnModePinYin == null || btnModeAbc == null || btnMode123 == null) return;
+        btnModePinYin.setTextColor(modeTextColors());
+        btnModeAbc.setTextColor(modeTextColors());
+        btnMode123.setTextColor(modeTextColors());
+        btnModePinYin.setSelected(keyboardMode == MODE_PINYIN);
+        btnModeAbc.setSelected(keyboardMode == MODE_ABC);
+        btnMode123.setSelected(keyboardMode == MODE_123);
         btnModePinYin.setBackgroundResource(keyboardMode == MODE_PINYIN ? R.drawable.bg_keyboard_key_action : R.drawable.bg_keyboard_key);
         btnModeAbc.setBackgroundResource(keyboardMode == MODE_ABC ? R.drawable.bg_keyboard_key_action : R.drawable.bg_keyboard_key);
         btnMode123.setBackgroundResource(keyboardMode == MODE_123 ? R.drawable.bg_keyboard_key_action : R.drawable.bg_keyboard_key);
@@ -383,7 +436,7 @@ public class CustomKeyboardPopup {
                         ViewGroup.LayoutParams.MATCH_PARENT));
                 tv.setPadding(24, 0, 24, 0);
                 tv.setTextSize(13);
-                tv.setTextColor(Color.WHITE);
+                tv.setTextColor(keyTextColors());
                 tv.setBackgroundResource(R.drawable.bg_keyboard_key);
                 tv.setGravity(Gravity.CENTER_VERTICAL);
                 tv.setFocusable(true);

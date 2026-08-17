@@ -287,14 +287,18 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
             changeSongPage(1);
             FocusAnimationHelper.keepFocusAfterClick(v);
         });
-        btnPlayAll.setOnKeyListener((v, keyCode, event) -> {
-            if (event.getAction() == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+        View.OnKeyListener actionNavigation = (v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) return focusFirstSong();
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && v == btnPlayAll) {
                 return focusRecyclerChild(rvSourceList, SOURCES.length - 1);
             }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v == btnFavorite) return true;
             return false;
-        });
-        btnFavorite.setOnKeyListener((v, keyCode, event) -> event.getAction() == KeyEvent.ACTION_DOWN
-                && keyCode == KeyEvent.KEYCODE_DPAD_RIGHT);
+        };
+        btnPlayAll.setOnKeyListener(actionNavigation);
+        btnShuffle.setOnKeyListener(actionNavigation);
+        btnFavorite.setOnKeyListener(actionNavigation);
     }
 
     private boolean focusRecyclerChild(RecyclerView recyclerView, int position) {
@@ -908,10 +912,28 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        View currentFocus = getActivity() != null ? getActivity().getCurrentFocus() : null;
+        if ((keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN)
+                && rvSongs != null && songAdapter != null
+                && (isWithinView(currentFocus, rvSongs) || currentFocus == rvSongs
+                || (currentFocus == null && songAdapter.hasFocusHistory()))) {
+            return songAdapter.handleVerticalKey(currentFocus != null ? currentFocus : rvSongs, keyCode);
+        }
         if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && isPagerFocused()) {
             // Do not let a repeated Down at the song-list boundary fall back
             // to the left primary rail.
             return true;
+        }
+        return false;
+    }
+
+    private boolean isWithinView(View child, View ancestor) {
+        if (child == null || ancestor == null) return false;
+        View current = child;
+        while (current != null) {
+            if (current == ancestor) return true;
+            if (!(current.getParent() instanceof View)) return false;
+            current = (View) current.getParent();
         }
         return false;
     }

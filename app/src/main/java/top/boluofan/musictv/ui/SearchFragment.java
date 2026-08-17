@@ -58,6 +58,7 @@ import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
 import top.boluofan.musictv.util.DialogHelper;
+import top.boluofan.musictv.util.FocusAnimationHelper;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
@@ -82,6 +83,13 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private TextView tvNoResults;
     private TextView tvResultCount;
     private TextView tvHotSearchTitle;
+    private View layoutSearchActions;
+    private View layoutSearchPager;
+    private ImageButton btnSearchPlayAll;
+    private ImageButton btnSearchPlayOrderToggle;
+    private ImageButton btnSearchPrevPage;
+    private ImageButton btnSearchNextPage;
+    private TextView tvSearchPageNumber;
 
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
@@ -95,6 +103,10 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private String lastKeyword = "";
     private List<MusicInfo> allResults = new ArrayList<>();
     private List<String> hotSearchWords = new ArrayList<>();
+    private boolean shuffleEnabled = false;
+    private static final int SEARCH_SONGS_PER_PAGE = 8;
+    private int currentResultPage = 0;
+    private int playingGlobalIndex = -1;
 
     private final String[] SOURCES = {"all", "kw", "kg", "tx", "wy", "mg"};
     private final String[] SOURCE_NAMES = {"聚合搜索", "酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
@@ -147,8 +159,16 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         tvNoResults = rootView.findViewById(R.id.tvNoResults);
         tvResultCount = rootView.findViewById(R.id.tvResultCount);
         tvHotSearchTitle = rootView.findViewById(R.id.tvHotSearchTitle);
+        layoutSearchActions = rootView.findViewById(R.id.layoutSearchActions);
+        layoutSearchPager = rootView.findViewById(R.id.layoutSearchPager);
+        btnSearchPlayAll = rootView.findViewById(R.id.btnSearchPlayAll);
+        btnSearchPlayOrderToggle = rootView.findViewById(R.id.btnSearchPlayOrderToggle);
+        btnSearchPrevPage = rootView.findViewById(R.id.btnSearchPrevPage);
+        btnSearchNextPage = rootView.findViewById(R.id.btnSearchNextPage);
+        tvSearchPageNumber = rootView.findViewById(R.id.tvSearchPageNumber);
 
         songAdapter = new LxMusicAdapter();
+        songAdapter.setNextFocusDownId(R.id.btnSearchNextPage);
         rvSearchResults.setAdapter(songAdapter);
         rvSearchResults.setLayoutManager(new LinearLayoutManager(requireContext()));
 
@@ -175,6 +195,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
                 holder.tvSourceName.setText(SOURCE_NAMES[position]);
                 holder.ivRadio.setImageResource(position == currentSourceIndex ? R.drawable.radio_checked : R.drawable.radio_unchecked);
                 holder.itemView.setSelected(position == currentSourceIndex);
+                holder.itemView.setNextFocusDownId(allResults.isEmpty() ? View.NO_ID : R.id.btnSearchPlayAll);
 
                 holder.itemView.setOnClickListener(v -> selectSource(position));
                 holder.itemView.setOnKeyListener((v, keyCode, event) -> {
@@ -230,6 +251,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
             public void onBindViewHolder(@NonNull HotSearchViewHolder holder, int position) {
                 String hotWord = hotSearchWords.size() > position ? hotSearchWords.get(position) : "";
                 holder.tv.setText(hotWord);
+                holder.tv.setNextFocusDownId(allResults.isEmpty() ? View.NO_ID : R.id.btnSearchPlayAll);
                 holder.tv.setOnClickListener(v -> {
                     hideCustomKeyboard();
                     etSearch.setText(hotWord);
@@ -267,7 +289,98 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
             collectSingleSong(song);
         });
         songAdapter.setNextFocusLeftId(R.id.tabSearch);
+        songAdapter.setOnFirstItemUpListener(() -> {
+            return btnSearchPlayAll != null && btnSearchPlayAll.isShown()
+                    && btnSearchPlayAll.requestFocus();
+        });
         rvSearchResults.setPreserveFocusAfterLayout(true);
+
+        View.OnKeyListener actionNavigation = (v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                requestFirstResultFocus();
+                return true;
+            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                return focusSearchHeader();
+            }
+            return false;
+        };
+        btnSearchPlayAll.setOnKeyListener(actionNavigation);
+        btnSearchPlayOrderToggle.setOnKeyListener(actionNavigation);
+        btnSearchPlayAll.setOnClickListener(v -> {
+            playAllResults();
+            FocusAnimationHelper.keepFocusAfterPlayback(v);
+        });
+        btnSearchPlayOrderToggle.setOnClickListener(v -> {
+            shuffleEnabled = !shuffleEnabled;
+            updatePlaybackModeButton();
+            if (player != null) player.setShuffleModeEnabled(shuffleEnabled);
+            FocusAnimationHelper.keepFocusAfterClick(v);
+        });
+        btnSearchPrevPage.setOnClickListener(v -> {
+            changeResultPage(-1);
+            FocusAnimationHelper.keepFocusAfterClick(v);
+        });
+        btnSearchNextPage.setOnClickListener(v -> {
+            changeResultPage(1);
+            FocusAnimationHelper.keepFocusAfterClick(v);
+        });
+        View.OnKeyListener pagerNavigation = (v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                requestLastResultFocus();
+                return true;
+            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) return true;
+            return false;
+        };
+        btnSearchPrevPage.setOnKeyListener(pagerNavigation);
+        btnSearchNextPage.setOnKeyListener(pagerNavigation);
+        updatePlaybackModeButton();
+    }
+
+    private void requestFirstResultFocus() {
+        if (rvSearchResults == null || allResults.isEmpty()) return;
+        rvSearchResults.setVisibility(View.VISIBLE);
+        rvSearchResults.scrollToPosition(0);
+        rvSearchResults.post(() -> {
+            RecyclerView.ViewHolder holder = rvSearchResults.findViewHolderForAdapterPosition(0);
+            if (holder != null) holder.itemView.requestFocus();
+        });
+    }
+
+    private void requestLastResultFocus() {
+        if (rvSearchResults == null || songAdapter.getItemCount() == 0) return;
+        int position = songAdapter.getItemCount() - 1;
+        rvSearchResults.scrollToPosition(position);
+        rvSearchResults.post(() -> {
+            RecyclerView.ViewHolder holder = rvSearchResults.findViewHolderForAdapterPosition(position);
+            if (holder != null) holder.itemView.requestFocus();
+        });
+    }
+
+    private boolean focusSearchHeader() {
+        if (rvHotSearch != null && rvHotSearch.getVisibility() == View.VISIBLE
+                && rvHotSearch.getChildCount() > 0) {
+            return rvHotSearch.getChildAt(0).requestFocus();
+        }
+        return rvSourceList != null && rvSourceList.getChildCount() > 0
+                && rvSourceList.getChildAt(0).requestFocus();
+    }
+
+    private void updateSearchFocusPath(boolean hasSearchResults) {
+        int downId = hasSearchResults ? R.id.btnSearchPlayAll : View.NO_ID;
+        if (rvSourceList != null) {
+            for (int i = 0; i < rvSourceList.getChildCount(); i++) {
+                rvSourceList.getChildAt(i).setNextFocusDownId(downId);
+            }
+        }
+        if (rvHotSearch != null) {
+            for (int i = 0; i < rvHotSearch.getChildCount(); i++) {
+                rvHotSearch.getChildAt(i).setNextFocusDownId(downId);
+            }
+        }
     }
 
     private int dp(int value) {
@@ -598,6 +711,9 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         hideCustomKeyboard();
         lastKeyword = keyword;
         currentPage = 1;
+        currentResultPage = 0;
+        playingGlobalIndex = -1;
+        songAdapter.setPlayingIndex(-1);
         hasMore = true;
         allResults.clear();
         showLoading(true);
@@ -724,6 +840,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private void updateResults() {
         boolean hasHotSearch = !hotSearchWords.isEmpty();
         boolean hasSearchResults = !allResults.isEmpty();
+        updateSearchFocusPath(hasSearchResults);
 
         tvHotSearchTitle.setVisibility(hasHotSearch ? View.VISIBLE : View.GONE);
         rvHotSearch.setVisibility(hasHotSearch ? View.VISIBLE : View.GONE);
@@ -731,10 +848,14 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         if (hasSearchResults) {
             tvResultCount.setVisibility(View.VISIBLE);
             tvResultCount.setText("共 " + allResults.size() + " 首");
+            layoutSearchActions.setVisibility(View.VISIBLE);
+            layoutSearchPager.setVisibility(View.VISIBLE);
             rvSearchResults.setVisibility(View.VISIBLE);
             tvNoResults.setVisibility(View.GONE);
         } else {
             tvResultCount.setVisibility(View.GONE);
+            layoutSearchActions.setVisibility(View.GONE);
+            layoutSearchPager.setVisibility(View.GONE);
             rvSearchResults.setVisibility(View.GONE);
             if (!hasHotSearch) {
                 tvNoResults.setVisibility(View.VISIBLE);
@@ -743,7 +864,54 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
             }
         }
 
-        songAdapter.setSongs(allResults);
+        if (hasSearchResults) {
+            updateResultPageUi();
+        } else {
+            songAdapter.setSongs(new ArrayList<>());
+            songAdapter.setIndexOffset(0);
+        }
+    }
+
+    private int getResultPageCount() {
+        return Math.max(1, (allResults.size() + SEARCH_SONGS_PER_PAGE - 1) / SEARCH_SONGS_PER_PAGE);
+    }
+
+    private void updateResultPageUi() {
+        int pageCount = getResultPageCount();
+        currentResultPage = Math.max(0, Math.min(currentResultPage, pageCount - 1));
+        int start = currentResultPage * SEARCH_SONGS_PER_PAGE;
+        int end = Math.min(start + SEARCH_SONGS_PER_PAGE, allResults.size());
+        List<MusicInfo> pageSongs = new ArrayList<>(allResults.subList(start, end));
+        songAdapter.setIndexOffset(start);
+        songAdapter.setSongs(pageSongs);
+        tvSearchPageNumber.setText(String.valueOf(currentResultPage + 1));
+        boolean hasPrevious = currentResultPage > 0;
+        boolean hasNext = currentResultPage + 1 < pageCount;
+        btnSearchPrevPage.setEnabled(hasPrevious);
+        btnSearchNextPage.setEnabled(hasNext);
+        btnSearchPrevPage.setAlpha(hasPrevious ? 1f : 0.35f);
+        btnSearchNextPage.setAlpha(hasNext ? 1f : 0.35f);
+        updateVisiblePlayingIndex();
+    }
+
+    private void changeResultPage(int delta) {
+        int nextPage = Math.max(0, Math.min(currentResultPage + delta, getResultPageCount() - 1));
+        if (nextPage == currentResultPage) return;
+        currentResultPage = nextPage;
+        updateResultPageUi();
+        rvSearchResults.scrollToPosition(0);
+        requestFirstResultFocus();
+    }
+
+    private void updateVisiblePlayingIndex() {
+        int globalIndex = playingGlobalIndex;
+        int pageStart = currentResultPage * SEARCH_SONGS_PER_PAGE;
+        int pageEnd = pageStart + songAdapter.getItemCount();
+        if (globalIndex >= pageStart && globalIndex < pageEnd) {
+            songAdapter.setPlayingIndex(globalIndex - pageStart);
+        } else {
+            songAdapter.setPlayingIndex(-1);
+        }
     }
 
     private void playSong(MusicInfo song) {
@@ -752,17 +920,46 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
             return;
         }
 
-        MediaItem mediaItem = createMediaItem(song);
-        player.setMediaItem(mediaItem);
-        player.prepare();
-        player.play();
-
         int index = allResults.indexOf(song);
-        if (index >= 0) {
-            songAdapter.setPlayingIndex(index);
+        if (index >= 0) playResultAtIndex(index);
+        else {
+            player.setMediaItem(createMediaItem(song));
+            player.setShuffleModeEnabled(shuffleEnabled);
+            player.prepare();
+            player.play();
         }
 
         Toast.makeText(requireContext(), "正在播放: " + song.getName(), Toast.LENGTH_SHORT).show();
+    }
+
+    private void playAllResults() {
+        if (allResults.isEmpty() || player == null) return;
+        playResultAtIndex(0);
+    }
+
+    private void playResultAtIndex(int index) {
+        if (player == null || index < 0 || index >= allResults.size()) return;
+        List<MediaItem> mediaItems = new ArrayList<>();
+        for (MusicInfo result : allResults) {
+            mediaItems.add(createMediaItem(result));
+        }
+        player.setMediaItems(mediaItems, index, 0);
+        player.setShuffleModeEnabled(shuffleEnabled);
+        player.prepare();
+        player.play();
+        playingGlobalIndex = index;
+        int pageStart = currentResultPage * SEARCH_SONGS_PER_PAGE;
+        int pageEnd = pageStart + songAdapter.getItemCount();
+        songAdapter.setPlayingIndex(index >= pageStart && index < pageEnd ? index - pageStart : -1);
+    }
+
+    private void updatePlaybackModeButton() {
+        if (btnSearchPlayOrderToggle == null) return;
+        btnSearchPlayOrderToggle.setImageResource(shuffleEnabled
+                ? R.drawable.ic_shuffle : R.drawable.ic_repeat);
+        btnSearchPlayOrderToggle.setContentDescription(shuffleEnabled
+                ? "切换为顺序播放" : "切换为随机播放");
+        btnSearchPlayOrderToggle.setSelected(shuffleEnabled);
     }
 
     private MediaItem createMediaItem(MusicInfo song) {
@@ -818,6 +1015,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
                     return;
                 }
                 player = resolved;
+                player.setShuffleModeEnabled(shuffleEnabled);
                 setupPlayerListener();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -850,6 +1048,16 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
 
             @Override
             public void onMediaItemTransition(MediaItem mediaItem, int reason) {
+                if (mediaItem == null || mediaItem.mediaId == null) return;
+                for (int i = 0; i < allResults.size(); i++) {
+                    if (mediaItem.mediaId.equals(allResults.get(i).getSongmid())) {
+                        playingGlobalIndex = i;
+                        int pageStart = currentResultPage * SEARCH_SONGS_PER_PAGE;
+                        int pageEnd = pageStart + songAdapter.getItemCount();
+                        songAdapter.setPlayingIndex(i >= pageStart && i < pageEnd ? i - pageStart : -1);
+                        break;
+                    }
+                }
             }
         });
     }
@@ -888,8 +1096,19 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
             }
         }
 
+        View currentFocus = requireActivity().getCurrentFocus();
+        if ((keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN)
+                && rvSearchResults != null && songAdapter != null
+                && (isWithinView(currentFocus, rvSearchResults) || currentFocus == rvSearchResults
+                || (currentFocus == null && songAdapter.hasFocusHistory()))) {
+            return songAdapter.handleVerticalKey(currentFocus != null ? currentFocus : rvSearchResults, keyCode);
+        }
+        if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                && (currentFocus == btnSearchPrevPage || currentFocus == btnSearchNextPage)) {
+            return true;
+        }
+
         if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-            View currentFocus = requireActivity().getCurrentFocus();
             if (currentFocus != null) {
                 if (currentFocus.getParent() == rvSourceList) {
                     if (!"all".equals(currentSource) && hotSearchWords.isEmpty()) {
@@ -903,6 +1122,17 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
             }
         }
 
+        return false;
+    }
+
+    private boolean isWithinView(View child, View ancestor) {
+        if (child == null || ancestor == null) return false;
+        View current = child;
+        while (current != null) {
+            if (current == ancestor) return true;
+            if (!(current.getParent() instanceof View)) return false;
+            current = (View) current.getParent();
+        }
         return false;
     }
 

@@ -98,6 +98,7 @@
                 android:padding="8dp"
                 android:focusable="true"
                 android:nextFocusRight="@id/btnShuffle"
+                android:nextFocusDown="@id/rvSongs"
                 android:contentDescription="播放全部" />
 
             <ImageButton
@@ -112,6 +113,7 @@
                 android:focusable="true"
                 android:nextFocusLeft="@id/btnPlayAll"
                 android:nextFocusRight="@id/btnFavorite"
+                android:nextFocusDown="@id/rvSongs"
                 android:contentDescription="随机播放" />
 
             <ImageButton
@@ -125,6 +127,7 @@
                 android:padding="8dp"
                 android:focusable="true"
                 android:nextFocusLeft="@id/btnShuffle"
+                android:nextFocusDown="@id/rvSongs"
                 android:contentDescription="收藏" />
 
         </LinearLayout>
@@ -178,11 +181,13 @@
             android:paddingEnd="24dp"
             android:paddingTop="12dp"
             android:paddingBottom="16dp"
-            android:focusable="false"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
             android:clipToPadding="false"
             android:descendantFocusability="afterDescendants"
             android:nextFocusLeft="@id/tabRanking"
-            android:nextFocusUp="@id/rvBoards" />
+            android:nextFocusUp="@id/rvBoards"
+            android:nextFocusDown="@id/btnRankingNextPage" />
 
     </LinearLayout>
 

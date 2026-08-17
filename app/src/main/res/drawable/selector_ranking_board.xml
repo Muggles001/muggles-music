@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Keep all active states on the same 2dp outline so focus never changes
-         the measured visual size of a board chip. -->
+    <!-- Focus on the already active board reverses the colors, making the
+         current destination obvious on a TV from viewing distance. -->
     <item android:state_selected="true" android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/lx_brand_soft" />
+            <solid android:color="@color/white" />
             <stroke android:width="2dp" android:color="@color/lx_focus_ring" />
             <corners android:radius="8dp" />
         </shape>

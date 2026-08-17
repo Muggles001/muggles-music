@@ -255,7 +255,8 @@
             android:paddingBottom="16dp"
             android:clipToPadding="false"
             android:focusable="false"
-            android:descendantFocusability="afterDescendants" />
+            android:descendantFocusability="afterDescendants"
+            android:nextFocusDown="@id/btnPlaylistDetailNextPage" />
 
     </LinearLayout>
 

@@ -414,6 +414,16 @@ public class FloatingPlayerWindow {
         return false;
     }
 
+    /** Enter the overlay from an explicitly configured row edge. */
+    public boolean requestFocusFrom(View source) {
+        if (source == null || container == null || container.getVisibility() != View.VISIBLE
+                || container.getAlpha() < 0.1f) {
+            return false;
+        }
+        focusReturnView = source;
+        return container.requestFocus();
+    }
+
     /**
      * The floating player is an overlay, not another row in the content list.
      * Only an explicit right press from a small lower-right control enters it;
@@ -439,6 +449,15 @@ public class FloatingPlayerWindow {
         }
 
         if (currentFocus == null) return false;
+
+        // Song rows explicitly mark their rightmost action with the overlay
+        // id. This gives the remote a deterministic edge transition even when
+        // the row is not close enough to the visual overlay for geometry-based
+        // detection.
+        if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+                && currentFocus.getNextFocusRightId() == R.id.floatingPlayerContainer) {
+            return requestFocusFrom(currentFocus);
+        }
 
         int[] decorLocation = new int[2];
         int[] focusLocation = new int[2];

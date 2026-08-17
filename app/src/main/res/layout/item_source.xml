@@ -23,7 +23,7 @@
         android:id="@+id/tvSourceName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/lx_text_primary"
+        android:textColor="@color/selector_source_item_text"
         android:textSize="14sp"
         android:layout_marginStart="6dp" />
 

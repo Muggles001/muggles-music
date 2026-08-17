@@ -181,6 +181,119 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/rvHotSearch" />
 
+    <LinearLayout
+        android:id="@+id/layoutSearchActions"
+        android:layout_width="0dp"
+        android:layout_height="52dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="32dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvResultCount">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="播放控制"
+            android:textColor="@color/lx_text_secondary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btnSearchPlayAll"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/btn_focused_circle"
+            android:contentDescription="播放全部搜索结果"
+            android:focusable="true"
+            android:nextFocusLeft="@id/tabSearch"
+            android:nextFocusRight="@id/btnSearchPlayOrderToggle"
+            android:nextFocusDown="@id/rvSearchResults"
+            android:padding="10dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_play"
+            app:tint="@color/lx_text_primary" />
+
+        <ImageButton
+            android:id="@+id/btnSearchPlayOrderToggle"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/btn_focused_circle"
+            android:contentDescription="切换为随机播放"
+            android:focusable="true"
+            android:nextFocusLeft="@id/btnSearchPlayAll"
+            android:nextFocusDown="@id/rvSearchResults"
+            android:padding="10dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_repeat"
+            app:tint="@color/lx_text_primary" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layoutSearchPager"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/lx_pager_height"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="@android:color/transparent"
+        android:paddingStart="@dimen/lx_nav_gutter"
+        android:paddingEnd="@dimen/lx_nav_gutter"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnSearchPrevPage"
+            android:layout_width="64dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_chevron_left"
+            android:background="@drawable/bg_btn_secondary"
+            android:scaleType="centerInside"
+            android:padding="12dp"
+            android:focusable="true"
+            android:nextFocusUp="@id/rvSearchResults"
+            android:nextFocusRight="@id/btnSearchNextPage"
+            android:nextFocusDown="@id/tabSearch"
+            android:contentDescription="上一页"
+            app:tint="@color/lx_text_primary" />
+
+        <TextView
+            android:id="@+id/tvSearchPageNumber"
+            android:layout_width="72dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="1"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/lx_text_secondary" />
+
+        <ImageButton
+            android:id="@+id/btnSearchNextPage"
+            android:layout_width="64dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_chevron_right"
+            android:background="@drawable/bg_btn_secondary"
+            android:scaleType="centerInside"
+            android:padding="12dp"
+            android:focusable="true"
+            android:nextFocusUp="@id/rvSearchResults"
+            android:nextFocusLeft="@id/btnSearchPrevPage"
+            android:nextFocusDown="@id/tabSearch"
+            android:contentDescription="下一页"
+            app:tint="@color/lx_text_primary" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/tvNoResults"
         android:layout_width="wrap_content"
@@ -215,11 +328,16 @@
         android:paddingBottom="16dp"
         android:clipToPadding="false"
         android:clipToOutline="true"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:descendantFocusability="afterDescendants"
         android:background="@drawable/bg_content_panel"
         android:nextFocusLeft="@id/tabSearch"
+        android:nextFocusUp="@id/btnSearchPlayAll"
+        android:nextFocusDown="@id/btnSearchNextPage"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvResultCount"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/layoutSearchActions"
+        app:layout_constraintBottom_toTopOf="@id/layoutSearchPager" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
