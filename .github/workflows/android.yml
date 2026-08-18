@@ -11,6 +11,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      signed: ${{ steps.build_config.outputs.signed }}
 
     steps:
       - name: Checkout code
@@ -48,13 +50,12 @@ jobs:
             printf '%s' "$KEYSTORE_BASE64" | base64 --decode > app/release-keystore.jks
             echo "task=assembleRelease" >> "$GITHUB_OUTPUT"
             echo "variant=release" >> "$GITHUB_OUTPUT"
-          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            echo "::error::Release tags require KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEYSTORE_ALIAS, and KEYSTORE_ALIAS_PASSWORD secrets."
-            exit 1
+            echo "signed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "No signing secrets configured; building an unsigned debug APK for this branch push."
+            echo "No signing secrets configured; building an unsigned debug APK and skipping automatic Release creation."
             echo "task=assembleDebug" >> "$GITHUB_OUTPUT"
             echo "variant=debug" >> "$GITHUB_OUTPUT"
+            echo "signed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build Android APK
@@ -72,7 +73,7 @@ jobs:
           path: app/build/outputs/apk/${{ steps.build_config.outputs.variant }}/*.apk
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && needs.build.outputs.signed == 'true'
     needs: build
     runs-on: ubuntu-latest
     permissions:
