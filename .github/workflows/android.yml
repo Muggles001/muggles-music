@@ -35,11 +35,30 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      - name: Decode keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release-keystore.jks
+      - name: Select build variant
+        id: build_config
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_ALIAS_PASSWORD: ${{ secrets.KEYSTORE_ALIAS_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] \
+            && [ -n "$KEYSTORE_ALIAS" ] && [ -n "$KEYSTORE_ALIAS_PASSWORD" ]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > app/release-keystore.jks
+            echo "task=assembleRelease" >> "$GITHUB_OUTPUT"
+            echo "variant=release" >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "::error::Release tags require KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEYSTORE_ALIAS, and KEYSTORE_ALIAS_PASSWORD secrets."
+            exit 1
+          else
+            echo "No signing secrets configured; building an unsigned debug APK for this branch push."
+            echo "task=assembleDebug" >> "$GITHUB_OUTPUT"
+            echo "variant=debug" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Build release APK
-        run: ./gradlew assembleRelease --no-daemon
+      - name: Build Android APK
+        run: ./gradlew ${{ steps.build_config.outputs.task }} --no-daemon
         env:
           GRADLE_CONNECT_TIMEOUT_MAX: 120
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -50,9 +69,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: apk-files
-          path: app/build/outputs/apk/release/*.apk
+          path: app/build/outputs/${{ steps.build_config.outputs.variant }}/*.apk
 
   release:
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     permissions:
