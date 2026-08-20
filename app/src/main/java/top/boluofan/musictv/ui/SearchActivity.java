@@ -41,17 +41,15 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.MusicService;
+import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.SearchWebServer;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.PlayerActivity;
-import android.view.KeyEvent;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.api.model.MusicInfo;
@@ -65,7 +63,6 @@ import androidx.media3.common.Player;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Collections;
-import java.util.List;
 
 public class SearchActivity extends AppCompatActivity {
     private static final String TAG = "SearchActivity";
@@ -257,8 +254,9 @@ public class SearchActivity extends AppCompatActivity {
         });
         
         songAdapter.setOnFullscreenClickListener((song, position) -> {
-            playSong(song);
-            startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
+            if (playSong(song)) {
+                startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
+            }
         });
 
         songAdapter.setOnFavClickListener((song, position) -> {
@@ -669,49 +667,42 @@ public class SearchActivity extends AppCompatActivity {
     }
     
     private void searchAllSources(String keyword) {
-        ExecutorService executor = Executors.newFixedThreadPool(ALL_SOURCES.length);
         List<MusicInfo>[] results = new List[ALL_SOURCES.length];
         int[] completed = new int[1];
+        LxApiService apiService = LxRetrofitClient.getApiService(SearchActivity.this);
         
         for (int i = 0; i < ALL_SOURCES.length; i++) {
             final int index = i;
             final String source = ALL_SOURCES[index];
             
-            executor.submit(() -> {
-                LxApiService apiService = LxRetrofitClient.getApiService(SearchActivity.this);
-                apiService.searchMusic(keyword, source, 1, 30).enqueue(new Callback<List<MusicInfo>>() {
-                    @Override
-                    public void onResponse(Call<List<MusicInfo>> call, Response<List<MusicInfo>> response) {
-                        synchronized (completed) {
-                            if (response.isSuccessful() && response.body() != null) {
-                                results[index] = response.body();
-                            } else {
-                                results[index] = new ArrayList<>();
-                            }
-                            completed[0]++;
-                            
-                            if (completed[0] == ALL_SOURCES.length) {
-                                runOnUiThread(() -> {
-                                    mergeAllResults(results);
-                                });
-                            }
-                        }
-                    }
-                    
-                    @Override
-                    public void onFailure(Call<List<MusicInfo>> call, Throwable t) {
-                        synchronized (completed) {
+            apiService.searchMusic(keyword, source, 1, 30).enqueue(new Callback<List<MusicInfo>>() {
+                @Override
+                public void onResponse(Call<List<MusicInfo>> call, Response<List<MusicInfo>> response) {
+                    synchronized (completed) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            results[index] = response.body();
+                        } else {
                             results[index] = new ArrayList<>();
-                            completed[0]++;
-                            
-                            if (completed[0] == ALL_SOURCES.length) {
-                                runOnUiThread(() -> {
-                                    mergeAllResults(results);
-                                });
-                            }
+                        }
+                        completed[0]++;
+
+                        if (completed[0] == ALL_SOURCES.length) {
+                            mergeAllResults(results);
                         }
                     }
-                });
+                }
+
+                @Override
+                public void onFailure(Call<List<MusicInfo>> call, Throwable t) {
+                    synchronized (completed) {
+                        results[index] = new ArrayList<>();
+                        completed[0]++;
+
+                        if (completed[0] == ALL_SOURCES.length) {
+                            mergeAllResults(results);
+                        }
+                    }
+                }
             });
         }
     }
@@ -852,22 +843,33 @@ public class SearchActivity extends AppCompatActivity {
         }
     }
 
-    private void playSong(MusicInfo song) {
+    private boolean playSong(MusicInfo song) {
         if (player == null) {
             Toast.makeText(this, "播放器未初始化", Toast.LENGTH_SHORT).show();
-            return;
+            return false;
         }
         
         int index = allResults.indexOf(song);
-        if (index >= 0) playResultAtIndex(index);
-        else {
-            player.setMediaItem(createMediaItem(song));
+        boolean started;
+        if (index >= 0) {
+            started = playResultAtIndex(index);
+        } else {
+            PlaybackQueue queue = PlaybackQueue.from(Collections.singletonList(song));
+            if (queue.isEmpty()) {
+                Toast.makeText(this, "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+            player.setMediaItem(queue.getMediaItems().get(0));
             player.setShuffleModeEnabled(shuffleEnabled);
             player.prepare();
             player.play();
+            started = true;
         }
         
-        Toast.makeText(this, "正在播放: " + song.getName(), Toast.LENGTH_SHORT).show();
+        if (started) {
+            Toast.makeText(this, "正在播放: " + song.getName(), Toast.LENGTH_SHORT).show();
+        }
+        return started;
     }
 
     private void playAllResults() {
@@ -875,13 +877,15 @@ public class SearchActivity extends AppCompatActivity {
         playResultAtIndex(0);
     }
 
-    private void playResultAtIndex(int index) {
-        if (player == null || index < 0 || index >= allResults.size()) return;
-        List<MediaItem> mediaItems = new ArrayList<>();
-        for (MusicInfo result : allResults) {
-            mediaItems.add(createMediaItem(result));
+    private boolean playResultAtIndex(int index) {
+        if (player == null || index < 0 || index >= allResults.size()) return false;
+        PlaybackQueue queue = PlaybackQueue.from(allResults);
+        int queueIndex = queue.queueIndexForSourceIndex(index);
+        if (queueIndex < 0) {
+            Toast.makeText(this, "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
+            return false;
         }
-        player.setMediaItems(mediaItems, index, 0);
+        player.setMediaItems(queue.getMediaItems(), queueIndex, 0);
         player.setShuffleModeEnabled(shuffleEnabled);
         player.prepare();
         player.play();
@@ -889,6 +893,7 @@ public class SearchActivity extends AppCompatActivity {
         int pageStart = currentResultPage * SEARCH_SONGS_PER_PAGE;
         int pageEnd = pageStart + songAdapter.getItemCount();
         songAdapter.setPlayingIndex(index >= pageStart && index < pageEnd ? index - pageStart : -1);
+        return true;
     }
 
     private void updatePlaybackModeButton() {
@@ -898,34 +903,6 @@ public class SearchActivity extends AppCompatActivity {
         btnSearchPlayOrderToggle.setContentDescription(shuffleEnabled
                 ? "切换为顺序播放" : "切换为随机播放");
         btnSearchPlayOrderToggle.setSelected(shuffleEnabled);
-    }
-
-    private MediaItem createMediaItem(MusicInfo song) {
-        Bundle extras = song.toPlaybackExtras();
-        
-        Uri artworkUri = null;
-        String coverUrl = song.getPicUrl();
-        if (coverUrl != null && !coverUrl.isEmpty()) {
-            artworkUri = Uri.parse(coverUrl);
-        }
-        
-        Uri resolveUri = MusicService.buildResolveUri(song.getSource(), song.getSongmid(), song.getName());
-        
-        MediaMetadata.Builder metadataBuilder = new MediaMetadata.Builder()
-                .setTitle(song.getName())
-                .setArtist(song.getSinger())
-                .setAlbumTitle(song.getAlbumName())
-                .setExtras(extras);
-        
-        if (artworkUri != null) {
-            metadataBuilder.setArtworkUri(artworkUri);
-        }
-        
-        return new MediaItem.Builder()
-                .setMediaId(song.getSongmid())
-                .setUri(resolveUri)
-                .setMediaMetadata(metadataBuilder.build())
-                .build();
     }
 
     private void showLoading(boolean show) {
@@ -947,10 +924,16 @@ public class SearchActivity extends AppCompatActivity {
         floatingPlayerWindow.connectToService();
         
         SessionToken sessionToken = new SessionToken(this, new ComponentName(this, MusicService.class));
-        controllerFuture = new MediaController.Builder(this, sessionToken).buildAsync();
-        controllerFuture.addListener(() -> {
+        final ListenableFuture<MediaController> pendingController =
+                new MediaController.Builder(this, sessionToken).buildAsync();
+        controllerFuture = pendingController;
+        pendingController.addListener(() -> {
+            if (controllerFuture != pendingController || isFinishing() || isDestroyed()) {
+                MediaController.releaseFuture(pendingController);
+                return;
+            }
             try {
-                player = controllerFuture.get();
+                player = pendingController.get();
                 player.setShuffleModeEnabled(shuffleEnabled);
                 setupPlayerListener();
             } catch (Exception e) {
@@ -962,8 +945,11 @@ public class SearchActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
+        ListenableFuture<MediaController> pendingController = controllerFuture;
+        controllerFuture = null;
+        player = null;
+        if (pendingController != null) {
+            MediaController.releaseFuture(pendingController);
         }
         if (positionUpdater != null) {
             mainHandler.removeCallbacks(positionUpdater);
@@ -1154,7 +1140,8 @@ public class SearchActivity extends AppCompatActivity {
         }
 
         for (MusicInfo m : songList) {
-            if (m.getName().equals(song.getName()) && m.getSource().equals(song.getSource())) {
+            if (java.util.Objects.equals(m.getName(), song.getName())
+                    && java.util.Objects.equals(m.getSource(), song.getSource())) {
                 Toast.makeText(this, "歌曲已存在于此歌单", Toast.LENGTH_SHORT).show();
                 return;
             }

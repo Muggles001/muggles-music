@@ -29,14 +29,22 @@ public class HotPlaylistAdapter extends RecyclerView.Adapter<HotPlaylistAdapter.
 
     public void setData(List<HotListResponse.HotListItem> playlists) {
         this.playlists = playlists != null ? playlists : new ArrayList<>();
+        selectedPosition = this.playlists.isEmpty()
+                ? RecyclerView.NO_POSITION
+                : Math.min(Math.max(0, selectedPosition), this.playlists.size() - 1);
         notifyDataSetChanged();
     }
 
     public void setSelection(int position) {
         int oldPosition = selectedPosition;
-        selectedPosition = position;
-        notifyItemChanged(oldPosition);
-        notifyItemChanged(selectedPosition);
+        selectedPosition = position >= 0 && position < playlists.size()
+                ? position : RecyclerView.NO_POSITION;
+        if (oldPosition >= 0 && oldPosition < playlists.size()) {
+            notifyItemChanged(oldPosition);
+        }
+        if (selectedPosition >= 0 && selectedPosition != oldPosition) {
+            notifyItemChanged(selectedPosition);
+        }
     }
 
     @NonNull
@@ -54,12 +62,16 @@ public class HotPlaylistAdapter extends RecyclerView.Adapter<HotPlaylistAdapter.
         holder.itemView.setSelected(position == selectedPosition);
         
         holder.itemView.setOnClickListener(v -> {
+            int newPosition = holder.getAdapterPosition();
+            if (newPosition == RecyclerView.NO_POSITION) return;
             int oldPosition = selectedPosition;
-            selectedPosition = holder.getAdapterPosition();
-            notifyItemChanged(oldPosition);
-            notifyItemChanged(selectedPosition);
+            selectedPosition = newPosition;
+            if (oldPosition >= 0 && oldPosition < playlists.size()) {
+                notifyItemChanged(oldPosition);
+            }
+            if (selectedPosition != oldPosition) notifyItemChanged(selectedPosition);
             if (listener != null) {
-                listener.onItemClick(playlist, holder.getAdapterPosition());
+                listener.onItemClick(playlist, selectedPosition);
             }
         });
     }

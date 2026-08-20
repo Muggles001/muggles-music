@@ -29,24 +29,16 @@ import top.boluofan.musictv.api.model.MusicUrlResponse;
 
 public class MusicService extends MediaSessionService {
     private static final String TAG = "MusicService";
-    private static final String PREFS_NAME = "LxMusicPrefs";
     private static final String RESOLVE_SCHEME = "lxmusic";
     private static final String RESOLVE_HOST = "resolve";
 
     private MediaSession mediaSession;
     private ExoPlayer player;
-    private LxApiService apiService;
-    private String quality;
 
     @OptIn(markerClass = UnstableApi.class)
     @Override
     public void onCreate() {
         super.onCreate();
-
-        android.content.SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-        quality = settings.getString("quality", LxRetrofitClient.QUALITY_320K);
-
-        apiService = LxRetrofitClient.getApiService(this);
 
         DefaultHttpDataSource.Factory httpDataSourceFactory = new DefaultHttpDataSource.Factory()
                 .setAllowCrossProtocolRedirects(true)
@@ -93,7 +85,7 @@ public class MusicService extends MediaSessionService {
                 .setWakeMode(C.WAKE_MODE_NETWORK)
                 .build();
 
-        Intent intent = new Intent(this, top.boluofan.musictv.ui.LibraryActivity.class);
+        Intent intent = new Intent(this, top.boluofan.musictv.ui.MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this, 0, intent,
@@ -124,7 +116,7 @@ public class MusicService extends MediaSessionService {
         String resolvedUrl = fixUrlFormat(url);
         String serverBaseUrl = LxRetrofitClient.getPureServerUrl(this);
         if (serverBaseUrl == null || serverBaseUrl.isEmpty()) {
-            throw new IOException("LXserver address is empty");
+            throw new IOException("未配置有效的 LXserver 地址，请先在设置中保存服务器地址");
         }
 
         Uri resolvedUri = Uri.parse(resolvedUrl);
@@ -133,10 +125,70 @@ public class MusicService extends MediaSessionService {
             String relativePath = resolvedUrl.startsWith("/") ? resolvedUrl : "/" + resolvedUrl;
             return serverBaseUrl + relativePath;
         }
+
+        // A custom source may return a loopback URL that is reachable from the
+        // LXserver host but not from the TV. The web player proxies such URLs
+        // through LXserver; do the same here instead of connecting to the TV's
+        // own localhost.
+        Uri configuredServer = Uri.parse(serverBaseUrl);
+        if (shouldProxyLoopback(resolvedUri.getHost(), configuredServer.getHost())) {
+            return serverBaseUrl
+                    + "/api/music/download?url=" + Uri.encode(resolvedUrl)
+                    + "&inline=1";
+        }
         return resolvedUrl;
     }
 
+    static boolean shouldProxyLoopback(String resolvedHost, String configuredServerHost) {
+        return isLoopbackHost(resolvedHost) && !isLoopbackHost(configuredServerHost);
+    }
+
+    static boolean isLoopbackHost(String host) {
+        if (host == null) return false;
+        String normalized = host.trim().toLowerCase(java.util.Locale.US);
+        if (normalized.startsWith("[") && normalized.endsWith("]")) {
+            normalized = normalized.substring(1, normalized.length() - 1);
+        }
+        if (normalized.equals("localhost") || normalized.endsWith(".localhost")
+                || normalized.equals("::1") || normalized.equals("0:0:0:0:0:0:0:1")
+                || normalized.equals("::") || normalized.equals("0:0:0:0:0:0:0:0")
+                || normalized.equals("0.0.0.0")) {
+            return true;
+        }
+        if (normalized.startsWith("::ffff:")) {
+            return isLoopbackHost(normalized.substring("::ffff:".length()));
+        }
+
+        String[] parts = normalized.split("\\.");
+        if (parts.length != 4) return false;
+        try {
+            int first = Integer.parseInt(parts[0]);
+            for (String part : parts) {
+                int value = Integer.parseInt(part);
+                if (value < 0 || value > 255) return false;
+            }
+            return first == 127;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
     private String resolveMusicUrlSync(String source, String songmid, String name) throws IOException {
+        String serverUrl = LxRetrofitClient.getServerUrl(this);
+        if (LxRetrofitClient.normalizeServerUrl(serverUrl) == null) {
+            throw new IOException("未配置有效的 LXserver 地址，请先在设置中保存服务器地址");
+        }
+
+        // MusicService can survive a configuration change. Always acquire the
+        // client for the latest saved base URL instead of retaining the proxy
+        // that existed when the service was first created.
+        final LxApiService currentApiService;
+        try {
+            currentApiService = LxRetrofitClient.getApiService(this);
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            throw new IOException("LXserver 地址无效: " + serverUrl, e);
+        }
+
         Map<String, Object> body = new HashMap<>();
         Map<String, Object> songInfo = new HashMap<>();
         songInfo.put("source", source);
@@ -145,7 +197,7 @@ public class MusicService extends MediaSessionService {
             songInfo.put("name", name);
         }
         body.put("songInfo", songInfo);
-        body.put("quality", quality);
+        body.put("quality", LxRetrofitClient.getQuality(this));
 
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
@@ -153,17 +205,17 @@ public class MusicService extends MediaSessionService {
 
         try {
             if ((token == null || token.isEmpty()) && !username.isEmpty() && !password.isEmpty()) {
-                token = loginAndSaveToken(username, password);
+                token = loginAndSaveToken(currentApiService, username, password);
             }
 
-            Response<MusicUrlResponse> response = apiService
+            Response<MusicUrlResponse> response = currentApiService
                     .getMusicUrl(username, password, token, body)
                     .execute();
 
             if (response.code() == 401 && !username.isEmpty() && !password.isEmpty()) {
-                token = loginAndSaveToken(username, password);
+                token = loginAndSaveToken(currentApiService, username, password);
                 if (token != null && !token.isEmpty()) {
-                    response = apiService
+                    response = currentApiService
                             .getMusicUrl(username, password, token, body)
                             .execute();
                 }
@@ -194,13 +246,13 @@ public class MusicService extends MediaSessionService {
         }
     }
 
-    private String loginAndSaveToken(String username, String password) {
+    private String loginAndSaveToken(LxApiService currentApiService, String username, String password) {
         Map<String, String> credentials = new HashMap<>();
         credentials.put("username", username);
         credentials.put("password", password);
 
         try {
-            Response<LoginResponse> response = apiService
+            Response<LoginResponse> response = currentApiService
                     .loginUser(credentials)
                     .execute();
             if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {

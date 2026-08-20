@@ -121,7 +121,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:background="@drawable/bg_input_field"
-                android:hint="http://localhost:9527"
+                android:hint="例如 http://192.168.1.100:9527"
                 android:inputType="textUri"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"

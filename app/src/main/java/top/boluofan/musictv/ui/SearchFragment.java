@@ -42,17 +42,15 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.MusicService;
+import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.SearchWebServer;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.PlayerActivity;
-import android.view.KeyEvent;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.api.model.MusicInfo;
@@ -66,7 +64,7 @@ import androidx.media3.common.Player;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Collections;
-import java.util.List;
+import java.util.Objects;
 
 public class SearchFragment extends Fragment implements MainActivity.PrimaryPageKeyHandler {
     private static final String TAG = "SearchFragment";
@@ -107,6 +105,8 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private static final int SEARCH_SONGS_PER_PAGE = 8;
     private int currentResultPage = 0;
     private int playingGlobalIndex = -1;
+    private int searchGeneration = 0;
+    private int hotSearchGeneration = 0;
 
     private final String[] SOURCES = {"all", "kw", "kg", "tx", "wy", "mg"};
     private final String[] SOURCE_NAMES = {"聚合搜索", "酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
@@ -266,12 +266,6 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         };
         rvHotSearch.setAdapter(hotSearchAdapter);
 
-        rvSourceList.post(() -> {
-            if (rvSourceList.getChildCount() > 0) {
-                rvSourceList.getChildAt(0).requestFocus();
-            }
-        });
-
         songAdapter.setOnItemClickListener((song, position) -> {
             playSong(song);
         });
@@ -281,7 +275,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         });
 
         songAdapter.setOnFullscreenClickListener((song, position) -> {
-            playSong(song);
+            if (!playSong(song)) return;
             startActivity(new Intent(requireContext(), top.boluofan.musictv.PlayerActivity.class));
         });
 
@@ -390,6 +384,10 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private void selectSource(int position) {
         if (position < 0 || position >= SOURCES.length) return;
 
+        View focusedBeforeUpdate = getActivity() != null
+                ? getActivity().getCurrentFocus() : null;
+        boolean retainSourceFocus = isWithinView(focusedBeforeUpdate, rvSourceList);
+
         currentSourceIndex = position;
         currentSource = SOURCES[position];
 
@@ -397,7 +395,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
             rvSourceList.getAdapter().notifyDataSetChanged();
         }
 
-        rvSourceList.post(() -> {
+        if (retainSourceFocus) rvSourceList.post(() -> {
             if (rvSourceList.getChildCount() > position) {
                 View itemView = rvSourceList.getChildAt(position);
                 if (itemView != null) {
@@ -432,7 +430,8 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     }
 
     private void loadHotSearch() {
-        String source = currentSource;
+        final int generation = ++hotSearchGeneration;
+        final String source = currentSource;
         if ("all".equals(source)) {
             hotSearchWords.clear();
             if (hotSearchAdapter != null) {
@@ -446,7 +445,8 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         apiService.getHotSearch(source).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
-                if (!isPageUsable()) return;
+                if (!isPageUsable() || generation != hotSearchGeneration
+                        || !source.equals(currentSource)) return;
                 if (response.isSuccessful() && response.body() != null) {
                     try {
                         String bodyStr = response.body().string();
@@ -470,7 +470,8 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
 
             @Override
             public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
-                if (!isPageUsable()) return;
+                if (!isPageUsable() || generation != hotSearchGeneration
+                        || !source.equals(currentSource)) return;
                 t.printStackTrace();
             }
         });
@@ -580,17 +581,26 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     }
 
     private void hideCustomKeyboard() {
+        boolean wasKeyboardVisible = isKeyboardVisible
+                || (customKeyboardPopup != null && customKeyboardPopup.isShowing());
         isKeyboardVisible = false;
         if (customKeyboardPopup != null) {
             customKeyboardPopup.dismiss();
         }
+        if (!wasKeyboardVisible) return;
         // 清除 EditText 的焦点，防止 InputMethodManager 继续尝试管理它
         if (etSearch != null) {
             etSearch.clearFocus();
         }
         // 一级页没有返回按钮；关闭键盘后将焦点还给搜索框。
         if (etSearch != null) {
-            etSearch.post(() -> etSearch.requestFocus());
+            etSearch.post(() -> {
+                if (!isPageUsable() || getActivity() == null) return;
+                View currentFocus = getActivity().getCurrentFocus();
+                if (currentFocus == null || currentFocus == etSearch) {
+                    etSearch.requestFocus();
+                }
+            });
         }
     }
 
@@ -620,6 +630,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
 
         searchWebServer = new SearchWebServer(requireContext(), SEARCH_SERVER_PORT, (keyword, source) -> {
             mainHandler.post(() -> {
+                if (!isPageUsable()) return;
                 qrDialog.dismiss();
                 if (searchWebServer != null) {
                     searchWebServer.stop();
@@ -709,6 +720,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
 
     private void search(String keyword) {
         hideCustomKeyboard();
+        final int generation = ++searchGeneration;
         lastKeyword = keyword;
         currentPage = 1;
         currentResultPage = 0;
@@ -719,63 +731,60 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         showLoading(true);
 
         if ("all".equals(currentSource)) {
-            searchAllSources(keyword);
+            searchAllSources(keyword, generation);
         } else {
-            searchSingleSource(keyword, currentSource);
+            searchSingleSource(keyword, currentSource, generation);
         }
     }
 
-    private void searchAllSources(String keyword) {
-        ExecutorService executor = Executors.newFixedThreadPool(ALL_SOURCES.length);
+    private void searchAllSources(String keyword, int generation) {
         List<MusicInfo>[] results = new List[ALL_SOURCES.length];
         int[] completed = new int[1];
+        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
 
         for (int i = 0; i < ALL_SOURCES.length; i++) {
             final int index = i;
             final String source = ALL_SOURCES[index];
 
-            executor.submit(() -> {
-                LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
-                apiService.searchMusic(keyword, source, 1, 30).enqueue(new Callback<List<MusicInfo>>() {
-                    @Override
-                    public void onResponse(Call<List<MusicInfo>> call, Response<List<MusicInfo>> response) {
-                if (!isPageUsable()) return;
-                        synchronized (completed) {
-                            if (response.isSuccessful() && response.body() != null) {
-                                results[index] = response.body();
-                            } else {
-                                results[index] = new ArrayList<>();
-                            }
-                            completed[0]++;
-
-                            if (completed[0] == ALL_SOURCES.length) {
-                                requireActivity().runOnUiThread(() -> {
-                                    mergeAllResults(results);
-                                });
-                            }
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<List<MusicInfo>> call, Throwable t) {
-                if (!isPageUsable()) return;
-                        synchronized (completed) {
+            // Retrofit.enqueue is already asynchronous. Wrapping it in a new
+            // fixed thread pool on every search left five core threads alive
+            // indefinitely and could eventually exhaust memory.
+            apiService.searchMusic(keyword, source, 1, 30).enqueue(new Callback<List<MusicInfo>>() {
+                @Override
+                public void onResponse(Call<List<MusicInfo>> call, Response<List<MusicInfo>> response) {
+                    if (!isPageUsable() || generation != searchGeneration) return;
+                    synchronized (completed) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            results[index] = response.body();
+                        } else {
                             results[index] = new ArrayList<>();
-                            completed[0]++;
+                        }
+                        completed[0]++;
 
-                            if (completed[0] == ALL_SOURCES.length) {
-                                requireActivity().runOnUiThread(() -> {
-                                    mergeAllResults(results);
-                                });
-                            }
+                        if (completed[0] == ALL_SOURCES.length) {
+                            mergeAllResults(results, generation);
                         }
                     }
-                });
+                }
+
+                @Override
+                public void onFailure(Call<List<MusicInfo>> call, Throwable t) {
+                    if (!isPageUsable() || generation != searchGeneration) return;
+                    synchronized (completed) {
+                        results[index] = new ArrayList<>();
+                        completed[0]++;
+
+                        if (completed[0] == ALL_SOURCES.length) {
+                            mergeAllResults(results, generation);
+                        }
+                    }
+                }
             });
         }
     }
 
-    private void mergeAllResults(List<MusicInfo>[] results) {
+    private void mergeAllResults(List<MusicInfo>[] results, int generation) {
+        if (!isPageUsable() || generation != searchGeneration) return;
         allResults.clear();
         for (List<MusicInfo> list : results) {
             if (list != null) {
@@ -799,12 +808,13 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         return source;
     }
 
-    private void searchSingleSource(String keyword, String source) {
+    private void searchSingleSource(String keyword, String source, int generation) {
         LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
         apiService.searchMusic(keyword, source, currentPage, 30).enqueue(new Callback<List<MusicInfo>>() {
             @Override
             public void onResponse(Call<List<MusicInfo>> call, Response<List<MusicInfo>> response) {
-                if (!isPageUsable()) return;
+                if (!isPageUsable() || generation != searchGeneration
+                        || !source.equals(currentSource)) return;
                 showLoading(false);
                 if (response.isSuccessful() && response.body() != null) {
                     List<MusicInfo> result = response.body();
@@ -830,7 +840,8 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
 
             @Override
             public void onFailure(Call<List<MusicInfo>> call, Throwable t) {
-                if (!isPageUsable()) return;
+                if (!isPageUsable() || generation != searchGeneration
+                        || !source.equals(currentSource)) return;
                 showLoading(false);
                 Toast.makeText(requireContext(), "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -914,22 +925,33 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         }
     }
 
-    private void playSong(MusicInfo song) {
+    private boolean playSong(MusicInfo song) {
         if (player == null) {
             Toast.makeText(requireContext(), "播放器未初始化", Toast.LENGTH_SHORT).show();
-            return;
+            return false;
         }
 
         int index = allResults.indexOf(song);
-        if (index >= 0) playResultAtIndex(index);
-        else {
-            player.setMediaItem(createMediaItem(song));
+        boolean started;
+        if (index >= 0) {
+            started = playResultAtIndex(index);
+        } else {
+            PlaybackQueue queue = PlaybackQueue.from(Collections.singletonList(song));
+            if (queue.isEmpty()) {
+                Toast.makeText(requireContext(), "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+            player.setMediaItem(queue.getMediaItems().get(0));
             player.setShuffleModeEnabled(shuffleEnabled);
             player.prepare();
             player.play();
+            started = true;
         }
 
-        Toast.makeText(requireContext(), "正在播放: " + song.getName(), Toast.LENGTH_SHORT).show();
+        if (started) {
+            Toast.makeText(requireContext(), "正在播放: " + song.getName(), Toast.LENGTH_SHORT).show();
+        }
+        return started;
     }
 
     private void playAllResults() {
@@ -937,13 +959,15 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         playResultAtIndex(0);
     }
 
-    private void playResultAtIndex(int index) {
-        if (player == null || index < 0 || index >= allResults.size()) return;
-        List<MediaItem> mediaItems = new ArrayList<>();
-        for (MusicInfo result : allResults) {
-            mediaItems.add(createMediaItem(result));
+    private boolean playResultAtIndex(int index) {
+        if (player == null || index < 0 || index >= allResults.size()) return false;
+        PlaybackQueue queue = PlaybackQueue.from(allResults);
+        int queueIndex = queue.queueIndexForSourceIndex(index);
+        if (queueIndex < 0) {
+            Toast.makeText(requireContext(), "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
+            return false;
         }
-        player.setMediaItems(mediaItems, index, 0);
+        player.setMediaItems(queue.getMediaItems(), queueIndex, 0);
         player.setShuffleModeEnabled(shuffleEnabled);
         player.prepare();
         player.play();
@@ -951,6 +975,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         int pageStart = currentResultPage * SEARCH_SONGS_PER_PAGE;
         int pageEnd = pageStart + songAdapter.getItemCount();
         songAdapter.setPlayingIndex(index >= pageStart && index < pageEnd ? index - pageStart : -1);
+        return true;
     }
 
     private void updatePlaybackModeButton() {
@@ -960,34 +985,6 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         btnSearchPlayOrderToggle.setContentDescription(shuffleEnabled
                 ? "切换为顺序播放" : "切换为随机播放");
         btnSearchPlayOrderToggle.setSelected(shuffleEnabled);
-    }
-
-    private MediaItem createMediaItem(MusicInfo song) {
-        Bundle extras = song.toPlaybackExtras();
-
-        Uri artworkUri = null;
-        String coverUrl = song.getPicUrl();
-        if (coverUrl != null && !coverUrl.isEmpty()) {
-            artworkUri = Uri.parse(coverUrl);
-        }
-
-        Uri resolveUri = MusicService.buildResolveUri(song.getSource(), song.getSongmid(), song.getName());
-
-        MediaMetadata.Builder metadataBuilder = new MediaMetadata.Builder()
-                .setTitle(song.getName())
-                .setArtist(song.getSinger())
-                .setAlbumTitle(song.getAlbumName())
-                .setExtras(extras);
-
-        if (artworkUri != null) {
-            metadataBuilder.setArtworkUri(artworkUri);
-        }
-
-        return new MediaItem.Builder()
-                .setMediaId(song.getSongmid())
-                .setUri(resolveUri)
-                .setMediaMetadata(metadataBuilder.build())
-                .build();
     }
 
     private void showLoading(boolean show) {
@@ -1138,6 +1135,9 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
 
     @Override
     public void onDestroyView() {
+        searchGeneration++;
+        hotSearchGeneration++;
+        mainHandler.removeCallbacksAndMessages(null);
         if (searchWebServer != null) {
             searchWebServer.stop();
             searchWebServer = null;
@@ -1187,6 +1187,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
 
                 final MusicInfo finalSong = song;
                 DialogHelper.showPlaylistPickerDialog(requireContext(), "选择歌单", playlistNames, (android.content.DialogInterface dialog, int which) -> {
+                    if (!isPageUsable() || which < 0 || which >= userPlaylists.size()) return;
                     fetchAndAddSongToPlaylist(userPlaylists.get(which).getName(), finalSong);
                 });
             }
@@ -1211,7 +1212,8 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         }
 
         for (MusicInfo m : songList) {
-            if (m.getName().equals(song.getName()) && m.getSource().equals(song.getSource())) {
+            if (Objects.equals(m.getName(), song.getName())
+                    && Objects.equals(m.getSource(), song.getSource())) {
                 Toast.makeText(requireContext(), "歌曲已存在于此歌单", Toast.LENGTH_SHORT).show();
                 return;
             }

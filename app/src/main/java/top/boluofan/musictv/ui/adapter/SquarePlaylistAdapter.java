@@ -31,6 +31,9 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
 
     public void setData(List<Playlist> playlists) {
         this.playlists = playlists != null ? playlists : new ArrayList<>();
+        selectedPosition = this.playlists.isEmpty()
+                ? RecyclerView.NO_POSITION
+                : Math.min(Math.max(0, selectedPosition), this.playlists.size() - 1);
         notifyDataSetChanged();
     }
     
@@ -38,16 +41,18 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         if (newPlaylists == null || newPlaylists.isEmpty()) return;
         int startPosition = playlists.size();
         playlists.addAll(newPlaylists);
+        if (selectedPosition == RecyclerView.NO_POSITION) selectedPosition = 0;
         notifyItemRangeInserted(startPosition, newPlaylists.size());
     }
 
     public void setShowFooter(boolean show) {
         if (showFooter != show) {
+            int footerPosition = playlists.size();
             showFooter = show;
             if (show) {
-                notifyItemInserted(getItemCount());
+                notifyItemInserted(footerPosition);
             } else {
-                notifyItemRemoved(getItemCount());
+                notifyItemRemoved(footerPosition);
             }
         }
     }
@@ -58,10 +63,11 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
 
     public void setSelection(int position) {
         int oldPos = selectedPosition;
-        selectedPosition = position;
+        selectedPosition = position >= 0 && position < playlists.size()
+                ? position : RecyclerView.NO_POSITION;
         if (oldPos != selectedPosition) {
-            notifyItemChanged(oldPos);
-            notifyItemChanged(selectedPosition);
+            if (oldPos >= 0 && oldPos < playlists.size()) notifyItemChanged(oldPos);
+            if (selectedPosition >= 0) notifyItemChanged(selectedPosition);
         }
     }
 
@@ -161,7 +167,7 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
 
             selectedPosition = newPos;
             if (oldPos != selectedPosition) {
-                notifyItemChanged(oldPos);
+                if (oldPos >= 0 && oldPos < playlists.size()) notifyItemChanged(oldPos);
                 notifyItemChanged(selectedPosition);
             }
             if (listener != null) listener.onItemClick(playlist);

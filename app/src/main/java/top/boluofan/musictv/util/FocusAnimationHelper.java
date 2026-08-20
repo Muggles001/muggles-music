@@ -47,7 +47,7 @@ public class FocusAnimationHelper {
     /** Keep a control focused when its click redraws surrounding content. */
     public static void keepFocusAfterClick(View view) {
         view.post(() -> {
-            if (view.isShown() && view.isEnabled() && view.isFocusable()) {
+            if (canRestoreClickedFocus(view)) {
                 view.requestFocus();
             }
         });
@@ -57,10 +57,20 @@ public class FocusAnimationHelper {
     public static void keepFocusAfterPlayback(View view) {
         keepFocusAfterClick(view);
         view.postDelayed(() -> {
-            if (view.isShown() && view.isEnabled() && view.isFocusable()) {
+            if (canRestoreClickedFocus(view)) {
                 view.requestFocus();
             }
         }, 320L);
+    }
+
+    /** Never let a delayed playback redraw override a newer remote action. */
+    private static boolean canRestoreClickedFocus(View view) {
+        if (view == null || !view.isAttachedToWindow() || !view.isShown()
+                || !view.isEnabled() || !view.isFocusable()) {
+            return false;
+        }
+        View currentFocus = view.getRootView().findFocus();
+        return currentFocus == null || currentFocus == view;
     }
 
     /** A pager is a vertical endpoint, never a route back to the app rail. */

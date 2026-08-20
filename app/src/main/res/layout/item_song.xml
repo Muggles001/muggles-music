@@ -37,7 +37,7 @@
             android:layout_gravity="center"
             android:src="@drawable/ic_equalizer"
             android:visibility="gone"
-            android:tint="@color/lx_brand"
+            app:tint="@color/lx_brand"
             android:contentDescription="playing"/>
     </FrameLayout>
 
@@ -111,7 +111,7 @@
             android:src="@drawable/ic_play"
             android:scaleType="fitCenter"
             android:padding="4dp"
-            android:tint="@color/lx_text_secondary"
+            app:tint="@color/lx_text_secondary"
             android:focusable="true"
             android:contentDescription="play"/>
 
@@ -124,7 +124,7 @@
             android:src="@drawable/ic_fullscreen"
             android:scaleType="fitCenter"
             android:padding="4dp"
-            android:tint="@color/lx_text_secondary"
+            app:tint="@color/lx_text_secondary"
             android:focusable="true"
             android:contentDescription="fullscreen"/>
 
@@ -137,7 +137,7 @@
             android:src="@drawable/ic_favorite_border"
             android:scaleType="fitCenter"
             android:padding="4dp"
-            android:tint="@color/lx_text_secondary"
+            app:tint="@color/lx_text_secondary"
             android:focusable="true"
             android:contentDescription="favorite"/>
 
@@ -149,7 +149,7 @@
             android:src="@drawable/ic_delete"
             android:scaleType="fitCenter"
             android:padding="4dp"
-            android:tint="@color/lx_text_secondary"
+            app:tint="@color/lx_text_secondary"
             android:focusable="true"
             android:contentDescription="delete"/>
 

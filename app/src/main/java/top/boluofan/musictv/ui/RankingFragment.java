@@ -35,6 +35,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.MusicService;
+import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.PlayerActivity;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.util.DialogHelper;
@@ -48,6 +49,7 @@ import android.net.Uri;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class RankingFragment extends Fragment implements MainActivity.PrimaryPageKeyHandler {
     private static final String TAG = "RankingFragment";
@@ -83,6 +85,8 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     private Runnable positionUpdater;
     private static final int SONGS_PER_PAGE = 8;
     private int currentSongPage = 0;
+    private long boardRequestGeneration = 0L;
+    private long songRequestGeneration = 0L;
 
     private boolean isPageUsable() {
         return isAdded() && rootView != null;
@@ -250,7 +254,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         });
 
         songAdapter.setOnFullscreenClickListener((song, position) -> {
-            playSongAtIndex(position);
+            if (!playSongAtIndex(position)) return;
             startActivity(new Intent(requireContext(), top.boluofan.musictv.PlayerActivity.class));
         });
 
@@ -258,11 +262,6 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
             collectSingleSong(song);
         });
 
-        rvSourceList.post(() -> {
-            if (rvSourceList.getChildCount() > 0) {
-                rvSourceList.getChildAt(0).requestFocus();
-            }
-        });
     }
 
     private void setupListeners() {
@@ -351,6 +350,20 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
             return;
         }
 
+        // Keep the exact board the user confirmed. The leaderboard can change
+        // while the user-list request is in flight, so callbacks must never
+        // read the mutable board index or song collection again.
+        final String sourceSnapshot = currentSource;
+        final String boardIdSnapshot = currentBoardId;
+        final int sourceIndexSnapshot = currentSourceIndex;
+        final BoardInfo boardSnapshot = currentBoardIndex >= 0 && currentBoardIndex < boards.size()
+                ? boards.get(currentBoardIndex) : null;
+        final String boardNameSnapshot = boardSnapshot != null
+                && boardSnapshot.name != null && !boardSnapshot.name.isEmpty()
+                ? boardSnapshot.name
+                : SOURCE_NAMES[Math.max(0, Math.min(sourceIndexSnapshot, SOURCE_NAMES.length - 1))] + "排行榜";
+        final List<MusicInfo> songsSnapshot = new ArrayList<>(songs);
+
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
         String token = LxRetrofitClient.getToken(requireContext());
@@ -371,12 +384,10 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
                 top.boluofan.musictv.api.model.ListData listData = response.body();
 
-                String boardName = currentBoardId.isEmpty() ? SOURCE_NAMES[currentSourceIndex] + "排行榜" : boards.get(currentBoardIndex).name;
-
                 top.boluofan.musictv.api.model.Playlist existingPlaylist = null;
                 if (listData.getUserList() != null) {
                     for (top.boluofan.musictv.api.model.Playlist p : listData.getUserList()) {
-                        if (boardName.equals(p.getName())) {
+                        if (boardNameSnapshot.equals(p.getName())) {
                             existingPlaylist = p;
                             break;
                         }
@@ -386,12 +397,13 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
                 if (existingPlaylist != null) {
                     final top.boluofan.musictv.api.model.ListData finalListData = listData;
                     final top.boluofan.musictv.api.model.Playlist finalExistingPlaylist = existingPlaylist;
-                    final String finalBoardName = boardName;
                     android.content.Context ctx = requireContext();
-                    DialogHelper.showOverwriteConfirmDialog(ctx, boardName, new DialogHelper.IDialogCallback() {
+                    DialogHelper.showOverwriteConfirmDialog(ctx, boardNameSnapshot, new DialogHelper.IDialogCallback() {
                         @Override
                         public void onConfirm() {
-                            doCollectPlaylist(finalListData, finalExistingPlaylist, finalBoardName);
+                            if (!isPageUsable()) return;
+                            doCollectPlaylist(finalListData, finalExistingPlaylist, boardNameSnapshot,
+                                    sourceSnapshot, boardIdSnapshot, songsSnapshot);
                         }
 
                         @Override
@@ -399,7 +411,8 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
                         }
                     });
                 } else {
-                    doCollectPlaylist(listData, null, boardName);
+                    doCollectPlaylist(listData, null, boardNameSnapshot,
+                            sourceSnapshot, boardIdSnapshot, songsSnapshot);
                 }
             }
 
@@ -412,7 +425,10 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         });
     }
 
-    private void doCollectPlaylist(top.boluofan.musictv.api.model.ListData listData, top.boluofan.musictv.api.model.Playlist existingPlaylist, String boardName) {
+    private void doCollectPlaylist(top.boluofan.musictv.api.model.ListData listData,
+                                   top.boluofan.musictv.api.model.Playlist existingPlaylist,
+                                   String boardName, String sourceSnapshot,
+                                   String boardIdSnapshot, List<MusicInfo> songsSnapshot) {
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
         String token = LxRetrofitClient.getToken(requireContext());
@@ -421,18 +437,18 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         top.boluofan.musictv.api.model.Playlist newPlaylist;
         if (existingPlaylist != null) {
             newPlaylist = existingPlaylist;
-            newPlaylist.setSongs(new ArrayList<>(songs));
-            newPlaylist.setSongCount(songs.size());
-            newPlaylist.setSource(currentSource);
-            newPlaylist.setSourceListId(currentBoardId);
+            newPlaylist.setSongs(new ArrayList<>(songsSnapshot));
+            newPlaylist.setSongCount(songsSnapshot.size());
+            newPlaylist.setSource(sourceSnapshot);
+            newPlaylist.setSourceListId(boardIdSnapshot);
         } else {
             newPlaylist = new top.boluofan.musictv.api.model.Playlist();
             newPlaylist.setId("playlist_" + System.currentTimeMillis());
             newPlaylist.setName(boardName);
-            newPlaylist.setSource(currentSource);
-            newPlaylist.setSourceListId(currentBoardId);
-            newPlaylist.setSongs(new ArrayList<>(songs));
-            newPlaylist.setSongCount(songs.size());
+            newPlaylist.setSource(sourceSnapshot);
+            newPlaylist.setSourceListId(boardIdSnapshot);
+            newPlaylist.setSongs(new ArrayList<>(songsSnapshot));
+            newPlaylist.setSongCount(songsSnapshot.size());
 
             if (listData.getUserList() == null) {
                 listData.setUserList(new ArrayList<>());
@@ -497,9 +513,9 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
                     playlistNames[i] = userPlaylists.get(i).getName();
                 }
 
-                final int songIndex = songs.indexOf(song);
                 final MusicInfo finalSong = song;
                 DialogHelper.showPlaylistPickerDialog(requireContext(), "选择歌单", playlistNames, (android.content.DialogInterface dialog, int which) -> {
+                    if (!isPageUsable() || which < 0 || which >= userPlaylists.size()) return;
                     fetchAndAddSongToPlaylist(userPlaylists.get(which).getName(), finalSong);
                 });
             }
@@ -570,7 +586,8 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         }
 
         for (MusicInfo m : songList) {
-            if (m.getName().equals(song.getName()) && m.getSource().equals(song.getSource())) {
+            if (Objects.equals(m.getName(), song.getName())
+                    && Objects.equals(m.getSource(), song.getSource())) {
                 Toast.makeText(requireContext(), "歌曲已存在于此歌单", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -602,6 +619,10 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     private void selectSource(int position) {
         if (position < 0 || position >= SOURCES.length) return;
 
+        View focusedBeforeUpdate = getActivity() != null
+                ? getActivity().getCurrentFocus() : null;
+        boolean retainSourceFocus = isWithinView(focusedBeforeUpdate, rvSourceList);
+
         currentSourceIndex = position;
         currentSource = SOURCES[position];
         currentBoardId = "";
@@ -623,7 +644,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
         loadBoards();
 
-        rvSourceList.post(() -> {
+        if (retainSourceFocus) rvSourceList.post(() -> {
             if (rvSourceList.getChildCount() > position) {
                 View itemView = rvSourceList.getChildAt(position);
                 if (itemView != null) {
@@ -668,13 +689,18 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     }
 
     private void loadBoards() {
+        final long requestGeneration = ++boardRequestGeneration;
+        final String sourceSnapshot = currentSource;
+        // A source reload invalidates any song response belonging to its old
+        // board set, even before the new board response arrives.
+        songRequestGeneration++;
         showLoading(true);
 
         LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
-        apiService.getLeaderboardBoards(currentSource).enqueue(new Callback<okhttp3.ResponseBody>() {
+        apiService.getLeaderboardBoards(sourceSnapshot).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
-                if (!isPageUsable()) return;
+                if (!isCurrentBoardRequest(requestGeneration, sourceSnapshot)) return;
                 showLoading(false);
                 if (response.isSuccessful() && response.body() != null) {
                     try {
@@ -713,7 +739,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
             @Override
             public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
-                if (!isPageUsable()) return;
+                if (!isCurrentBoardRequest(requestGeneration, sourceSnapshot)) return;
                 showLoading(false);
                 Toast.makeText(requireContext(), "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -723,13 +749,17 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     private void loadSongs() {
         if (currentBoardId.isEmpty()) return;
 
+        final long requestGeneration = ++songRequestGeneration;
+        final String sourceSnapshot = currentSource;
+        final String boardIdSnapshot = currentBoardId;
+
         showLoading(true);
 
         LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
-        apiService.getLeaderboardList(currentSource, currentBoardId, 1).enqueue(new Callback<okhttp3.ResponseBody>() {
+        apiService.getLeaderboardList(sourceSnapshot, boardIdSnapshot, 1).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
-                if (!isPageUsable()) return;
+                if (!isCurrentSongRequest(requestGeneration, sourceSnapshot, boardIdSnapshot)) return;
                 showLoading(false);
                 if (response.isSuccessful() && response.body() != null) {
                     try {
@@ -738,18 +768,23 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
                         JsonObject root = gson.fromJson(bodyStr, JsonObject.class);
                         JsonArray list = root.getAsJsonArray("list");
 
-                        songs.clear();
+                        List<MusicInfo> loadedSongs = new ArrayList<>();
                         if (list != null) {
                             for (int i = 0; i < list.size(); i++) {
                                 JsonObject item = list.get(i).getAsJsonObject();
                                 MusicInfo music = gson.fromJson(item, MusicInfo.class);
                                 if (music.getSource() == null || music.getSource().isEmpty()) {
-                                    music.setSource(currentSource);
+                                    music.setSource(sourceSnapshot);
                                 }
-                                songs.add(music);
+                                loadedSongs.add(music);
                             }
                         }
 
+                        // Parsing is synchronous, but a source/board selection
+                        // can still invalidate this response before publishing.
+                        if (!isCurrentSongRequest(requestGeneration, sourceSnapshot, boardIdSnapshot)) return;
+                        songs.clear();
+                        songs.addAll(loadedSongs);
                         currentSongPage = 0;
                         updateSongPage();
                     } catch (Exception e) {
@@ -762,11 +797,25 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
             @Override
             public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
-                if (!isPageUsable()) return;
+                if (!isCurrentSongRequest(requestGeneration, sourceSnapshot, boardIdSnapshot)) return;
                 showLoading(false);
                 Toast.makeText(requireContext(), "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private boolean isCurrentBoardRequest(long requestGeneration, String sourceSnapshot) {
+        return isPageUsable()
+                && requestGeneration == boardRequestGeneration
+                && sourceSnapshot.equals(currentSource);
+    }
+
+    private boolean isCurrentSongRequest(long requestGeneration, String sourceSnapshot,
+                                         String boardIdSnapshot) {
+        return isPageUsable()
+                && requestGeneration == songRequestGeneration
+                && sourceSnapshot.equals(currentSource)
+                && boardIdSnapshot.equals(currentBoardId);
     }
 
     private void playAll(boolean shuffle) {
@@ -777,34 +826,36 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
         if (player == null) return;
 
-        List<MediaItem> mediaItems = new ArrayList<>();
-        for (MusicInfo song : songs) {
-            mediaItems.add(createMediaItem(song));
+        PlaybackQueue queue = PlaybackQueue.from(songs);
+        if (queue.isEmpty()) {
+            Toast.makeText(requireContext(), "歌曲缺少可用的播放信息", Toast.LENGTH_SHORT).show();
+            return;
         }
 
-        int startIndex = shuffle ? (int) (Math.random() * songs.size()) : 0;
+        int startIndex = shuffle ? (int) (Math.random() * queue.size()) : 0;
 
-        player.setMediaItems(mediaItems, startIndex, 0);
+        player.setMediaItems(queue.getMediaItems(), startIndex, 0);
         player.prepare();
         player.play();
 
         Toast.makeText(requireContext(), shuffle ? "随机播放" : "播放全部", Toast.LENGTH_SHORT).show();
     }
 
-    private void playSongAtIndex(int position) {
-        if (songs.isEmpty() || player == null) return;
-
-        List<MediaItem> mediaItems = new ArrayList<>();
-        for (MusicInfo song : songs) {
-            mediaItems.add(createMediaItem(song));
-        }
+    private boolean playSongAtIndex(int position) {
+        if (songs.isEmpty() || player == null) return false;
 
         int globalPosition = currentSongPage * SONGS_PER_PAGE + position;
-        if (globalPosition < 0 || globalPosition >= mediaItems.size()) return;
-        player.setMediaItems(mediaItems, globalPosition, 0);
+        PlaybackQueue queue = PlaybackQueue.from(songs);
+        int queueIndex = queue.queueIndexForSourceIndex(globalPosition);
+        if (queueIndex < 0) {
+            Toast.makeText(requireContext(), "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        player.setMediaItems(queue.getMediaItems(), queueIndex, 0);
         player.prepare();
         player.play();
         songAdapter.setPlayingIndex(position);
+        return true;
     }
 
     private int getSongPageCount() {
@@ -826,7 +877,6 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         btnNextPage.setEnabled(hasNext);
         btnPrevPage.setAlpha(hasPrevious ? 1f : 0.35f);
         btnNextPage.setAlpha(hasNext ? 1f : 0.35f);
-        requestFirstSongFocus();
     }
 
     private void changeSongPage(int delta) {
@@ -844,29 +894,6 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
             RecyclerView.ViewHolder holder = rvSongs.findViewHolderForAdapterPosition(0);
             if (holder != null) holder.itemView.requestFocus();
         });
-    }
-
-    private MediaItem createMediaItem(MusicInfo song) {
-        Bundle extras = song.toPlaybackExtras();
-
-        Uri artworkUri = song.getPicUrl() != null ? Uri.parse(song.getPicUrl()) : null;
-        Uri resolveUri = MusicService.buildResolveUri(song.getSource(), song.getSongmid(), song.getName());
-
-        MediaMetadata.Builder metadataBuilder = new MediaMetadata.Builder()
-                .setTitle(song.getName())
-                .setArtist(song.getSinger())
-                .setAlbumTitle(song.getAlbumName())
-                .setExtras(extras);
-
-        if (artworkUri != null) {
-            metadataBuilder.setArtworkUri(artworkUri);
-        }
-
-        return new MediaItem.Builder()
-                .setMediaId(song.getSongmid())
-                .setUri(resolveUri)
-                .setMediaMetadata(metadataBuilder.build())
-                .build();
     }
 
     private void showLoading(boolean show) {
@@ -906,6 +933,8 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
     @Override
     public void onDestroyView() {
+        boardRequestGeneration++;
+        songRequestGeneration++;
         rootView = null;
         super.onDestroyView();
     }

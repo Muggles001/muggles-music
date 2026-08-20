@@ -3,6 +3,7 @@ package top.boluofan.musictv.ui;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.KeyEvent;
 import android.widget.ImageButton;
@@ -23,11 +24,13 @@ import com.bumptech.glide.Glide;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.PlayerActivity;
+import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxApiService;
@@ -74,6 +77,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     private LxMusicAdapter songAdapter;
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
+    private Player.Listener playerListener;
     private FloatingPlayerWindow floatingPlayerWindow;
     private List<MusicInfo> songs = new ArrayList<>();
     private static final int SONGS_PER_PAGE = 8;
@@ -174,8 +178,9 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         });
         
         songAdapter.setOnFullscreenClickListener((song, position) -> {
-            playSongAtIndex(position);
-            startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
+            if (playSongAtIndex(position)) {
+                startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
+            }
         });
 
         songAdapter.setOnFavClickListener((song, position) -> {
@@ -225,6 +230,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
             public void onResponse(Call<top.boluofan.musictv.api.model.ListData> call, Response<top.boluofan.musictv.api.model.ListData> response) {
+                if (!isActivityUsable()) return;
                 btnFavorite.setEnabled(true);
                 
                 if (!response.isSuccessful() || response.body() == null) {
@@ -251,6 +257,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                     DialogHelper.showOverwriteConfirmDialog(ctx, playlistName, new DialogHelper.IDialogCallback() {
                         @Override
                         public void onConfirm() {
+                            if (!isActivityUsable()) return;
                             doCollectPlaylist(finalListData, finalExistingPlaylist);
                         }
 
@@ -265,6 +272,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<top.boluofan.musictv.api.model.ListData> call, Throwable t) {
+                if (!isActivityUsable()) return;
                 btnFavorite.setEnabled(true);
                 Toast.makeText(PlaylistDetailActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -272,6 +280,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     }
     
     private void doCollectPlaylist(top.boluofan.musictv.api.model.ListData listData, top.boluofan.musictv.api.model.Playlist existingPlaylist) {
+        if (!isActivityUsable()) return;
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
         String token = LxRetrofitClient.getToken(this);
@@ -303,6 +312,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         apiService.updateUserList(username, password, token, listData).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
+                if (!isActivityUsable()) return;
                 btnFavorite.setEnabled(true);
                 if (response.isSuccessful()) {
                     Toast.makeText(PlaylistDetailActivity.this, existingPlaylist != null ? "覆盖成功" : "收藏成功", Toast.LENGTH_SHORT).show();
@@ -313,6 +323,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
+                if (!isActivityUsable()) return;
                 btnFavorite.setEnabled(true);
                 Toast.makeText(PlaylistDetailActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -336,6 +347,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
             public void onResponse(Call<top.boluofan.musictv.api.model.ListData> call, Response<top.boluofan.musictv.api.model.ListData> response) {
+                if (!isActivityUsable()) return;
                 if (!response.isSuccessful() || response.body() == null) {
                     Toast.makeText(PlaylistDetailActivity.this, "获取歌单失败", Toast.LENGTH_SHORT).show();
                     return;
@@ -355,12 +367,14 @@ public class PlaylistDetailActivity extends AppCompatActivity {
 
                 final MusicInfo finalSong = song;
                 DialogHelper.showPlaylistPickerDialog(PlaylistDetailActivity.this, "选择歌单", playlistNames, (android.content.DialogInterface dialog, int which) -> {
+                    if (!isActivityUsable() || which < 0 || which >= userPlaylists.size()) return;
                     fetchAndAddSongToPlaylist(userPlaylists.get(which).getName(), finalSong);
                 });
             }
 
             @Override
             public void onFailure(Call<top.boluofan.musictv.api.model.ListData> call, Throwable t) {
+                if (!isActivityUsable()) return;
                 Toast.makeText(PlaylistDetailActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
@@ -378,7 +392,9 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         }
 
         for (MusicInfo m : songList) {
-            if (m.getName().equals(song.getName()) && m.getSource().equals(song.getSource())) {
+            if (m != null && song != null
+                    && Objects.equals(m.getName(), song.getName())
+                    && Objects.equals(m.getSource(), song.getSource())) {
                 Toast.makeText(this, "歌曲已存在于此歌单", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -391,6 +407,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         apiService.updateUserList(username, password, token, listData).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
+                if (!isActivityUsable()) return;
                 if (response.isSuccessful()) {
                     Toast.makeText(PlaylistDetailActivity.this, "已添加到「" + playlist.getName() + "」", Toast.LENGTH_SHORT).show();
                 } else {
@@ -400,6 +417,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
+                if (!isActivityUsable()) return;
                 Toast.makeText(PlaylistDetailActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
@@ -414,6 +432,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
             public void onResponse(Call<top.boluofan.musictv.api.model.ListData> call, Response<top.boluofan.musictv.api.model.ListData> response) {
+                if (!isActivityUsable()) return;
                 if (!response.isSuccessful() || response.body() == null) {
                     Toast.makeText(PlaylistDetailActivity.this, "获取歌单失败", Toast.LENGTH_SHORT).show();
                     return;
@@ -444,6 +463,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<top.boluofan.musictv.api.model.ListData> call, Throwable t) {
+                if (!isActivityUsable()) return;
                 Toast.makeText(PlaylistDetailActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
@@ -499,6 +519,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         apiService.getPlaylistDetail(playlistSource, playlistId, 1).enqueue(new Callback<Playlist>() {
             @Override
             public void onResponse(Call<Playlist> call, Response<Playlist> response) {
+                if (!isActivityUsable()) return;
                 showLoading(false);
                 if (response.isSuccessful() && response.body() != null) {
                     Playlist playlist = response.body();
@@ -510,6 +531,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
             
             @Override
             public void onFailure(Call<Playlist> call, Throwable t) {
+                if (!isActivityUsable()) return;
                 showLoading(false);
                 Toast.makeText(PlaylistDetailActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -533,6 +555,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                     public void onResponse(
                             Call<top.boluofan.musictv.api.model.ListData> call,
                             Response<top.boluofan.musictv.api.model.ListData> response) {
+                        if (!isActivityUsable()) return;
                         showLoading(false);
                         if (!response.isSuccessful() || response.body() == null
                                 || response.body().getUserList() == null) {
@@ -555,11 +578,16 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(
                             Call<top.boluofan.musictv.api.model.ListData> call, Throwable t) {
+                        if (!isActivityUsable()) return;
                         showLoading(false);
                         Toast.makeText(PlaylistDetailActivity.this,
                                 "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
+    }
+
+    private boolean isActivityUsable() {
+        return !isFinishing() && !isDestroyed();
     }
 
     private Playlist findLocalPlaylist(List<Playlist> playlists) {
@@ -678,57 +706,35 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         
         if (player == null) return;
         
-        List<MediaItem> mediaItems = new ArrayList<>();
-        for (MusicInfo song : songs) {
-            mediaItems.add(createMediaItem(song));
+        PlaybackQueue queue = PlaybackQueue.from(songs);
+        if (queue.isEmpty()) {
+            Toast.makeText(this, "歌曲缺少可用的播放信息", Toast.LENGTH_SHORT).show();
+            return;
         }
-        
-        int startIndex = shuffle ? (int) (Math.random() * songs.size()) : 0;
-        
-        player.setMediaItems(mediaItems, startIndex, 0);
+
+        int startIndex = shuffle ? (int) (Math.random() * queue.size()) : 0;
+
+        player.setMediaItems(queue.getMediaItems(), startIndex, 0);
         player.prepare();
         player.play();
         
         Toast.makeText(this, shuffle ? "随机播放" : "播放全部", Toast.LENGTH_SHORT).show();
     }
     
-    private void playSongAtIndex(int position) {
-        if (songs.isEmpty() || player == null) return;
-        
-        List<MediaItem> mediaItems = new ArrayList<>();
-        for (MusicInfo song : songs) {
-            mediaItems.add(createMediaItem(song));
-        }
-        
+    private boolean playSongAtIndex(int position) {
+        if (songs.isEmpty() || player == null) return false;
         int globalPosition = currentPage * SONGS_PER_PAGE + position;
-        if (globalPosition < 0 || globalPosition >= mediaItems.size()) return;
-        player.setMediaItems(mediaItems, globalPosition, 0);
+        PlaybackQueue queue = PlaybackQueue.from(songs);
+        int queueIndex = queue.queueIndexForSourceIndex(globalPosition);
+        if (queueIndex < 0) {
+            Toast.makeText(this, "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        player.setMediaItems(queue.getMediaItems(), queueIndex, 0);
         player.prepare();
         player.play();
         songAdapter.setPlayingIndex(position);
-    }
-    
-    private MediaItem createMediaItem(MusicInfo song) {
-        Bundle extras = song.toPlaybackExtras();
-        
-        Uri artworkUri = song.getPicUrl() != null ? Uri.parse(song.getPicUrl()) : null;
-        Uri resolveUri = MusicService.buildResolveUri(song.getSource(), song.getSongmid(), song.getName());
-        
-        MediaMetadata.Builder metadataBuilder = new MediaMetadata.Builder()
-                .setTitle(song.getName())
-                .setArtist(song.getSinger())
-                .setAlbumTitle(song.getAlbumName())
-                .setExtras(extras);
-        
-        if (artworkUri != null) {
-            metadataBuilder.setArtworkUri(artworkUri);
-        }
-        
-        return new MediaItem.Builder()
-                .setMediaId(song.getSongmid())
-                .setUri(resolveUri)
-                .setMediaMetadata(metadataBuilder.build())
-                .build();
+        return true;
     }
     
     private String formatTime(Long timestamp) {
@@ -745,11 +751,18 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         SessionToken sessionToken = new SessionToken(this, new ComponentName(this, MusicService.class));
-        controllerFuture = new MediaController.Builder(this, sessionToken).buildAsync();
-        controllerFuture.addListener(() -> {
+        final ListenableFuture<MediaController> pendingController =
+                new MediaController.Builder(this, sessionToken).buildAsync();
+        controllerFuture = pendingController;
+        pendingController.addListener(() -> {
             try {
-                player = controllerFuture.get();
-                player.addListener(new Player.Listener() {
+                MediaController resolvedController = pendingController.get();
+                if (isFinishing() || isDestroyed() || controllerFuture != pendingController) {
+                    MediaController.releaseFuture(pendingController);
+                    return;
+                }
+                player = resolvedController;
+                playerListener = new Player.Listener() {
                     @Override
                     public void onIsPlayingChanged(boolean isPlaying) {
                         songAdapter.setPlayerPlaying(isPlaying);
@@ -761,9 +774,10 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                         songAdapter.notifyDataSetChanged();
                         songAdapter.restorePendingPlaybackFocus();
                     }
-                });
+                };
+                player.addListener(playerListener);
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "Failed to connect media controller", e);
             }
         }, androidx.core.content.ContextCompat.getMainExecutor(this));
     }
@@ -771,8 +785,14 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        if (player != null && playerListener != null) {
+            player.removeListener(playerListener);
+        }
+        playerListener = null;
+        player = null;
         if (controllerFuture != null) {
             MediaController.releaseFuture(controllerFuture);
+            controllerFuture = null;
         }
     }
     

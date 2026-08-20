@@ -2,7 +2,7 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat">
+    <style name="BaseAppTheme" parent="Theme.AppCompat">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
@@ -10,12 +10,12 @@
         <item name="android:windowBackground">@color/lx_bg_canvas</item>
         <item name="android:navigationBarColor">@color/lx_bg_canvas</item>
         <item name="android:statusBarColor">@color/lx_bg_canvas</item>
-        <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:windowLightStatusBar">true</item>
         <item name="android:textColorPrimary">@color/lx_text_primary</item>
         <item name="android:textColorSecondary">@color/lx_text_secondary</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
+
+    <style name="AppTheme" parent="BaseAppTheme" />
 
     <style name="AppTheme.NoActionBar" parent="AppTheme">
         <item name="windowActionBar">false</item>

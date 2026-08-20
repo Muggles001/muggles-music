@@ -34,6 +34,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.MusicService;
+import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.PlayerActivity;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.util.DialogHelper;
@@ -184,8 +185,9 @@ public class RankingActivity extends AppCompatActivity {
         });
         
         songAdapter.setOnFullscreenClickListener((song, position) -> {
-            playSongAtIndex(position);
-            startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
+            if (playSongAtIndex(position)) {
+                startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
+            }
         });
         
         songAdapter.setOnFavClickListener((song, position) -> {
@@ -238,7 +240,14 @@ public class RankingActivity extends AppCompatActivity {
                 
                 top.boluofan.musictv.api.model.ListData listData = response.body();
                 
-                String boardName = currentBoardId.isEmpty() ? SOURCE_NAMES[currentSourceIndex] + "排行榜" : boards.get(currentBoardIndex).name;
+                String boardName;
+                if (currentBoardId.isEmpty() || currentBoardIndex < 0
+                        || currentBoardIndex >= boards.size()) {
+                    boardName = SOURCE_NAMES[Math.max(0,
+                            Math.min(currentSourceIndex, SOURCE_NAMES.length - 1))] + "排行榜";
+                } else {
+                    boardName = boards.get(currentBoardIndex).name;
+                }
                 
                 top.boluofan.musictv.api.model.Playlist existingPlaylist = null;
                 if (listData.getUserList() != null) {
@@ -430,7 +439,8 @@ public class RankingActivity extends AppCompatActivity {
         }
 
         for (MusicInfo m : songList) {
-            if (m.getName().equals(song.getName()) && m.getSource().equals(song.getSource())) {
+            if (java.util.Objects.equals(m.getName(), song.getName())
+                    && java.util.Objects.equals(m.getSource(), song.getSource())) {
                 Toast.makeText(this, "歌曲已存在于此歌单", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -635,55 +645,34 @@ public class RankingActivity extends AppCompatActivity {
         
         if (player == null) return;
         
-        List<MediaItem> mediaItems = new ArrayList<>();
-        for (MusicInfo song : songs) {
-            mediaItems.add(createMediaItem(song));
+        PlaybackQueue queue = PlaybackQueue.from(songs);
+        if (queue.isEmpty()) {
+            Toast.makeText(this, "歌曲缺少可用的播放信息", Toast.LENGTH_SHORT).show();
+            return;
         }
-        
-        int startIndex = shuffle ? (int) (Math.random() * songs.size()) : 0;
-        
-        player.setMediaItems(mediaItems, startIndex, 0);
+
+        int startIndex = shuffle ? (int) (Math.random() * queue.size()) : 0;
+
+        player.setMediaItems(queue.getMediaItems(), startIndex, 0);
         player.prepare();
         player.play();
         
         Toast.makeText(this, shuffle ? "随机播放" : "播放全部", Toast.LENGTH_SHORT).show();
     }
     
-    private void playSongAtIndex(int position) {
-        if (songs.isEmpty() || player == null) return;
-        
-        List<MediaItem> mediaItems = new ArrayList<>();
-        for (MusicInfo song : songs) {
-            mediaItems.add(createMediaItem(song));
+    private boolean playSongAtIndex(int position) {
+        if (songs.isEmpty() || player == null) return false;
+        PlaybackQueue queue = PlaybackQueue.from(songs);
+        int queueIndex = queue.queueIndexForSourceIndex(position);
+        if (queueIndex < 0) {
+            Toast.makeText(this, "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
+            return false;
         }
-        
-        player.setMediaItems(mediaItems, position, 0);
+        player.setMediaItems(queue.getMediaItems(), queueIndex, 0);
         player.prepare();
         player.play();
         songAdapter.setPlayingIndex(position);
-    }
-    
-    private MediaItem createMediaItem(MusicInfo song) {
-        Bundle extras = song.toPlaybackExtras();
-        
-        Uri artworkUri = song.getPicUrl() != null ? Uri.parse(song.getPicUrl()) : null;
-        Uri resolveUri = MusicService.buildResolveUri(song.getSource(), song.getSongmid(), song.getName());
-        
-        MediaMetadata.Builder metadataBuilder = new MediaMetadata.Builder()
-                .setTitle(song.getName())
-                .setArtist(song.getSinger())
-                .setAlbumTitle(song.getAlbumName())
-                .setExtras(extras);
-        
-        if (artworkUri != null) {
-            metadataBuilder.setArtworkUri(artworkUri);
-        }
-        
-        return new MediaItem.Builder()
-                .setMediaId(song.getSongmid())
-                .setUri(resolveUri)
-                .setMediaMetadata(metadataBuilder.build())
-                .build();
+        return true;
     }
     
     private void showLoading(boolean show) {
@@ -698,10 +687,16 @@ public class RankingActivity extends AppCompatActivity {
         floatingPlayerWindow.connectToService();
         
         SessionToken sessionToken = new SessionToken(this, new ComponentName(this, MusicService.class));
-        controllerFuture = new MediaController.Builder(this, sessionToken).buildAsync();
-        controllerFuture.addListener(() -> {
+        final ListenableFuture<MediaController> pendingController =
+                new MediaController.Builder(this, sessionToken).buildAsync();
+        controllerFuture = pendingController;
+        pendingController.addListener(() -> {
+            if (controllerFuture != pendingController || isFinishing() || isDestroyed()) {
+                MediaController.releaseFuture(pendingController);
+                return;
+            }
             try {
-                player = controllerFuture.get();
+                player = pendingController.get();
                 setupPlayerListener();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -712,8 +707,11 @@ public class RankingActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
+        ListenableFuture<MediaController> pendingController = controllerFuture;
+        controllerFuture = null;
+        player = null;
+        if (pendingController != null) {
+            MediaController.releaseFuture(pendingController);
         }
     }
     

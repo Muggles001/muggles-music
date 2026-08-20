@@ -332,7 +332,7 @@ public class MusicRepository {
 
                 boolean found = false;
                 for (Playlist p : result.getUserList()) {
-                    if (p.getId().equals(playlist.getId())) {
+                    if (java.util.Objects.equals(p.getId(), playlist.getId())) {
                         if (p.getSongs() == null) {
                             p.setSongs(new java.util.ArrayList<>());
                         }
@@ -377,7 +377,7 @@ public class MusicRepository {
 
                 boolean found = false;
                 for (Playlist p : result.getUserList()) {
-                    if (p.getId().equals(playlist.getId())) {
+                    if (java.util.Objects.equals(p.getId(), playlist.getId())) {
                         if (p.getSongs() != null && songIndex >= 0 && songIndex < p.getSongs().size()) {
                             p.getSongs().remove(songIndex);
                             found = true;

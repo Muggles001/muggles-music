@@ -2,9 +2,11 @@ package top.boluofan.musictv.api;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.util.Base64;
 import android.util.Log;
 import java.util.concurrent.TimeUnit;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
@@ -30,18 +32,10 @@ public class LxRetrofitClient {
 
     public static Retrofit getClient(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String baseUrl = prefs.getString(KEY_SERVER_URL, "");
-
-        if (baseUrl.isEmpty()) {
-            baseUrl = "http://localhost:9527/";
-        }
-
-        if (!baseUrl.startsWith("http")) {
-            baseUrl = "https://" + baseUrl;
-        }
-
-        if (!baseUrl.endsWith("/")) {
-            baseUrl += "/";
+        String savedBaseUrl = prefs.getString(KEY_SERVER_URL, "");
+        String baseUrl = normalizeServerUrl(savedBaseUrl);
+        if (baseUrl == null) {
+            throw new IllegalStateException("LXserver address is missing or invalid");
         }
 
         if (retrofit != null && baseUrl.equals(currentBaseUrl)) {
@@ -51,7 +45,13 @@ public class LxRetrofitClient {
         currentBaseUrl = baseUrl;
 
         HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+        // BODY logging buffers and prints complete playlist/lyric responses,
+        // which is expensive on low-memory TVs and can expose account data.
+        boolean isDebuggable = (context.getApplicationInfo().flags
+                & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        logging.setLevel(isDebuggable
+                ? HttpLoggingInterceptor.Level.BODY
+                : HttpLoggingInterceptor.Level.NONE);
 
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
@@ -98,27 +98,47 @@ public class LxRetrofitClient {
     }
 
     public static String getPureServerUrl(Context context) {
-        String baseUrl = getServerUrl(context);
-        if (baseUrl == null || baseUrl.isEmpty()) {
-            return "http://localhost:9527";
-        }
-        if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
-            baseUrl = "https://" + baseUrl;
-        }
+        String baseUrl = normalizeServerUrl(getServerUrl(context));
+        if (baseUrl == null) return null;
         while (baseUrl.endsWith("/")) {
             baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
         }
         return baseUrl;
     }
 
+    /** Returns a Retrofit-compatible HTTP(S) base URL, or null when invalid. */
+    public static String normalizeServerUrl(String rawUrl) {
+        if (rawUrl == null) return null;
+        String candidate = rawUrl.trim();
+        if (candidate.isEmpty()) return null;
+        boolean hasHttpScheme = candidate.regionMatches(true, 0, "http://", 0, 7)
+                || candidate.regionMatches(true, 0, "https://", 0, 8);
+        if (!hasHttpScheme) {
+            candidate = "https://" + candidate;
+        }
+        HttpUrl parsed = HttpUrl.parse(candidate);
+        if (parsed == null || parsed.host().isEmpty()) return null;
+
+        HttpUrl.Builder builder = parsed.newBuilder().query(null).fragment(null);
+        if (!parsed.encodedPath().endsWith("/")) builder.addPathSegment("");
+        return builder.build().toString();
+    }
+
     public static void saveConfig(Context context, String serverUrl, String username, String password, String token) {
+        String normalizedServerUrl = normalizeServerUrl(serverUrl);
+        if (normalizedServerUrl == null) {
+            throw new IllegalArgumentException("LXserver address is missing or invalid");
+        }
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        prefs.edit()
-                .putString(KEY_SERVER_URL, serverUrl)
+        boolean saved = prefs.edit()
+                .putString(KEY_SERVER_URL, normalizedServerUrl)
                 .putString(KEY_USERNAME, username)
                 .putString(KEY_PASSWORD, password)
                 .putString(KEY_TOKEN, token)
-                .apply();
+                .commit();
+        if (!saved) {
+            throw new IllegalStateException("Failed to persist LXserver configuration");
+        }
         resetClient();
     }
 

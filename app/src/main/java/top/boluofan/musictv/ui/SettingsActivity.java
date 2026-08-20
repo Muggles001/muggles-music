@@ -117,10 +117,16 @@ public class SettingsActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         SessionToken sessionToken = new SessionToken(this, new ComponentName(this, MusicService.class));
-        controllerFuture = new MediaController.Builder(this, sessionToken).buildAsync();
-        controllerFuture.addListener(() -> {
+        final ListenableFuture<MediaController> pendingController =
+                new MediaController.Builder(this, sessionToken).buildAsync();
+        controllerFuture = pendingController;
+        pendingController.addListener(() -> {
+            if (controllerFuture != pendingController || isFinishing() || isDestroyed()) {
+                MediaController.releaseFuture(pendingController);
+                return;
+            }
             try {
-                player = controllerFuture.get();
+                player = pendingController.get();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -130,8 +136,11 @@ public class SettingsActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
+        ListenableFuture<MediaController> pendingController = controllerFuture;
+        controllerFuture = null;
+        player = null;
+        if (pendingController != null) {
+            MediaController.releaseFuture(pendingController);
         }
     }
     

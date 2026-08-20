@@ -5,8 +5,10 @@
     android:layout_height="wrap_content"
     android:gravity="center"
     android:orientation="vertical"
-    android:paddingVertical="12dp"
-    android:paddingHorizontal="0dp">
+    android:paddingStart="0dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="0dp"
+    android:paddingBottom="12dp">
 
 
 

@@ -3,8 +3,10 @@ package top.boluofan.musictv.ui;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.KeyEvent;
+import android.view.FocusFinder;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -64,7 +66,11 @@ public class MainActivity extends AppCompatActivity {
 
     private int currentSelectedTab = -1;
     private boolean pageTransitionInProgress = false;
+    private int pageTransitionGeneration = 0;
     private View fragmentContainer;
+    private View lastContentFocus;
+    private int lastContentFocusPage = -1;
+    private ViewTreeObserver.OnGlobalFocusChangeListener contentFocusTracker;
     
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
@@ -74,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         
         String serverUrl = LxRetrofitClient.getServerUrl(this);
-        if (serverUrl == null || serverUrl.isEmpty()) {
+        if (LxRetrofitClient.normalizeServerUrl(serverUrl) == null) {
             startActivity(new Intent(this, top.boluofan.musictv.ConfigActivity.class));
             finish();
             return;
@@ -130,6 +136,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void initViews() {
         fragmentContainer = findViewById(R.id.fragmentContainer);
+        contentFocusTracker = (oldFocus, newFocus) -> {
+            if (newFocus != null && isWithinView(newFocus, fragmentContainer)) {
+                lastContentFocus = newFocus;
+                lastContentFocusPage = currentSelectedTab;
+            }
+        };
+        fragmentContainer.getViewTreeObserver()
+                .addOnGlobalFocusChangeListener(contentFocusTracker);
         tabLibrary = findViewById(R.id.tabLibrary);
         tabSearch = findViewById(R.id.tabSearch);
         tabSongSquare = findViewById(R.id.tabSongSquare);
@@ -281,6 +295,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        final int transitionGeneration = ++pageTransitionGeneration;
         pageTransitionInProgress = true;
         updateTabSelection(page);
         if (current != null && current != next) {
@@ -294,7 +309,11 @@ public class MainActivity extends AppCompatActivity {
         }
         transaction.setMaxLifecycle(next, Lifecycle.State.RESUMED);
         transaction.commit();
-        fragmentContainer.postDelayed(() -> pageTransitionInProgress = false, 300L);
+        fragmentContainer.postDelayed(() -> {
+            if (transitionGeneration == pageTransitionGeneration) {
+                pageTransitionInProgress = false;
+            }
+        }, 300L);
     }
 
     /** The visual rail is ordered Song Square, Search, Ranking, Library, Settings. */
@@ -401,6 +420,78 @@ public class MainActivity extends AppCompatActivity {
                 || view == tabLibrary || view == tabSettings;
     }
 
+    private boolean isWithinView(View child, View ancestor) {
+        if (child == null || ancestor == null) return false;
+        View current = child;
+        while (current != null) {
+            if (current == ancestor) return true;
+            if (!(current.getParent() instanceof View)) return false;
+            current = (View) current.getParent();
+        }
+        return false;
+    }
+
+    /**
+     * Android's geometric focus search can choose the first item in the left
+     * rail when content is loading or a list is being rebound. A vertical key
+     * must never change the primary page; the rail is entered explicitly from
+     * the left edge with DPAD_LEFT.
+     */
+    private boolean wouldLeakVerticalFocusToRail(int keyCode, View currentFocus) {
+        if ((keyCode != KeyEvent.KEYCODE_DPAD_UP && keyCode != KeyEvent.KEYCODE_DPAD_DOWN)
+                || !isWithinView(currentFocus, fragmentContainer)) {
+            return false;
+        }
+        View contentRoot = findViewById(android.R.id.content);
+        if (!(contentRoot instanceof ViewGroup)) return false;
+        int direction = keyCode == KeyEvent.KEYCODE_DPAD_UP
+                ? View.FOCUS_UP : View.FOCUS_DOWN;
+        View next = FocusFinder.getInstance().findNextFocus(
+                (ViewGroup) contentRoot,
+                currentFocus,
+                direction
+        );
+        // No valid content target means this is a vertical boundary. Keep the
+        // current control focused instead of allowing framework wraparound.
+        return next == null || isRailItem(next);
+    }
+
+    /**
+     * RecyclerView can briefly clear window focus while rebinding a row. If a
+     * repeated vertical key reaches the Activity during that frame, Android's
+     * default search starts at the decor root and commonly selects the first
+     * primary-rail item. Restore the last focus from this page when it is still
+     * valid; otherwise consume the key until the content finishes laying out.
+     */
+    private boolean handleMissingContentVerticalFocus(int keyCode, View currentFocus) {
+        if ((keyCode != KeyEvent.KEYCODE_DPAD_UP && keyCode != KeyEvent.KEYCODE_DPAD_DOWN)
+                || currentFocus != null) {
+            return false;
+        }
+
+        final View target = lastContentFocus;
+        final int targetPage = lastContentFocusPage;
+        if (isRestorableContentFocus(target, targetPage) && !target.requestFocus()) {
+            fragmentContainer.post(() -> {
+                if (getCurrentFocus() == null
+                        && isRestorableContentFocus(target, targetPage)) {
+                    target.requestFocus();
+                }
+            });
+        }
+        return true;
+    }
+
+    private boolean isRestorableContentFocus(View target, int targetPage) {
+        return target != null
+                && targetPage == currentSelectedTab
+                && target.isAttachedToWindow()
+                && target.isShown()
+                && target.isEnabled()
+                && target.isFocusable()
+                && isWithinView(target, fragmentContainer);
+    }
+
     private void moveFocusFromRailWhenReady() {
         fragmentContainer.postDelayed(() -> {
             if (!isRailItem(getCurrentFocus())) return;
@@ -418,6 +509,13 @@ public class MainActivity extends AppCompatActivity {
     
     @Override
     protected void onDestroy() {
+        if (fragmentContainer != null && contentFocusTracker != null) {
+            ViewTreeObserver observer = fragmentContainer.getViewTreeObserver();
+            if (observer.isAlive()) {
+                observer.removeOnGlobalFocusChangeListener(contentFocusTracker);
+            }
+            contentFocusTracker = null;
+        }
         super.onDestroy();
         if (floatingPlayerWindow != null) {
             floatingPlayerWindow.release();
@@ -448,6 +546,9 @@ public class MainActivity extends AppCompatActivity {
         if (directionalKey && (currentFragment == null || pageTransitionInProgress)) {
             return true;
         }
+        if (handleMissingContentVerticalFocus(keyCode, currentFocus)) {
+            return true;
+        }
 
         // Give the floating player the first chance at edge navigation. Page
         // fragments may intentionally consume down/left at their own edges;
@@ -466,6 +567,10 @@ public class MainActivity extends AppCompatActivity {
             if (songSquareFragment.onKeyDown(keyCode, event)) {
                 return true;
             }
+        }
+
+        if (wouldLeakVerticalFocusToRail(keyCode, currentFocus)) {
+            return true;
         }
         
         if (keyCode == KeyEvent.KEYCODE_BACK) {

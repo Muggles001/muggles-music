@@ -64,7 +64,7 @@ public class ConfigActivity extends AppCompatActivity {
         layoutQr = findViewById(R.id.layoutQr);
         btnToggleMode = findViewById(R.id.btnToggleMode);
 
-        etUrl.setText("http://localhost:9527");
+        etUrl.setText("");
         
         String serverUrlFromSettings = getIntent().getStringExtra("server_url");
         String usernameFromSettings = getIntent().getStringExtra("username");
@@ -151,10 +151,11 @@ public class ConfigActivity extends AppCompatActivity {
                 return;
             }
 
-            if (!urlRaw.startsWith("http")) {
-                urlRaw = "https://" + urlRaw;
+            String finalUrl = LxRetrofitClient.normalizeServerUrl(urlRaw);
+            if (finalUrl == null) {
+                Toast.makeText(this, "服务器地址格式不正确", Toast.LENGTH_SHORT).show();
+                return;
             }
-            String finalUrl = urlRaw.endsWith("/") ? urlRaw : urlRaw + "/";
 
             btnConnect.setEnabled(false);
             btnConnect.setText("连接中...");
@@ -179,6 +180,7 @@ public class ConfigActivity extends AppCompatActivity {
             apiService.loginUser(body).enqueue(new retrofit2.Callback<LoginResponse>() {
                 @Override
                 public void onResponse(retrofit2.Call<LoginResponse> call, retrofit2.Response<LoginResponse> response) {
+                    if (!isActivityUsable()) return;
                     btnConnect.setEnabled(true);
                     btnConnect.setText("连　接");
 
@@ -194,6 +196,7 @@ public class ConfigActivity extends AppCompatActivity {
 
                 @Override
                 public void onFailure(retrofit2.Call<LoginResponse> call, Throwable t) {
+                    if (!isActivityUsable()) return;
                     btnConnect.setEnabled(true);
                     btnConnect.setText("连　接");
                     Toast.makeText(ConfigActivity.this, "连接超时，将以游客身份使用", Toast.LENGTH_LONG).show();
@@ -244,6 +247,7 @@ public class ConfigActivity extends AppCompatActivity {
 
         webServer = new LoginWebServer(this, SERVER_PORT, (url, username, password, token) -> {
             mainHandler.post(() -> {
+                if (!isActivityUsable()) return;
                 qrDialog.dismiss();
                 // 合并：如果推送的值为空，保留原有值
                 String mergedUrl = (url != null && !url.isEmpty()) ? url : savedUrl;
@@ -291,6 +295,7 @@ public class ConfigActivity extends AppCompatActivity {
 
         webServer = new LoginWebServer(this, SERVER_PORT, (url, username, password, token) -> {
             mainHandler.post(() -> {
+                if (!isActivityUsable()) return;
                 etUrl.setText(url);
                 etUsername.setText(username);
                 etPassword.setText(password);
@@ -345,11 +350,17 @@ public class ConfigActivity extends AppCompatActivity {
         return null;
     }
 
+    private boolean isActivityUsable() {
+        return !isFinishing() && !isDestroyed();
+    }
+
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+        mainHandler.removeCallbacksAndMessages(null);
         if (webServer != null) {
             webServer.stop();
+            webServer = null;
         }
+        super.onDestroy();
     }
 }

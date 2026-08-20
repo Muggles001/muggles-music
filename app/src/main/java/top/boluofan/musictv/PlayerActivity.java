@@ -25,6 +25,8 @@ import androidx.media3.session.SessionToken;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.load.resource.bitmap.CenterCrop;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 import com.bumptech.glide.request.RequestOptions;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -43,9 +45,12 @@ import retrofit2.Response;
 import okhttp3.ResponseBody;
 import android.content.SharedPreferences;
 import com.google.gson.JsonObject;
+import jp.wasabeef.glide.transformations.BlurTransformation;
 
 public class PlayerActivity extends AppCompatActivity {
     private static final String TAG = "PlayerActivity";
+    private static final int BLURRED_ARTWORK_WIDTH = 640;
+    private static final int BLURRED_ARTWORK_HEIGHT = 360;
     private ImageView ivBigCover;
     private ImageView ivBlurBackground;
     private TextView tvBigTitle;
@@ -69,6 +74,7 @@ public class PlayerActivity extends AppCompatActivity {
 
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
+    private Player.Listener playerListener;
     private LyricAdapter lyricAdapter;
     private top.boluofan.musictv.api.LxApiService apiService;
     private String baseUrl;
@@ -256,13 +262,20 @@ public class PlayerActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         SessionToken token = new SessionToken(this, new android.content.ComponentName(this, MusicService.class));
-        controllerFuture = new MediaController.Builder(this, token).buildAsync();
-        controllerFuture.addListener(() -> {
+        final ListenableFuture<MediaController> pendingController =
+                new MediaController.Builder(this, token).buildAsync();
+        controllerFuture = pendingController;
+        pendingController.addListener(() -> {
             try {
-                player = controllerFuture.get();
+                MediaController resolvedController = pendingController.get();
+                if (isFinishing() || isDestroyed() || controllerFuture != pendingController) {
+                    MediaController.releaseFuture(pendingController);
+                    return;
+                }
+                player = resolvedController;
                 setupPlayer();
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "Failed to connect media controller", e);
             }
         }, androidx.core.content.ContextCompat.getMainExecutor(this));
     }
@@ -626,7 +639,11 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void setupPlayer() {
-        player.addListener(new Player.Listener() {
+        if (player == null) return;
+        if (playerListener != null) {
+            player.removeListener(playerListener);
+        }
+        playerListener = new Player.Listener() {
             @Override
             public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
                 updateMetadata(mediaItem);
@@ -658,7 +675,8 @@ public class PlayerActivity extends AppCompatActivity {
                 Log.e(TAG, "Player Error: " + errorMsg);
                 showPlaybackError(errorMsg);
             }
-        });
+        };
+        player.addListener(playerListener);
         
         // Enforce Default Mode: List Loop (REPEAT_MODE_ALL)
         if (player.getRepeatMode() == Player.REPEAT_MODE_OFF && !player.getShuffleModeEnabled()) {
@@ -756,9 +774,7 @@ public class PlayerActivity extends AppCompatActivity {
                 .placeholder(R.drawable.ic_cover_placeholder)
                 .error(R.drawable.ic_cover_placeholder)
                 .transform(new RoundedCorners(80)).into(ivBigCover);
-            Glide.with(this).load(data)
-                .transform(new jp.wasabeef.glide.transformations.BlurTransformation(20, 3))
-                .into(ivBlurBackground);
+            loadBlurredBackground(data);
             hasArtwork = true;
         } else if (mediaItem.mediaMetadata.artworkUri != null) {
             String uri = mediaItem.mediaMetadata.artworkUri.toString();
@@ -767,14 +783,13 @@ public class PlayerActivity extends AppCompatActivity {
                 .placeholder(R.drawable.ic_cover_placeholder)
                 .error(R.drawable.ic_cover_placeholder)
                 .transform(new RoundedCorners(80)).into(ivBigCover);
-            Glide.with(this).load(uri)
-                .transform(new jp.wasabeef.glide.transformations.BlurTransformation(20, 3))
-                .into(ivBlurBackground);
+            loadBlurredBackground(uri);
             hasArtwork = true;
         } else {
             // 如果当前在抓取中，不要轻易重置图片，避免闪烁
             if (!isCurrentlyScraping) {
                 ivBigCover.setImageResource(R.drawable.ic_cover_placeholder);
+                Glide.with(this).clear(ivBlurBackground);
                 ivBlurBackground.setImageResource(android.R.color.black);
             }
         }
@@ -1009,11 +1024,7 @@ public class PlayerActivity extends AppCompatActivity {
                             })
                             .into(ivBigCover);
                             
-                        Glide.with(PlayerActivity.this)
-                            .load(picUrl)
-                            .apply(new RequestOptions()
-                                .transform(new jp.wasabeef.glide.transformations.BlurTransformation(20, 3)))
-                            .into(ivBlurBackground);
+                        loadBlurredBackground(picUrl);
                     }
                     
                     // 更新歌词
@@ -1315,23 +1326,17 @@ public class PlayerActivity extends AppCompatActivity {
                 if (scrapedPicUrl != null && !scrapedPicUrl.isEmpty() && scrapedPicUrl.startsWith("http")) {
                     Toast.makeText(this, "正在处理并保存封面，请稍后...", Toast.LENGTH_SHORT).show();
                     new Thread(() -> {
+                        com.bumptech.glide.request.FutureTarget<android.graphics.Bitmap> coverTarget = null;
                         try {
-                            java.net.URL url = new java.net.URL(scrapedPicUrl);
-                            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-                            conn.setConnectTimeout(5000);
-                            conn.setReadTimeout(5000);
-                            java.io.InputStream is = conn.getInputStream();
-                            android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeStream(is);
+                            // Let Glide sample the image while decoding instead
+                            // of allocating the original full-resolution bitmap
+                            // and shrinking it afterwards.
+                            coverTarget = Glide.with(getApplicationContext())
+                                    .asBitmap()
+                                    .load(scrapedPicUrl)
+                                    .submit(800, 800);
+                            android.graphics.Bitmap bitmap = coverTarget.get();
                             if (bitmap != null) {
-                                int maxDim = 800;
-                                int width = bitmap.getWidth();
-                                int height = bitmap.getHeight();
-                                if (width > maxDim || height > maxDim) {
-                                    float ratio = Math.min((float) maxDim / width, (float) maxDim / height);
-                                    width = Math.round(width * ratio);
-                                    height = Math.round(height * ratio);
-                                    bitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, width, height, true);
-                                }
                                 java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
                                 bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, baos);
                                 byte[] imageBytes = baos.toByteArray();
@@ -1344,6 +1349,10 @@ public class PlayerActivity extends AppCompatActivity {
                         } catch (Exception e) {
                             android.util.Log.e(TAG, "Failed to download image: " + e.getMessage());
                             updates.put("picture", scrapedPicUrl);
+                        } finally {
+                            if (coverTarget != null) {
+                                Glide.with(getApplicationContext()).clear(coverTarget);
+                            }
                         }
                         
                         runOnUiThread(() -> {
@@ -1438,6 +1447,23 @@ public class PlayerActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Decode the decorative full-screen artwork at a fixed TV-safe size before
+     * blurring it. Decoding a 4K source at the ImageView's full dimensions can
+     * hold more than 30 MiB for the input bitmap alone and crash low-memory TVs.
+     */
+    private void loadBlurredBackground(Object artwork) {
+        if (artwork == null || isFinishing() || isDestroyed()) return;
+        Glide.with(this).clear(ivBlurBackground);
+        Glide.with(this)
+                .load(artwork)
+                .override(BLURRED_ARTWORK_WIDTH, BLURRED_ARTWORK_HEIGHT)
+                .diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+                .transform(new CenterCrop(), new BlurTransformation(20, 3))
+                .error(android.R.color.black)
+                .into(ivBlurBackground);
+    }
+
     private String getStringOrEmpty(JsonObject obj, String key) {
         if (obj == null || !obj.has(key) || obj.get(key).isJsonNull()) return "";
         return obj.get(key).getAsString();
@@ -1457,9 +1483,16 @@ public class PlayerActivity extends AppCompatActivity {
         }
         currentScrapingId = "";
         stopScrapeAnimation();
+        if (player != null && playerListener != null) {
+            player.removeListener(playerListener);
+        }
+        playerListener = null;
+        player = null;
         if (controllerFuture != null) {
             MediaController.releaseFuture(controllerFuture);
+            controllerFuture = null;
         }
+        Glide.with(this).clear(ivBlurBackground);
         stopProgressUpdater();
     }
     

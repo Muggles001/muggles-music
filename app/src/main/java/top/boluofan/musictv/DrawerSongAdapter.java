@@ -64,21 +64,28 @@ public class DrawerSongAdapter extends RecyclerView.Adapter<DrawerSongAdapter.Vi
     }
 
     public void setSongs(List<DrawerSongItem> songs) {
-        this.songs = songs;
+        this.songs = songs != null ? songs : new ArrayList<>();
+        if (playingIndex >= this.songs.size()) {
+            playingIndex = -1;
+        }
         notifyDataSetChanged();
     }
 
     public void setPlayingIndex(int index) {
         int oldIndex = this.playingIndex;
-        this.playingIndex = index;
-        if (oldIndex != -1) notifyItemChanged(oldIndex);
-        if (index != -1) notifyItemChanged(index);
+        this.playingIndex = index >= 0 && index < songs.size() ? index : -1;
+        if (oldIndex >= 0 && oldIndex < songs.size()) notifyItemChanged(oldIndex);
+        if (this.playingIndex >= 0 && this.playingIndex != oldIndex) {
+            notifyItemChanged(this.playingIndex);
+        }
     }
 
     public void setPlayerPlaying(boolean isPlaying) {
         if (this.isPlayerPlaying == isPlaying) return;
         this.isPlayerPlaying = isPlaying;
-        if (playingIndex != -1) notifyItemChanged(playingIndex);
+        if (playingIndex >= 0 && playingIndex < songs.size()) {
+            notifyItemChanged(playingIndex);
+        }
     }
 
     public void setOnItemClickListener(OnItemClickListener listener) {
@@ -164,7 +171,9 @@ public class DrawerSongAdapter extends RecyclerView.Adapter<DrawerSongAdapter.Vi
 
         holder.itemView.setFocusable(true);
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) listener.onItemClick(song.title, position);
+            int adapterPosition = holder.getAdapterPosition();
+            if (adapterPosition == RecyclerView.NO_POSITION) return;
+            if (listener != null) listener.onItemClick(song.title, adapterPosition);
         });
 
         // Load cover

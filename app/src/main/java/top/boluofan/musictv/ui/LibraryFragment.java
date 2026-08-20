@@ -25,6 +25,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import top.boluofan.musictv.MusicService;
+import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
@@ -71,6 +72,7 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
     private static final int PLAYLISTS_PER_PAGE = 10;
     private static final int SONGS_PER_PAGE = 8;
     private int currentSongPage = 0;
+    private int songFocusRequestGeneration = 0;
 
     private boolean isPageUsable() {
         return isAdded() && getView() != null;
@@ -233,6 +235,7 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
         });
         
         songAdapter.setOnFullscreenClickListener((song, position) -> {
+            if (!playSongAtIndex(position)) return;
             Intent intent = new Intent(requireContext(), top.boluofan.musictv.PlayerActivity.class);
             intent.putExtra("song", song.getName());
             intent.putExtra("artist", song.getSinger());
@@ -321,7 +324,7 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
         if (listData == null || listData.getUserList() == null) return;
         
         for (Playlist p : listData.getUserList()) {
-            if (p.getName().equals(playlistName)) {
+            if (java.util.Objects.equals(p.getName(), playlistName)) {
                 // Reuse the public playlist-detail screen so a playlist from
                 // "我的歌单" has the exact same layout and navigation model as
                 // one opened from 歌单广场.
@@ -336,6 +339,7 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
 
     private void showPlaylistOverview() {
         int distance = transitionDistance();
+        songFocusRequestGeneration++;
         showingPlaylistDetail = false;
         rvSongs.animate().cancel();
         libraryActionBar.animate().cancel();
@@ -419,16 +423,31 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
     }
 
     private void requestFirstSongFocus() {
+        requestFirstSongFocus(++songFocusRequestGeneration, 3);
+    }
+
+    private void requestFirstSongFocus(int generation, int attemptsLeft) {
         if (rvSongs == null || songAdapter == null || songAdapter.getItemCount() == 0) {
+            return;
+        }
+        if (!isPageUsable() || !showingPlaylistDetail || !rvSongs.isShown()
+                || generation != songFocusRequestGeneration) {
             return;
         }
         rvSongs.scrollToPosition(0);
         rvSongs.post(() -> {
+            if (!isPageUsable() || generation != songFocusRequestGeneration
+                    || !showingPlaylistDetail || !rvSongs.isShown()) {
+                return;
+            }
             RecyclerView.ViewHolder holder = rvSongs.findViewHolderForAdapterPosition(0);
             if (holder != null) {
                 holder.itemView.requestFocus();
-            } else {
-                rvSongs.postDelayed(this::requestFirstSongFocus, 80L);
+            } else if (attemptsLeft > 0) {
+                rvSongs.postDelayed(
+                        () -> requestFirstSongFocus(generation, attemptsLeft - 1),
+                        80L
+                );
             }
         });
     }
@@ -535,54 +554,31 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
         playSongAtGlobalIndex(0);
     }
     
-    private void playSongAtIndex(int position) {
-        if (currentPlaylist == null || currentPlaylist.getSongs() == null) return;
+    private boolean playSongAtIndex(int position) {
+        if (currentPlaylist == null || currentPlaylist.getSongs() == null) return false;
         int globalPosition = currentSongPage * SONGS_PER_PAGE + position;
-        playSongAtGlobalIndex(globalPosition);
+        return playSongAtGlobalIndex(globalPosition);
     }
 
-    private void playSongAtGlobalIndex(int globalPosition) {
-        if (currentPlaylist == null || currentPlaylist.getSongs() == null) return;
-        
-        List<MediaItem> mediaItems = new ArrayList<>();
-        for (MusicInfo song : currentPlaylist.getSongs()) {
-            mediaItems.add(createMediaItem(song));
+    private boolean playSongAtGlobalIndex(int globalPosition) {
+        if (currentPlaylist == null || currentPlaylist.getSongs() == null || player == null) {
+            return false;
         }
-        
-        if (player != null) {
-            if (globalPosition < 0 || globalPosition >= mediaItems.size()) return;
-            player.setMediaItems(mediaItems, globalPosition, 0);
-            player.setShuffleModeEnabled(shuffleEnabled);
-            player.prepare();
-            player.play();
-            int pageStart = currentSongPage * SONGS_PER_PAGE;
-            int pageEnd = pageStart + songAdapter.getItemCount();
-            songAdapter.setPlayingIndex(globalPosition >= pageStart && globalPosition < pageEnd
-                    ? globalPosition - pageStart : -1);
+        PlaybackQueue queue = PlaybackQueue.from(currentPlaylist.getSongs());
+        int queueIndex = queue.queueIndexForSourceIndex(globalPosition);
+        if (queueIndex < 0) {
+            Toast.makeText(requireContext(), "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
+            return false;
         }
-    }
-    
-    private MediaItem createMediaItem(MusicInfo song) {
-        Bundle extras = song.toPlaybackExtras();
-        
-        Uri artworkUri = song.getPicUrl() != null ? Uri.parse(song.getPicUrl()) : null;
-        Uri resolveUri = MusicService.buildResolveUri(song.getSource(), song.getSongmid(), song.getName());
-        
-        MediaMetadata.Builder metadataBuilder = new MediaMetadata.Builder()
-                .setTitle(song.getName())
-                .setArtist(song.getSinger())
-                .setAlbumTitle(song.getAlbumName())
-                .setExtras(extras);
-        
-        if (artworkUri != null) {
-            metadataBuilder.setArtworkUri(artworkUri);
-        }
-        
-        return new MediaItem.Builder()
-                .setMediaId(song.getSongmid())
-                .setUri(resolveUri)
-                .setMediaMetadata(metadataBuilder.build())
-                .build();
+        player.setMediaItems(queue.getMediaItems(), queueIndex, 0);
+        player.setShuffleModeEnabled(shuffleEnabled);
+        player.prepare();
+        player.play();
+        int pageStart = currentSongPage * SONGS_PER_PAGE;
+        int pageEnd = pageStart + songAdapter.getItemCount();
+        songAdapter.setPlayingIndex(globalPosition >= pageStart && globalPosition < pageEnd
+                ? globalPosition - pageStart : -1);
+        return true;
     }
     
     @Override
@@ -621,5 +617,11 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
             controllerFuture = null;
         }
         player = null;
+    }
+
+    @Override
+    public void onDestroyView() {
+        songFocusRequestGeneration++;
+        super.onDestroyView();
     }
 }

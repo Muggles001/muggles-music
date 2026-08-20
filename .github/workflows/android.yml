@@ -37,6 +37,11 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
+      - name: Verify compatibility and unit tests
+        run: ./gradlew testDebugUnitTest lintDebug --no-daemon
+        env:
+          GRADLE_CONNECT_TIMEOUT_MAX: 120
+
       - name: Select build variant
         id: build_config
         env:

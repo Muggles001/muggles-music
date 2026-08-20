@@ -38,7 +38,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:src="@drawable/ic_playlist_music"
-            android:tint="@color/lx_brand"
+            app:tint="@color/lx_brand"
             android:scaleType="centerInside"
             android:padding="7dp"
             android:contentDescription="歌单" />

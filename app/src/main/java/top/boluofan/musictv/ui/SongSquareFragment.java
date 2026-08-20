@@ -159,16 +159,14 @@ public class SongSquareFragment extends Fragment {
             startActivity(intent);
         });
         
-        rvSourceList.post(() -> {
-            if (!isAdded() || rvSourceList == null) return;
-            if (rvSourceList.getChildCount() > 0) {
-                rvSourceList.getChildAt(0).requestFocus();
-            }
-        });
     }
     
     private void selectSource(int position) {
         if (position < 0 || position >= SOURCES.length) return;
+
+        View focusedBeforeUpdate = getActivity() != null
+                ? getActivity().getCurrentFocus() : null;
+        boolean retainSourceFocus = isWithinView(focusedBeforeUpdate, rvSourceList);
 
         navigationReady = false;
 
@@ -198,7 +196,7 @@ public class SongSquareFragment extends Fragment {
         
         loadPlaylists(false);
         
-        rvSourceList.post(() -> {
+        if (retainSourceFocus) rvSourceList.post(() -> {
             if (!isAdded() || rvSourceList == null) return;
             if (rvSourceList.getChildCount() > position) {
                 View itemView = rvSourceList.getChildAt(position);
@@ -282,15 +280,6 @@ public class SongSquareFragment extends Fragment {
                 }
                 updatePager();
                 
-                if (!advanceAfterLoad) rvSourceList.post(() -> {
-                    if (!isAdded() || rvSourceList == null) return;
-                    if (rvSourceList.getChildCount() > currentSourceIndex) {
-                        View itemView = rvSourceList.getChildAt(currentSourceIndex);
-                        if (itemView != null && itemView.isFocusable()) {
-                            itemView.requestFocus();
-                        }
-                    }
-                });
             }
 
             @Override
@@ -474,6 +463,17 @@ public class SongSquareFragment extends Fragment {
                 || keyCode == KeyEvent.KEYCODE_DPAD_DOWN
                 || keyCode == KeyEvent.KEYCODE_DPAD_LEFT
                 || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT;
+    }
+
+    private boolean isWithinView(View child, View ancestor) {
+        if (child == null || ancestor == null) return false;
+        View current = child;
+        while (current != null) {
+            if (current == ancestor) return true;
+            if (!(current.getParent() instanceof View)) return false;
+            current = (View) current.getParent();
+        }
+        return false;
     }
 
     @Override

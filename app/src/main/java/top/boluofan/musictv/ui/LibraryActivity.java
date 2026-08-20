@@ -21,6 +21,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import okhttp3.ResponseBody;
 import top.boluofan.musictv.MusicService;
+import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxApiService;
@@ -125,8 +126,9 @@ public class LibraryActivity extends AppCompatActivity {
         });
         
         songAdapter.setOnFullscreenClickListener((song, position) -> {
-            playSongAtIndex(position);
-            startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
+            if (playSongAtIndex(position)) {
+                startActivity(new Intent(this, top.boluofan.musictv.PlayerActivity.class));
+            }
         });
         
         songAdapter.setOnDeleteClickListener((song, position) -> {
@@ -227,20 +229,20 @@ public class LibraryActivity extends AppCompatActivity {
         Playlist targetPlaylist = null;
         
         Playlist defaultPlaylist = listData.getDefaultPlaylist();
-        if (defaultPlaylist != null && defaultPlaylist.getName().equals(playlistName)) {
+        if (defaultPlaylist != null && java.util.Objects.equals(defaultPlaylist.getName(), playlistName)) {
             targetPlaylist = defaultPlaylist;
         }
         
         if (targetPlaylist == null) {
             Playlist lovePlaylist = listData.getLovePlaylist();
-            if (lovePlaylist != null && lovePlaylist.getName().equals(playlistName)) {
+            if (lovePlaylist != null && java.util.Objects.equals(lovePlaylist.getName(), playlistName)) {
                 targetPlaylist = lovePlaylist;
             }
         }
         
         if (targetPlaylist == null && listData.getUserList() != null) {
             for (Playlist playlist : listData.getUserList()) {
-                if (playlist.getName().equals(playlistName)) {
+                if (java.util.Objects.equals(playlist.getName(), playlistName)) {
                     targetPlaylist = playlist;
                     break;
                 }
@@ -262,21 +264,23 @@ public class LibraryActivity extends AppCompatActivity {
         }
     }
 
-    private void playSongAtIndex(int index) {
-        if (currentPlaylist == null || currentPlaylist.getSongs() == null || player == null) return;
-        if (index < 0 || index >= currentPlaylist.getSongs().size()) return;
-        
-        List<MediaItem> mediaItems = new ArrayList<>();
-        for (MusicInfo song : currentPlaylist.getSongs()) {
-            MediaItem item = createMediaItem(song);
-            mediaItems.add(item);
+    private boolean playSongAtIndex(int index) {
+        if (currentPlaylist == null || currentPlaylist.getSongs() == null || player == null) {
+            return false;
         }
-        
-        player.setMediaItems(mediaItems, index, 0);
+        if (index < 0 || index >= currentPlaylist.getSongs().size()) return false;
+        PlaybackQueue queue = PlaybackQueue.from(currentPlaylist.getSongs());
+        int queueIndex = queue.queueIndexForSourceIndex(index);
+        if (queueIndex < 0) {
+            Toast.makeText(this, "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        player.setMediaItems(queue.getMediaItems(), queueIndex, 0);
         player.prepare();
         player.play();
         
         songAdapter.setPlayingIndex(index);
+        return true;
     }
     
     private void playAll(boolean shuffle) {
@@ -287,48 +291,19 @@ public class LibraryActivity extends AppCompatActivity {
         
         if (player == null) return;
         
-        List<MediaItem> mediaItems = new ArrayList<>();
-        for (MusicInfo song : currentPlaylist.getSongs()) {
-            mediaItems.add(createMediaItem(song));
+        PlaybackQueue queue = PlaybackQueue.from(currentPlaylist.getSongs());
+        if (queue.isEmpty()) {
+            Toast.makeText(this, "歌曲缺少可用的播放信息", Toast.LENGTH_SHORT).show();
+            return;
         }
-        
-        int startIndex = shuffle ? (int) (Math.random() * currentPlaylist.getSongs().size()) : 0;
-        
-        player.setMediaItems(mediaItems, startIndex, 0);
+
+        int startIndex = shuffle ? (int) (Math.random() * queue.size()) : 0;
+
+        player.setMediaItems(queue.getMediaItems(), startIndex, 0);
         player.prepare();
         player.play();
         
         Toast.makeText(this, shuffle ? "随机播放" : "播放全部", Toast.LENGTH_SHORT).show();
-    }
-
-    private MediaItem createMediaItem(MusicInfo song) {
-        Bundle extras = song.toPlaybackExtras();
-        
-        Uri artworkUri = null;
-        String coverUrl = song.getPicUrl();
-        if (coverUrl != null && !coverUrl.isEmpty()) {
-            artworkUri = Uri.parse(coverUrl);
-        }
-        
-        Uri resolveUri = MusicService.buildResolveUri(song.getSource(), song.getSongmid(), song.getName());
-        
-        MediaItem.Builder builder = new MediaItem.Builder()
-                .setMediaId(song.getSongmid())
-                .setUri(resolveUri);
-        
-        MediaMetadata.Builder metadataBuilder = new MediaMetadata.Builder()
-                .setTitle(song.getName())
-                .setArtist(song.getSinger())
-                .setAlbumTitle(song.getAlbumName())
-                .setExtras(extras);
-        
-        if (artworkUri != null) {
-            metadataBuilder.setArtworkUri(artworkUri);
-        }
-        
-        builder.setMediaMetadata(metadataBuilder.build());
-        
-        return builder.build();
     }
 
     private void showDeleteConfirmDialog(MusicInfo song, int position) {
@@ -393,7 +368,7 @@ public class LibraryActivity extends AppCompatActivity {
 
                 Playlist targetPlaylist = null;
                 for (Playlist p : userPlaylists) {
-                    if (currentPlaylist.getName().equals(p.getName())) {
+                    if (java.util.Objects.equals(currentPlaylist.getName(), p.getName())) {
                         targetPlaylist = p;
                         break;
                     }
@@ -477,10 +452,16 @@ public class LibraryActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         SessionToken sessionToken = new SessionToken(this, new ComponentName(this, MusicService.class));
-        controllerFuture = new MediaController.Builder(this, sessionToken).buildAsync();
-        controllerFuture.addListener(() -> {
+        final ListenableFuture<MediaController> pendingController =
+                new MediaController.Builder(this, sessionToken).buildAsync();
+        controllerFuture = pendingController;
+        pendingController.addListener(() -> {
+            if (controllerFuture != pendingController || isFinishing() || isDestroyed()) {
+                MediaController.releaseFuture(pendingController);
+                return;
+            }
             try {
-                player = controllerFuture.get();
+                player = pendingController.get();
                 player.addListener(new Player.Listener() {
                     @Override
                     public void onIsPlayingChanged(boolean isPlaying) {
@@ -498,8 +479,11 @@ public class LibraryActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
+        ListenableFuture<MediaController> pendingController = controllerFuture;
+        controllerFuture = null;
+        player = null;
+        if (pendingController != null) {
+            MediaController.releaseFuture(pendingController);
         }
     }
 

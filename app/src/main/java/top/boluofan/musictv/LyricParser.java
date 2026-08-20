@@ -1,6 +1,7 @@
 package top.boluofan.musictv;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -54,7 +55,16 @@ public final class LyricParser {
                 }
             }
         }
-        candidates.sort(Comparator.comparingLong(candidate -> candidate.distanceMs));
+        // List.sort and Comparator.comparingLong are only available from API 24.
+        // The app supports Android 5.0 (API 21), so use the legacy collection
+        // helper to keep opening the lyric screen safe on older TVs.
+        Collections.sort(candidates, new Comparator<TranslationCandidate>() {
+            @Override
+            public int compare(TranslationCandidate left, TranslationCandidate right) {
+                return left.distanceMs < right.distanceMs ? -1
+                        : (left.distanceMs == right.distanceMs ? 0 : 1);
+            }
+        });
 
         int[] translationForPrimary = new int[primary.size()];
         for (int i = 0; i < translationForPrimary.length; i++) translationForPrimary[i] = -1;
@@ -105,7 +115,13 @@ public final class LyricParser {
         for (String rawLine : rawLines) {
             parseLine(rawLine, offsetMs, result);
         }
-        result.sort(Comparator.comparingLong(line -> line.timeMs));
+        Collections.sort(result, new Comparator<Line>() {
+            @Override
+            public int compare(Line left, Line right) {
+                return left.timeMs < right.timeMs ? -1
+                        : (left.timeMs == right.timeMs ? 0 : 1);
+            }
+        });
         return result;
     }
 
