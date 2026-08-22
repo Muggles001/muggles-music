@@ -326,14 +326,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         if (rvSongs == null || songAdapter == null || songAdapter.getItemCount() == 0) {
             return true;
         }
-        RecyclerView.ViewHolder holder = rvSongs.findViewHolderForAdapterPosition(0);
-        if (holder != null) return holder.itemView.requestFocus();
-        rvSongs.scrollToPosition(0);
-        rvSongs.post(() -> {
-            RecyclerView.ViewHolder target = rvSongs.findViewHolderForAdapterPosition(0);
-            if (target != null) target.itemView.requestFocus();
-        });
-        return true;
+        return songAdapter.requestFocusAt(rvSongs, 0);
     }
 
     private boolean focusCurrentBoard() {
@@ -899,11 +892,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
     private void requestFirstSongFocus() {
         if (rvSongs == null || songAdapter == null || songAdapter.getItemCount() == 0) return;
-        rvSongs.scrollToPosition(0);
-        rvSongs.post(() -> {
-            RecyclerView.ViewHolder holder = rvSongs.findViewHolderForAdapterPosition(0);
-            if (holder != null) holder.itemView.requestFocus();
-        });
+        songAdapter.requestFocusAt(rvSongs, 0);
     }
 
     private void showLoading(boolean show) {

@@ -2,13 +2,13 @@ package top.boluofan.musictv.util;
 
 import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import java.util.Hashtable;
 import top.boluofan.musictv.R;
 
@@ -20,7 +20,7 @@ public class DialogHelper {
     }
 
     public static AlertDialog showConfirmDialog(Context context, String title, String message, String confirmText, String cancelText, IDialogCallback callback) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.CustomAlertDialog);
         builder.setTitle(title);
         builder.setMessage(message);
 
@@ -39,29 +39,11 @@ public class DialogHelper {
             Button negativeButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
 
             if (positiveButton != null) {
-                positiveButton.setTextSize(16);
-                positiveButton.setTextColor(Color.WHITE);
-                positiveButton.setBackgroundResource(R.drawable.bg_btn_primary);
-                positiveButton.setPadding(40, 20, 40, 20);
-                android.widget.LinearLayout.LayoutParams params = new android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
-                params.leftMargin = 20;
-                positiveButton.setLayoutParams(params);
+                styleDialogButton(context, positiveButton, true, false);
             }
 
             if (negativeButton != null) {
-                negativeButton.setTextSize(16);
-                negativeButton.setTextColor(Color.WHITE);
-                negativeButton.setBackgroundResource(R.drawable.bg_btn_secondary);
-                negativeButton.setPadding(40, 20, 40, 20);
-                negativeButton.setFocusable(true);
-                negativeButton.requestFocus();
-                android.widget.LinearLayout.LayoutParams params = new android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
-                params.leftMargin = 30;
-                negativeButton.setLayoutParams(params);
+                styleDialogButton(context, negativeButton, false, true);
             }
 
             if (dialog.getWindow() != null) {
@@ -74,7 +56,7 @@ public class DialogHelper {
     }
 
     public static AlertDialog showPlaylistPickerDialog(Context context, String title, String[] playlistNames, DialogInterface.OnClickListener onItemClick) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.CustomAlertDialog);
         builder.setTitle(title);
         builder.setItems(playlistNames, onItemClick);
         builder.setNegativeButton("取消", null);
@@ -87,17 +69,7 @@ public class DialogHelper {
             }
             Button negativeButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
             if (negativeButton != null) {
-                negativeButton.setTextSize(16);
-                negativeButton.setTextColor(Color.WHITE);
-                negativeButton.setBackgroundResource(R.drawable.bg_btn_secondary);
-                negativeButton.setPadding(40, 20, 40, 20);
-                negativeButton.setFocusable(true);
-                negativeButton.requestFocus();
-                android.widget.LinearLayout.LayoutParams params = new android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
-                params.leftMargin = 30;
-                negativeButton.setLayoutParams(params);
+                styleDialogButton(context, negativeButton, false, true);
             }
         });
 
@@ -130,7 +102,8 @@ public class DialogHelper {
             ivQrCode.setImageBitmap(qrBitmap);
         }
         
-        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(context);
+        androidx.appcompat.app.AlertDialog.Builder builder =
+                new androidx.appcompat.app.AlertDialog.Builder(context, R.style.CustomAlertDialog);
         builder.setView(dialogView);
         
         androidx.appcompat.app.AlertDialog dialog = builder.create();
@@ -147,11 +120,6 @@ public class DialogHelper {
     private static android.graphics.Bitmap generateQrCodeBitmap(String content, int size) {
         try {
             com.google.zxing.BarcodeFormat format = com.google.zxing.BarcodeFormat.QR_CODE;
-            com.google.zxing.EncodeHintType[] hintTypes = new com.google.zxing.EncodeHintType[]{
-                com.google.zxing.EncodeHintType.CHARACTER_SET,
-                com.google.zxing.EncodeHintType.MARGIN
-            };
-            String[] hints = new String[]{"UTF-8", "1"};
             Hashtable<com.google.zxing.EncodeHintType, String> hints2 = new Hashtable<>();
             hints2.put(com.google.zxing.EncodeHintType.CHARACTER_SET, "UTF-8");
             hints2.put(com.google.zxing.EncodeHintType.MARGIN, "1");
@@ -172,5 +140,28 @@ public class DialogHelper {
             e.printStackTrace();
             return null;
         }
+    }
+
+    private static void styleDialogButton(Context context, Button button,
+                                          boolean primary, boolean requestFocus) {
+        button.setTextSize(16);
+        button.setTextColor(ContextCompat.getColorStateList(context, primary
+                ? R.color.selector_primary_action_content
+                : R.color.selector_action_content));
+        button.setBackgroundResource(primary
+                ? R.drawable.bg_btn_primary : R.drawable.bg_btn_secondary);
+        int horizontal = context.getResources().getDimensionPixelSize(R.dimen.lx_space_md);
+        int vertical = context.getResources().getDimensionPixelSize(R.dimen.lx_space_sm);
+        button.setPadding(horizontal, vertical, horizontal, vertical);
+        button.setMinWidth(context.getResources().getDimensionPixelSize(R.dimen.lx_button_short_width));
+        button.setMinHeight(context.getResources().getDimensionPixelSize(R.dimen.lx_control_standard));
+        if (button.getLayoutParams() instanceof android.widget.LinearLayout.LayoutParams) {
+            android.widget.LinearLayout.LayoutParams params =
+                    (android.widget.LinearLayout.LayoutParams) button.getLayoutParams();
+            params.setMarginStart(context.getResources().getDimensionPixelSize(R.dimen.lx_space_sm));
+            button.setLayoutParams(params);
+        }
+        button.setFocusable(true);
+        if (requestFocus) button.requestFocus();
     }
 }

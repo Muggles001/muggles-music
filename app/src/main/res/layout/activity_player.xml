@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"
+    android:background="@color/player_bg"
     tools:context=".PlayerActivity">
 
     <!-- 1. Background: Fullscreen Cover with Blur & Dim -->
@@ -60,14 +60,14 @@
             app:layout_constraintDimensionRatio="1:1"
             app:layout_constraintWidth_percent="0.27"
             app:cardCornerRadius="@dimen/player_cover_corner_radius"
-            app:cardElevation="12dp"
-            app:cardBackgroundColor="#00000000"
+            app:cardElevation="@dimen/lx_elevation_surface"
+            app:cardBackgroundColor="@android:color/transparent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/tvBigTitle"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/guideSplit"
             app:layout_constraintVertical_chainStyle="packed"
-            android:layout_marginBottom="8dp">
+            android:layout_marginBottom="@dimen/lx_space_sm">
 
             <ImageView
                 android:id="@+id/ivBigCover"
@@ -83,7 +83,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="Song Title"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/player_text_primary"
             android:textSize="22sp"
             android:textStyle="bold"
             android:gravity="center"
@@ -92,7 +92,7 @@
             app:layout_constraintBottom_toTopOf="@+id/tvBigArtist"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/guideSplit"
-            android:layout_marginBottom="4dp"/>
+            android:layout_marginBottom="@dimen/lx_space_xxs"/>
 
         <!-- Artist Name: Centered - Smaller -->
         <top.boluofan.musictv.MarqueeTextView
@@ -100,8 +100,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="Artist Name"
-            android:textColor="#80FFFFFF"
-            android:textSize="14sp"
+            android:textColor="@color/player_text_secondary"
+            android:textSize="@dimen/lx_type_body"
             android:gravity="center"
             app:layout_constraintWidth_percent="0.20"
             app:layout_constraintTop_toBottomOf="@+id/tvBigTitle"
@@ -149,8 +149,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="暂无歌词"
-            android:textColor="#66FFFFFF"
-            android:textSize="24sp"
+            android:textColor="@color/player_text_muted"
+            android:textSize="@dimen/lx_type_title"
             android:visibility="gone"
             app:layout_constraintBottom_toTopOf="@+id/guideBottom"
             app:layout_constraintEnd_toEndOf="parent"
@@ -245,8 +245,8 @@
                 android:paddingEnd="12dp"
                 android:splitTrack="false"
                 android:progressDrawable="@drawable/bg_progress"
-                android:progressTint="#FFFFFF"
-                android:progressBackgroundTint="#4DFFFFFF"
+                android:progressTint="@color/player_text_primary"
+                android:progressBackgroundTint="@color/player_text_muted"
                 android:thumb="@drawable/selector_thumb"
                 android:focusable="true"
                 android:nextFocusUp="@+id/progressBar"
@@ -275,8 +275,8 @@
                     android:layout_height="20dp"
                     android:gravity="center"
                     android:text="00:00"
-                    android:textColor="#DDDDDD"
-                    android:textSize="12sp"
+                    android:textColor="@color/player_text_secondary"
+                    android:textSize="@dimen/lx_type_caption"
                     android:textStyle="bold"
                     android:fontFamily="monospace"
                     app:layout_constraintStart_toStartOf="parent"
@@ -289,8 +289,8 @@
                     android:layout_height="20dp"
                     android:gravity="center"
                     android:text="00:00"
-                    android:textColor="#DDDDDD"
-                    android:textSize="12sp"
+                    android:textColor="@color/player_text_secondary"
+                    android:textSize="@dimen/lx_type_caption"
                     android:textStyle="bold"
                     android:fontFamily="monospace"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -301,13 +301,13 @@
             <!-- CENTER GROUP: Prev, Play, Next -->
             <ImageButton
                 android:id="@+id/btnPlayPause"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_marginBottom="32dp"
+                android:layout_width="@dimen/lx_control_hero"
+                android:layout_height="@dimen/lx_control_hero"
+                android:layout_marginBottom="@dimen/lx_space_lg"
                 android:background="@drawable/btn_focused_circle"
                 android:src="@drawable/ic_play"
                 android:scaleType="fitCenter"
-                android:padding="12dp"
+                android:padding="@dimen/lx_space_md"
                 android:contentDescription="PlayPause"
                 android:focusable="true"
                 android:nextFocusUp="@+id/progressBar"
@@ -316,19 +316,20 @@
                 android:nextFocusDown="@+id/btnPlayPause"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent">
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:tint="@color/selector_player_action_content">
                 <requestFocus />
             </ImageButton>
 
             <ImageButton
                 android:id="@+id/btnPrev"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_marginEnd="16dp"
+                android:layout_width="@dimen/lx_control_hero"
+                android:layout_height="@dimen/lx_control_hero"
+                android:layout_marginEnd="@dimen/lx_space_md"
                 android:background="@drawable/btn_focused_circle"
                 android:src="@drawable/ic_skip_previous"
                 android:scaleType="centerInside"
-                android:padding="12dp"
+                android:padding="@dimen/lx_space_md"
                 android:contentDescription="Previous"
                 android:focusable="true"
                 android:nextFocusUp="@+id/progressBar"
@@ -337,17 +338,18 @@
                 android:nextFocusDown="@+id/btnPrev"
                 app:layout_constraintEnd_toStartOf="@+id/btnPlayPause"
                 app:layout_constraintTop_toTopOf="@+id/btnPlayPause"
-                app:layout_constraintBottom_toBottomOf="@+id/btnPlayPause"/>
+                app:layout_constraintBottom_toBottomOf="@+id/btnPlayPause"
+                app:tint="@color/selector_player_action_content"/>
 
             <ImageButton
                 android:id="@+id/btnNext"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_marginStart="16dp"
+                android:layout_width="@dimen/lx_control_hero"
+                android:layout_height="@dimen/lx_control_hero"
+                android:layout_marginStart="@dimen/lx_space_md"
                 android:background="@drawable/btn_focused_circle"
                 android:src="@drawable/ic_skip_next"
                 android:scaleType="centerInside"
-                android:padding="12dp"
+                android:padding="@dimen/lx_space_md"
                 android:contentDescription="Next"
                 android:focusable="true"
                 android:nextFocusUp="@+id/progressBar"
@@ -356,19 +358,20 @@
                 android:nextFocusDown="@+id/btnNext"
                 app:layout_constraintStart_toEndOf="@+id/btnPlayPause"
                 app:layout_constraintTop_toTopOf="@+id/btnPlayPause"
-                app:layout_constraintBottom_toBottomOf="@+id/btnPlayPause"/>
+                app:layout_constraintBottom_toBottomOf="@+id/btnPlayPause"
+                app:tint="@color/selector_player_action_content"/>
 
             <!-- LEFT GROUP: Playlist -->
             <ImageButton
                 android:id="@+id/btnQueue"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_marginBottom="32dp"
-                android:layout_marginStart="48dp"
+                android:layout_width="@dimen/lx_control_hero"
+                android:layout_height="@dimen/lx_control_hero"
+                android:layout_marginBottom="@dimen/lx_space_lg"
+                android:layout_marginStart="@dimen/lx_space_xl"
                 android:background="@drawable/btn_focused_circle"
                 android:src="@drawable/ic_queue_music"
                 android:scaleType="centerInside"
-                android:padding="12dp"
+                android:padding="@dimen/lx_space_md"
                 android:contentDescription="Queue"
                 android:focusable="true"
                 android:nextFocusUp="@+id/progressBar"
@@ -376,18 +379,19 @@
                 android:nextFocusLeft="@+id/btnQueue"
                 android:nextFocusDown="@+id/btnQueue"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:tint="@color/selector_player_action_content" />
 
             <!-- RIGHT GROUP: Mode, Scrape -->
             <ImageButton
                 android:id="@+id/btnRepeat"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_marginEnd="16dp"
+                android:layout_width="@dimen/lx_control_hero"
+                android:layout_height="@dimen/lx_control_hero"
+                android:layout_marginEnd="@dimen/lx_space_md"
                 android:background="@drawable/btn_focused_circle"
                 android:src="@drawable/ic_repeat"
                 android:scaleType="centerInside"
-                android:padding="12dp"
+                android:padding="@dimen/lx_space_md"
                 android:alpha="0.8"
                 android:contentDescription="Mode"
                 android:focusable="true"
@@ -397,17 +401,18 @@
                 android:nextFocusDown="@+id/btnRepeat"
                 app:layout_constraintEnd_toStartOf="@+id/btnScrape"
                 app:layout_constraintTop_toTopOf="@+id/btnQueue"
-                app:layout_constraintBottom_toBottomOf="@+id/btnQueue"/>
+                app:layout_constraintBottom_toBottomOf="@+id/btnQueue"
+                app:tint="@color/selector_player_action_content"/>
 
             <ImageButton
                 android:id="@+id/btnScrape"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_marginEnd="48dp"
+                android:layout_width="@dimen/lx_control_hero"
+                android:layout_height="@dimen/lx_control_hero"
+                android:layout_marginEnd="@dimen/lx_space_xl"
                 android:background="@drawable/btn_focused_circle"
                 android:src="@drawable/ic_scrape"
                 android:scaleType="centerInside"
-                android:padding="12dp"
+                android:padding="@dimen/lx_space_md"
                 android:contentDescription="Scrape"
                 android:focusable="true"
                 android:nextFocusUp="@+id/progressBar"
@@ -416,7 +421,8 @@
                 android:nextFocusDown="@+id/btnScrape"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/btnQueue"
-                app:layout_constraintBottom_toBottomOf="@+id/btnQueue"/>
+                app:layout_constraintBottom_toBottomOf="@+id/btnQueue"
+                app:tint="@color/selector_player_action_content"/>
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 

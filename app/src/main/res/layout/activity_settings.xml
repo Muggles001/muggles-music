@@ -23,13 +23,13 @@
 
         <ImageButton
             android:id="@+id/btnBack"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
             android:src="@drawable/ic_back"
             android:background="@drawable/btn_focused_circle"
             android:scaleType="centerInside"
-            android:padding="8dp"
-            app:tint="@color/lx_text_primary"
+            android:padding="@dimen/lx_space_sm"
+            app:tint="@color/selector_action_content"
             android:focusable="true"
             android:contentDescription="返回" />
 
@@ -38,10 +38,9 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="设置"
-            android:textSize="24sp"
+            android:textSize="@dimen/lx_type_title"
             android:textStyle="bold"
-            android:textColor="@color/lx_text_primary"
-            android:layout_marginStart="16dp" />
+            android:textColor="@color/lx_text_primary" />
 
     </LinearLayout>
 
@@ -59,21 +58,21 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:paddingStart="28dp"
-            android:paddingEnd="28dp"
-            android:paddingTop="24dp"
-            android:paddingBottom="24dp">
+            android:paddingStart="@dimen/lx_title_gutter"
+            android:paddingEnd="@dimen/lx_title_gutter"
+            android:paddingTop="@dimen/lx_nav_gutter"
+            android:paddingBottom="@dimen/lx_nav_gutter">
 
             <!-- 服务器配置 -->
             <LinearLayout
                 android:id="@+id/layoutServerConfig"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="@dimen/lx_control_standard"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/selector_item_bg"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
+                android:background="@drawable/selector_menu_item"
+                android:paddingStart="@dimen/lx_space_md"
+                android:paddingEnd="@dimen/lx_space_md"
                 android:focusable="true"
                 android:clickable="true"
                 android:nextFocusLeft="@id/tabSettings">
@@ -84,23 +83,26 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="服务器配置"
-                    android:textSize="16sp"
-                    android:textColor="@color/lx_text_primary" />
+                    android:textSize="@dimen/lx_type_control"
+                    android:textColor="@color/selector_action_content"
+                    android:duplicateParentState="true" />
 
                 <TextView
                     android:id="@+id/tvServerUrl"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="未配置"
-                    android:textSize="14sp"
-                    android:textColor="@color/lx_text_secondary" />
+                    android:textSize="@dimen/lx_type_body"
+                    android:textColor="@color/selector_action_secondary_content"
+                    android:duplicateParentState="true" />
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="@dimen/lx_icon_small"
+                    android:layout_height="@dimen/lx_icon_small"
                     android:src="@drawable/ic_chevron_right"
-                    android:layout_marginStart="8dp"
-                    app:tint="@color/lx_text_muted" />
+                    android:layout_marginStart="@dimen/lx_space_sm"
+                    android:duplicateParentState="true"
+                    app:tint="@color/selector_action_content" />
 
             </LinearLayout>
 
@@ -108,13 +110,13 @@
             <LinearLayout
                 android:id="@+id/layoutUserInfo"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="@dimen/lx_control_standard"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/selector_item_bg"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:layout_marginTop="8dp"
+                android:background="@drawable/selector_menu_item"
+                android:paddingStart="@dimen/lx_space_md"
+                android:paddingEnd="@dimen/lx_space_md"
+                android:layout_marginTop="@dimen/lx_space_sm"
                 android:focusable="true"
                 android:clickable="true"
                 android:nextFocusLeft="@id/tabSettings">
@@ -125,23 +127,26 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="当前用户"
-                    android:textSize="16sp"
-                    android:textColor="@color/lx_text_primary" />
+                    android:textSize="@dimen/lx_type_control"
+                    android:textColor="@color/selector_action_content"
+                    android:duplicateParentState="true" />
 
                 <TextView
                     android:id="@+id/tvUsername"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="未登录"
-                    android:textSize="14sp"
-                    android:textColor="@color/lx_text_secondary" />
+                    android:textSize="@dimen/lx_type_body"
+                    android:textColor="@color/selector_action_secondary_content"
+                    android:duplicateParentState="true" />
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="@dimen/lx_icon_small"
+                    android:layout_height="@dimen/lx_icon_small"
                     android:src="@drawable/ic_chevron_right"
-                    android:layout_marginStart="8dp"
-                    app:tint="@color/lx_text_muted" />
+                    android:layout_marginStart="@dimen/lx_space_sm"
+                    android:duplicateParentState="true"
+                    app:tint="@color/selector_action_content" />
 
             </LinearLayout>
 
@@ -149,13 +154,13 @@
             <LinearLayout
                 android:id="@+id/layoutBackgroundPlay"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="@dimen/lx_control_standard"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/selector_item_bg"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:layout_marginTop="8dp"
+                android:background="@drawable/selector_menu_item"
+                android:paddingStart="@dimen/lx_space_md"
+                android:paddingEnd="@dimen/lx_space_md"
+                android:layout_marginTop="@dimen/lx_space_sm"
                 android:focusable="true"
                 android:clickable="true"
                 android:nextFocusLeft="@id/tabSettings">
@@ -165,17 +170,18 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="允许后台播放"
-                    android:textSize="16sp"
-                    android:textColor="@color/lx_text_primary" />
+                    android:textSize="@dimen/lx_type_control"
+                    android:textColor="@color/selector_action_content"
+                    android:duplicateParentState="true" />
 
                 <ImageButton
                     android:id="@+id/btnBackgroundPlay"
                     android:layout_width="60dp"
                     android:layout_height="30dp"
-                    android:background="@drawable/toggle_on"
+                    android:background="@drawable/toggle_on_new"
                     android:scaleType="centerInside"
-                    android:clickable="true"
-                    android:focusable="true"
+                    android:clickable="false"
+                    android:focusable="false"
                     android:contentDescription="允许后台播放" />
 
             </LinearLayout>
@@ -184,11 +190,11 @@
             <LinearLayout
                 android:id="@+id/layoutLogout"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="@dimen/lx_control_standard"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_btn_primary"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="@dimen/lx_space_lg"
                 android:focusable="true"
                 android:clickable="true">
 
@@ -197,8 +203,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="清除配置"
-                    android:textSize="16sp"
-                    android:textColor="@color/lx_text_primary" />
+                    android:textSize="@dimen/lx_type_control"
+                    android:textColor="@color/selector_primary_action_content"
+                    android:duplicateParentState="true" />
 
             </LinearLayout>
 

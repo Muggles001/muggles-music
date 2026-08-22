@@ -8,13 +8,58 @@
     <dimen name="lx_title_gutter">28dp</dimen>
     <dimen name="lx_title_top">24dp</dimen>
     <dimen name="lx_title_height">88dp</dimen>
-    <dimen name="lx_secondary_nav_height">72dp</dimen>
+    <dimen name="lx_secondary_nav_height">68dp</dimen>
     <dimen name="lx_secondary_item_width">180dp</dimen>
     <dimen name="lx_secondary_item_height">56dp</dimen>
-    <dimen name="lx_primary_item_height">58dp</dimen>
+    <dimen name="lx_primary_item_height">56dp</dimen>
     <dimen name="lx_pager_height">56dp</dimen>
-    <dimen name="lx_glass_radius">24dp</dimen>
-    <dimen name="lx_rail_radius">28dp</dimen>
+    <dimen name="lx_glass_radius">26dp</dimen>
+    <dimen name="lx_rail_radius">26dp</dimen>
+
+    <dimen name="lx_space_xxs">4dp</dimen>
+    <dimen name="lx_space_xs">6dp</dimen>
+    <dimen name="lx_space_sm">10dp</dimen>
+    <dimen name="lx_space_md">16dp</dimen>
+    <dimen name="lx_space_lg">26dp</dimen>
+    <dimen name="lx_space_xl">42dp</dimen>
+    <dimen name="lx_space_xxl">68dp</dimen>
+
+    <dimen name="lx_radius_small">10dp</dimen>
+    <dimen name="lx_radius_control">16dp</dimen>
+    <dimen name="lx_radius_panel">26dp</dimen>
+    <dimen name="lx_stroke_hairline">1dp</dimen>
+    <dimen name="lx_stroke_selected">2dp</dimen>
+    <dimen name="lx_stroke_focus">3dp</dimen>
+
+    <dimen name="lx_control_compact">44dp</dimen>
+    <dimen name="lx_control_standard">56dp</dimen>
+    <dimen name="lx_control_hero">68dp</dimen>
+    <dimen name="lx_button_short_width">90dp</dimen>
+    <dimen name="lx_button_wide_width">146dp</dimen>
+    <dimen name="lx_list_row_height">68dp</dimen>
+    <dimen name="lx_list_cover_size">42dp</dimen>
+    <dimen name="lx_pager_button_width">72dp</dimen>
+    <dimen name="lx_pager_button_height">44dp</dimen>
+    <dimen name="lx_pager_number_width">56dp</dimen>
+
+    <dimen name="lx_icon_small">20dp</dimen>
+    <dimen name="lx_icon_default">26dp</dimen>
+    <dimen name="lx_icon_large">42dp</dimen>
+
+    <dimen name="lx_type_caption">12sp</dimen>
+    <dimen name="lx_type_body">14sp</dimen>
+    <dimen name="lx_type_control">16sp</dimen>
+    <dimen name="lx_type_section">20sp</dimen>
+    <dimen name="lx_type_title">24sp</dimen>
+    <dimen name="lx_type_hero">30sp</dimen>
+
+    <dimen name="lx_elevation_surface">8dp</dimen>
+    <dimen name="lx_elevation_control">4dp</dimen>
+    <dimen name="lx_floating_player_collapsed_width">56dp</dimen>
+    <dimen name="lx_floating_player_expanded_width">220dp</dimen>
+    <dimen name="lx_floating_player_title_width">146dp</dimen>
+    <dimen name="lx_floating_player_margin">24dp</dimen>
+    <dimen name="lx_floating_entry_bottom">144dp</dimen>
     <dimen name="player_cover_corner_radius">54dp</dimen>
     <dimen name="player_lyric_horizontal_padding">24dp</dimen>
 </resources>

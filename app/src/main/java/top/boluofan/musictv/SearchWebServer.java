@@ -65,14 +65,14 @@ public class SearchWebServer extends NanoHTTPD {
                 "    <style>\n" +
                 "        :root { color-scheme: light; }\n" +
                 "        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #F3F8F5 0%, #E9FFF4 52%, #D7F7E9 100%); color: #10231B; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }\n" +
-                "        .card { background: rgba(255,255,255,0.72); padding: 24px; border: 1px solid rgba(148,178,162,0.40); border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 18px 50px rgba(48,111,84,0.16); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }\n" +
+                "        .card { background: rgba(255,255,255,0.82); padding: 26px; border: 1px solid rgba(255,255,255,0.80); border-radius: 26px; width: 100%; max-width: 400px; box-shadow: 0 18px 48px rgba(48,111,84,0.14); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }\n" +
                 "        h2 { margin-top: 0; text-align: center; color: #00A965; }\n" +
                 "        .desc { text-align: center; color: #4B685A; font-size: 14px; margin-bottom: 24px; }\n" +
                 "        .field { margin-bottom: 16px; }\n" +
                 "        label { display: block; margin-bottom: 6px; color: #4B685A; font-size: 13px; }\n" +
-                "        input, select { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid rgba(148,178,162,0.60); background: rgba(255,255,255,0.62); color: #10231B; box-sizing: border-box; font-size: 16px; outline: none; }\n" +
+                "        input, select { width: 100%; min-height: 56px; padding: 12px 16px; border-radius: 16px; border: 1px solid rgba(148,178,162,0.60); background: rgba(255,255,255,0.82); color: #10231B; box-sizing: border-box; font-size: 16px; outline: none; }\n" +
                 "        input:focus, select:focus { border-color: #00A965; box-shadow: 0 0 0 3px rgba(0,200,120,0.16); }\n" +
-                "        button { width: 100%; padding: 14px; border-radius: 12px; border: none; background: #00C878; color: #FFFFFF; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 8px; box-shadow: 0 8px 18px rgba(0,169,101,0.22); }\n" +
+                "        button { width: 100%; min-height: 56px; padding: 14px 16px; border-radius: 16px; border: none; background: #00C878; color: #FFFFFF; font-weight: 600; font-size: 16px; cursor: pointer; margin-top: 10px; box-shadow: 0 8px 18px rgba(0,169,101,0.18); }\n" +
                 "        button:disabled { opacity: 0.62; cursor: wait; }\n" +
                 "        #status { text-align: center; margin-top: 16px; font-size: 14px; }\n" +
                 "    </style>\n" +

@@ -349,14 +349,17 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
         rvPlaylists.setVisibility(View.VISIBLE);
         rvPlaylists.setAlpha(0f);
         rvPlaylists.setTranslationX(-distance);
-        rvPlaylists.animate().alpha(1f).translationX(0f).setDuration(220L).start();
+        rvPlaylists.animate().alpha(1f).translationX(0f)
+                .setDuration(getResources().getInteger(R.integer.lx_motion_panel)).start();
 
-        rvSongs.animate().alpha(0f).translationX(distance).setDuration(150L)
+        rvSongs.animate().alpha(0f).translationX(distance)
+                .setDuration(getResources().getInteger(R.integer.lx_motion_focus))
                 .withEndAction(() -> {
                     rvSongs.setVisibility(View.GONE);
                     rvSongs.setTranslationX(0f);
                 }).start();
-        libraryActionBar.animate().alpha(0f).translationX(distance).setDuration(150L)
+        libraryActionBar.animate().alpha(0f).translationX(distance)
+                .setDuration(getResources().getInteger(R.integer.lx_motion_focus))
                 .withEndAction(() -> {
                     libraryActionBar.setVisibility(View.GONE);
                     libraryActionBar.setTranslationX(0f);
@@ -406,10 +409,13 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
         rvSongs.setVisibility(View.VISIBLE);
         rvSongs.setAlpha(0f);
         rvSongs.setTranslationX(distance);
-        rvSongs.animate().alpha(1f).translationX(0f).setDuration(220L).start();
-        libraryActionBar.animate().alpha(1f).translationX(0f).setDuration(220L).start();
+        rvSongs.animate().alpha(1f).translationX(0f)
+                .setDuration(getResources().getInteger(R.integer.lx_motion_panel)).start();
+        libraryActionBar.animate().alpha(1f).translationX(0f)
+                .setDuration(getResources().getInteger(R.integer.lx_motion_panel)).start();
         if (focusFirstSong) {
-            rvSongs.postDelayed(this::requestFirstSongFocus, 220L);
+            rvSongs.postDelayed(this::requestFirstSongFocus,
+                    getResources().getInteger(R.integer.lx_motion_panel));
         }
     }
 
@@ -425,10 +431,7 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
     }
 
     private void requestFirstSongFocus() {
-        requestFirstSongFocus(++songFocusRequestGeneration, 3);
-    }
-
-    private void requestFirstSongFocus(int generation, int attemptsLeft) {
+        int generation = ++songFocusRequestGeneration;
         if (rvSongs == null || songAdapter == null || songAdapter.getItemCount() == 0) {
             return;
         }
@@ -436,22 +439,7 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
                 || generation != songFocusRequestGeneration) {
             return;
         }
-        rvSongs.scrollToPosition(0);
-        rvSongs.post(() -> {
-            if (!isPageUsable() || generation != songFocusRequestGeneration
-                    || !showingPlaylistDetail || !rvSongs.isShown()) {
-                return;
-            }
-            RecyclerView.ViewHolder holder = rvSongs.findViewHolderForAdapterPosition(0);
-            if (holder != null) {
-                holder.itemView.requestFocus();
-            } else if (attemptsLeft > 0) {
-                rvSongs.postDelayed(
-                        () -> requestFirstSongFocus(generation, attemptsLeft - 1),
-                        80L
-                );
-            }
-        });
+        songAdapter.requestFocusAt(rvSongs, 0);
     }
 
     private int transitionDistance() {

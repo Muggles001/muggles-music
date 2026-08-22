@@ -5,20 +5,20 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="4dp"
-    android:layout_marginBottom="4dp"
+    android:padding="@dimen/lx_space_xxs"
+    android:layout_marginBottom="@dimen/lx_space_xxs"
     android:gravity="center_vertical"
     android:background="@drawable/selector_item_bg"
     android:clickable="true"
     android:focusable="true"
     android:descendantFocusability="afterDescendants"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:minHeight="62dp">
+    android:paddingStart="@dimen/lx_space_md"
+    android:paddingEnd="@dimen/lx_space_md"
+    android:minHeight="@dimen/lx_list_row_height">
 
     <FrameLayout
-        android:layout_width="24dp"
-        android:layout_height="24dp">
+        android:layout_width="@dimen/lx_icon_default"
+        android:layout_height="@dimen/lx_icon_default">
         
         <TextView
             android:id="@+id/tvIndex"
@@ -26,14 +26,15 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:text="1"
-            android:textColor="@color/lx_text_muted"
+            android:textColor="@color/selector_action_secondary_content"
             android:fontFamily="monospace"
-            android:textSize="12sp"/>
+            android:textSize="@dimen/lx_type_caption"
+            android:duplicateParentState="true"/>
 
         <ImageView
             android:id="@+id/ivEqualizer"
-            android:layout_width="12dp"
-            android:layout_height="12dp"
+            android:layout_width="@dimen/lx_icon_small"
+            android:layout_height="@dimen/lx_icon_small"
             android:layout_gravity="center"
             android:src="@drawable/ic_equalizer"
             android:visibility="gone"
@@ -42,11 +43,11 @@
     </FrameLayout>
 
     <androidx.cardview.widget.CardView
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginStart="6dp"
+        android:layout_width="@dimen/lx_list_cover_size"
+        android:layout_height="@dimen/lx_list_cover_size"
+        android:layout_marginStart="@dimen/lx_space_xs"
         app:cardBackgroundColor="@android:color/transparent"
-        app:cardCornerRadius="4dp"
+        app:cardCornerRadius="@dimen/lx_radius_small"
         app:cardElevation="0dp">
         <ImageView
             android:id="@+id/ivCover"
@@ -61,37 +62,41 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:layout_marginStart="8dp"
-        android:gravity="center_vertical">
+        android:layout_marginStart="@dimen/lx_space_sm"
+        android:gravity="center_vertical"
+        android:duplicateParentState="true">
 
         <TextView
             android:id="@+id/tvSongName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Song Title"
-            android:textColor="@color/lx_text_primary"
-            android:textSize="15sp"
+            android:textColor="@color/selector_selectable_content"
+            android:textSize="@dimen/lx_type_control"
             android:textStyle="bold"
             android:maxLines="2"
-            android:ellipsize="end"/>
+            android:ellipsize="end"
+            android:duplicateParentState="true"/>
 
         <TextView
             android:id="@+id/tvArtist"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Unknown Artist"
-            android:textColor="@color/lx_text_secondary"
-            android:textSize="12sp"
+            android:textColor="@color/selector_action_secondary_content"
+            android:textSize="@dimen/lx_type_caption"
             android:maxLines="1"
-            android:ellipsize="end"/>
+            android:ellipsize="end"
+            android:duplicateParentState="true"/>
 
         <TextView
             android:id="@+id/tvSource"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/lx_brand"
-            android:textSize="10sp"
-            android:layout_marginTop="0dp"/>
+            android:textColor="@color/selector_selectable_content"
+            android:textSize="@dimen/lx_type_caption"
+            android:layout_marginTop="0dp"
+            android:duplicateParentState="true"/>
 
     </LinearLayout>
 
@@ -100,56 +105,56 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginStart="4dp">
+        android:layout_marginStart="@dimen/lx_space_xxs">
 
         <ImageButton
             android:id="@+id/btnItemPlay"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="2dp"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
+            android:layout_marginEnd="@dimen/lx_space_xxs"
             android:background="@drawable/btn_focused_circle"
             android:src="@drawable/ic_play"
             android:scaleType="fitCenter"
-            android:padding="4dp"
-            app:tint="@color/lx_text_secondary"
+            android:padding="@dimen/lx_space_sm"
+            app:tint="@color/selector_action_content"
             android:focusable="true"
             android:contentDescription="play"/>
 
         <ImageButton
             android:id="@+id/btnItemFullscreen"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="2dp"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
+            android:layout_marginEnd="@dimen/lx_space_xxs"
             android:background="@drawable/btn_focused_circle"
             android:src="@drawable/ic_fullscreen"
             android:scaleType="fitCenter"
-            android:padding="4dp"
-            app:tint="@color/lx_text_secondary"
+            android:padding="@dimen/lx_space_sm"
+            app:tint="@color/selector_action_content"
             android:focusable="true"
             android:contentDescription="fullscreen"/>
 
         <ImageButton
             android:id="@+id/btnItemFav"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="2dp"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
+            android:layout_marginEnd="@dimen/lx_space_xxs"
             android:background="@drawable/btn_focused_circle"
             android:src="@drawable/ic_favorite_border"
             android:scaleType="fitCenter"
-            android:padding="4dp"
-            app:tint="@color/lx_text_secondary"
+            android:padding="@dimen/lx_space_sm"
+            app:tint="@color/selector_action_content"
             android:focusable="true"
             android:contentDescription="favorite"/>
 
         <ImageButton
             android:id="@+id/btnItemDelete"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
             android:background="@drawable/btn_focused_circle"
             android:src="@drawable/ic_delete"
             android:scaleType="fitCenter"
-            android:padding="4dp"
-            app:tint="@color/lx_text_secondary"
+            android:padding="@dimen/lx_space_sm"
+            app:tint="@color/selector_action_content"
             android:focusable="true"
             android:contentDescription="delete"/>
 

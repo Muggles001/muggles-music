@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape><solid android:color="@color/lx_disabled_fill" /><corners android:radius="@dimen/lx_radius_control" /></shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape><solid android:color="@color/lx_brand_pressed" /><corners android:radius="@dimen/lx_radius_control" /></shape>
+    </item>
+    <item android:state_selected="true" android:state_focused="true">
+        <shape><solid android:color="@color/lx_selected_focused_fill" /><stroke android:width="@dimen/lx_stroke_focus" android:color="@color/lx_focus_ring_strong" /><corners android:radius="@dimen/lx_radius_control" /></shape>
+    </item>
+    <item android:state_focused="true">
+        <shape><solid android:color="@color/lx_bg_focus" /><stroke android:width="@dimen/lx_stroke_focus" android:color="@color/lx_focus_ring_strong" /><corners android:radius="@dimen/lx_radius_control" /></shape>
+    </item>
+    <item android:state_selected="true">
+        <shape><solid android:color="@color/lx_brand_soft" /><stroke android:width="@dimen/lx_stroke_selected" android:color="@color/lx_brand" /><corners android:radius="@dimen/lx_radius_control" /></shape>
+    </item>
+    <item android:state_activated="true">
+        <shape><solid android:color="@color/lx_brand_soft" /><corners android:radius="@dimen/lx_radius_control" /></shape>
+    </item>
+    <item><shape><solid android:color="@android:color/transparent" /><corners android:radius="@dimen/lx_radius_control" /></shape></item>
+</selector>

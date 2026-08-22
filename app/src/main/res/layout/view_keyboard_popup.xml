@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/bg_keyboard_popup"
-    android:padding="12dp">
+    android:padding="@dimen/lx_space_md">
 
     <LinearLayout
         android:id="@+id/layoutTipSuggestions"
@@ -12,22 +12,22 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:visibility="gone"
-        android:paddingBottom="6dp">
+        android:paddingBottom="@dimen/lx_space_xs">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvTipSuggestions"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="@dimen/lx_control_compact"
             android:layout_weight="1" />
 
         <ImageButton
             android:id="@+id/btnCloseTips"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
             android:background="@drawable/bg_keyboard_key_action"
             android:src="@drawable/ic_close"
             android:scaleType="centerInside"
-            android:padding="4dp"
+            android:padding="@dimen/lx_space_sm"
             android:focusable="true" />
     </LinearLayout>
 
@@ -36,47 +36,47 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="6dp">
+        android:layout_marginBottom="@dimen/lx_space_xs">
 
         <Button
             android:id="@+id/btnModePinYin"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="@dimen/lx_control_compact"
             android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            android:background="@drawable/bg_keyboard_key_action"
+            android:layout_marginEnd="@dimen/lx_space_xxs"
+            android:background="@drawable/selector_tab_bg"
             android:text="拼音"
-            android:textColor="@color/lx_text_primary"
-            android:textSize="12sp"
+            android:textColor="@color/selector_selectable_content"
+            android:textSize="@dimen/lx_type_body"
             android:focusable="true" />
 
         <Button
             android:id="@+id/btnModeAbc"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="@dimen/lx_control_compact"
             android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            android:background="@drawable/bg_keyboard_key"
+            android:layout_marginEnd="@dimen/lx_space_xxs"
+            android:background="@drawable/selector_tab_bg"
             android:text="abc"
-            android:textColor="@color/lx_text_primary"
-            android:textSize="12sp"
+            android:textColor="@color/selector_selectable_content"
+            android:textSize="@dimen/lx_type_body"
             android:focusable="true" />
 
         <Button
             android:id="@+id/btnMode123"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="@dimen/lx_control_compact"
             android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            android:background="@drawable/bg_keyboard_key"
+            android:layout_marginEnd="@dimen/lx_space_xxs"
+            android:background="@drawable/selector_tab_bg"
             android:text="123"
-            android:textColor="@color/lx_text_primary"
-            android:textSize="12sp"
+            android:textColor="@color/selector_selectable_content"
+            android:textSize="@dimen/lx_type_body"
             android:focusable="true" />
 
         <View
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="@dimen/lx_control_compact"
             android:layout_weight="1" />
     </LinearLayout>
 
@@ -91,23 +91,23 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="@dimen/lx_space_xxs" />
 
         <LinearLayout
             android:id="@+id/layoutRow2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="4dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp" />
+            android:layout_marginBottom="@dimen/lx_space_xxs"
+            android:paddingStart="@dimen/lx_space_md"
+            android:paddingEnd="@dimen/lx_space_md" />
 
         <LinearLayout
             android:id="@+id/layoutRow3"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="@dimen/lx_space_xxs" />
 
         <LinearLayout
             android:id="@+id/layoutRow4"

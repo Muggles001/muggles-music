@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false" android:color="@color/lx_text_muted" />
+    <item android:state_pressed="true" android:color="@color/white" />
+    <item android:state_selected="true" android:state_focused="true" android:color="@color/lx_brand_pressed" />
+    <item android:state_focused="true" android:color="@color/lx_brand_pressed" />
+    <item android:state_selected="true" android:color="@color/lx_brand" />
+    <item android:color="@color/lx_text_secondary" />
+</selector>

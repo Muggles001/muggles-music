@@ -43,7 +43,6 @@ import top.boluofan.musictv.source.SourceRuntimeEngine;
 import top.boluofan.musictv.source.SourceRuntimeManager;
 import top.boluofan.musictv.source.SourceScriptImporter;
 import top.boluofan.musictv.source.SourceScriptStore;
-import top.boluofan.musictv.ui.LibraryActivity;
 import top.boluofan.musictv.util.DialogHelper;
 
 public class ConfigActivity extends AppCompatActivity {
@@ -357,12 +356,8 @@ public class ConfigActivity extends AppCompatActivity {
         layoutQr.setVisibility(View.GONE);
         btnToggleMode.setVisibility(View.VISIBLE);
         btnToggleMode.setText(direct ? "扫码导入音源" : "扫码配置");
-        btnModeDirect.setBackgroundResource(direct ? R.drawable.bg_btn_primary_tv : R.drawable.bg_btn_secondary);
-        btnModeServer.setBackgroundResource(direct ? R.drawable.bg_btn_secondary : R.drawable.bg_btn_primary_tv);
-        btnModeDirect.setTextColor(ContextCompat.getColorStateList(this,
-                direct ? R.color.selector_primary_button_text : R.color.lx_text_primary));
-        btnModeServer.setTextColor(ContextCompat.getColorStateList(this,
-                direct ? R.color.lx_text_primary : R.color.selector_primary_button_text));
+        btnModeDirect.setSelected(direct);
+        btnModeServer.setSelected(!direct);
         if (direct) {
             etSourceUrl.setNextFocusLeftId(R.id.btnToggleMode);
             btnImportSource.setNextFocusLeftId(R.id.btnToggleMode);

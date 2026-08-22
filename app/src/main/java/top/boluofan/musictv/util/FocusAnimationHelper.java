@@ -3,6 +3,7 @@ package top.boluofan.musictv.util;
 import android.view.View;
 import android.view.KeyEvent;
 import android.view.animation.DecelerateInterpolator;
+import top.boluofan.musictv.R;
 
 public class FocusAnimationHelper {
 
@@ -21,8 +22,8 @@ public class FocusAnimationHelper {
         view.animate()
                 .scaleX(1.0f)
                 .scaleY(1.0f)
-                .translationZ(1.5f)
-                .setDuration(180L)
+                .translationZ(view.getResources().getDimension(R.dimen.lx_elevation_control))
+                .setDuration(view.getResources().getInteger(R.integer.lx_motion_focus))
                 .setInterpolator(new DecelerateInterpolator(1.8f))
                 .start();
     }
@@ -33,7 +34,7 @@ public class FocusAnimationHelper {
                 .scaleX(1.0f)
                 .scaleY(1.0f)
                 .translationZ(0f)
-                .setDuration(150L)
+                .setDuration(view.getResources().getInteger(R.integer.lx_motion_press))
                 .setInterpolator(new DecelerateInterpolator())
                 .start();
     }

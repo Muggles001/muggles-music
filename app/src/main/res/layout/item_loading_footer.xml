@@ -7,15 +7,15 @@
     android:orientation="horizontal">
 
     <ProgressBar
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="@dimen/lx_icon_default"
+        android:layout_height="@dimen/lx_icon_default"
         android:layout_marginEnd="8dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="加载中..."
-        android:textColor="#9CA3AF"
-        android:textSize="14sp" />
+        android:textColor="@color/lx_text_muted"
+        android:textSize="@dimen/lx_type_body" />
 
 </LinearLayout>

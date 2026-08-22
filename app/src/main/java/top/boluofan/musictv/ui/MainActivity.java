@@ -7,13 +7,10 @@ import android.view.FocusFinder;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.Lifecycle;
@@ -52,19 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout tabRanking;
     private LinearLayout tabSettings;
     
-    private ImageButton btnLibrary;
-    private ImageButton btnSearch;
-    private ImageButton btnSongSquare;
-    private ImageButton btnRanking;
-    private ImageButton btnSettings;
-    
     private long lastBackPressTime = 0;
-    
-    private TextView tvLibrary;
-    private TextView tvSearch;
-    private TextView tvSongSquare;
-    private TextView tvRanking;
-    private TextView tvSettings;
 
     private int currentSelectedTab = -1;
     private boolean pageTransitionInProgress = false;
@@ -152,18 +137,6 @@ public class MainActivity extends AppCompatActivity {
         tabRanking = findViewById(R.id.tabRanking);
         tabSettings = findViewById(R.id.tabSettings);
         
-        btnLibrary = findViewById(R.id.btnLibrary);
-        btnSearch = findViewById(R.id.btnSearch);
-        btnSongSquare = findViewById(R.id.btnSongSquare);
-        btnRanking = findViewById(R.id.btnRanking);
-        btnSettings = findViewById(R.id.btnSettings);
-        
-        tvLibrary = findViewById(R.id.tvLibrary);
-        tvSearch = findViewById(R.id.tvSearch);
-        tvSongSquare = findViewById(R.id.tvSongSquare);
-        tvRanking = findViewById(R.id.tvRanking);
-        tvSettings = findViewById(R.id.tvSettings);
-        
         if (!isLibraryAvailable()) {
             tabLibrary.setVisibility(View.GONE);
         }
@@ -184,8 +157,6 @@ public class MainActivity extends AppCompatActivity {
     private void bindPrimaryTab(View tab, int page) {
         tab.setOnClickListener(v -> selectPrimaryPage(page, true));
         tab.setOnFocusChangeListener((v, hasFocus) -> {
-            TextView label = getTabLabel(page);
-            if (label != null) label.setActivated(hasFocus);
             if (hasFocus) {
                 FocusAnimationHelper.animateFocusIn(v);
                 selectPrimaryPage(page, true);
@@ -196,28 +167,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void clearSelection() {
-        btnLibrary.setAlpha(0.5f);
-        btnSearch.setAlpha(0.5f);
-        btnSongSquare.setAlpha(0.5f);
-        btnRanking.setAlpha(0.5f);
-        btnSettings.setAlpha(0.5f);
-        btnLibrary.setSelected(false);
-        btnSearch.setSelected(false);
-        btnSongSquare.setSelected(false);
-        btnRanking.setSelected(false);
-        btnSettings.setSelected(false);
-        
-        tvLibrary.setTextColor(ContextCompat.getColorStateList(this, R.color.selector_nav_tint));
-        tvSearch.setTextColor(ContextCompat.getColorStateList(this, R.color.selector_nav_tint));
-        tvSongSquare.setTextColor(ContextCompat.getColorStateList(this, R.color.selector_nav_tint));
-        tvRanking.setTextColor(ContextCompat.getColorStateList(this, R.color.selector_nav_tint));
-        tvSettings.setTextColor(ContextCompat.getColorStateList(this, R.color.selector_nav_tint));
-        tvLibrary.setSelected(false);
-        tvSearch.setSelected(false);
-        tvSongSquare.setSelected(false);
-        tvRanking.setSelected(false);
-        tvSettings.setSelected(false);
-
         tabLibrary.setSelected(false);
         tabSearch.setSelected(false);
         tabSongSquare.setSelected(false);
@@ -229,48 +178,22 @@ public class MainActivity extends AppCompatActivity {
         clearSelection();
         switch (tabIndex) {
             case PAGE_SEARCH:
-                btnSearch.setAlpha(1.0f);
-                btnSearch.setSelected(true);
                 tabSearch.setSelected(true);
-                tvSearch.setSelected(true);
                 break;
             case PAGE_SONG_SQUARE:
-                btnSongSquare.setAlpha(1.0f);
-                btnSongSquare.setSelected(true);
                 tabSongSquare.setSelected(true);
-                tvSongSquare.setSelected(true);
                 break;
             case PAGE_RANKING:
-                btnRanking.setAlpha(1.0f);
-                btnRanking.setSelected(true);
                 tabRanking.setSelected(true);
-                tvRanking.setSelected(true);
                 break;
             case PAGE_LIBRARY:
-                btnLibrary.setAlpha(1.0f);
-                btnLibrary.setSelected(true);
                 tabLibrary.setSelected(true);
-                tvLibrary.setSelected(true);
                 break;
             case PAGE_SETTINGS:
-                btnSettings.setAlpha(1.0f);
-                btnSettings.setSelected(true);
                 tabSettings.setSelected(true);
-                tvSettings.setSelected(true);
                 break;
         }
         currentSelectedTab = tabIndex;
-    }
-
-    private TextView getTabLabel(int page) {
-        switch (page) {
-            case PAGE_SEARCH: return tvSearch;
-            case PAGE_SONG_SQUARE: return tvSongSquare;
-            case PAGE_RANKING: return tvRanking;
-            case PAGE_LIBRARY: return tvLibrary;
-            case PAGE_SETTINGS: return tvSettings;
-            default: return null;
-        }
     }
 
     public void selectPrimaryPage(int page, boolean animate) {
@@ -319,7 +242,7 @@ public class MainActivity extends AppCompatActivity {
             if (transitionGeneration == pageTransitionGeneration) {
                 pageTransitionInProgress = false;
             }
-        }, 300L);
+        }, getResources().getInteger(R.integer.lx_motion_panel));
     }
 
     /** The visual rail is ordered Song Square, Search, Ranking, Library, Settings. */

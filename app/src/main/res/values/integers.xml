@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="lx_motion_press">100</integer>
+    <integer name="lx_motion_focus">160</integer>
+    <integer name="lx_motion_panel">260</integer>
+</resources>

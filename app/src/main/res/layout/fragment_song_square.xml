@@ -25,16 +25,16 @@
             android:layout_height="wrap_content"
             android:text="歌单广场"
             android:textColor="@color/lx_text_primary"
-            android:textSize="24sp"
+            android:textSize="@dimen/lx_type_title"
             android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="@dimen/lx_space_xxs"
             android:text="探索不同平台的精选歌单"
             android:textColor="@color/lx_text_secondary"
-            android:textSize="13sp" />
+            android:textSize="@dimen/lx_type_body" />
     </LinearLayout>
 
     <!-- Source List (Platform) -->
@@ -43,14 +43,14 @@
         android:layout_width="0dp"
         android:layout_height="@dimen/lx_secondary_nav_height"
         android:layout_marginStart="@dimen/lx_nav_gutter"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="@dimen/lx_space_sm"
         android:layout_marginEnd="@dimen/lx_nav_gutter"
         android:paddingStart="@dimen/lx_nav_gutter"
         android:paddingEnd="@dimen/lx_nav_gutter"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp"
+        android:paddingTop="@dimen/lx_space_xs"
+        android:paddingBottom="@dimen/lx_space_xs"
         android:background="@drawable/bg_floating_glass"
-        android:elevation="8dp"
+        android:elevation="@dimen/lx_elevation_surface"
         android:outlineProvider="background"
         android:clipToOutline="true"
         android:clipToPadding="false"
@@ -66,14 +66,14 @@
         android:layout_height="0dp"
         android:paddingStart="@dimen/lx_nav_gutter"
         android:paddingEnd="@dimen/lx_nav_gutter"
-        android:paddingTop="18dp"
-        android:paddingBottom="18dp"
+        android:paddingTop="@dimen/lx_space_md"
+        android:paddingBottom="@dimen/lx_space_md"
         android:descendantFocusability="afterDescendants"
         android:nextFocusDown="@id/btnNextPage"
         android:nextFocusLeft="@id/tabSongSquare"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="@dimen/lx_space_sm"
         app:layout_constraintTop_toBottomOf="@+id/rvSourceList"
         app:layout_constraintBottom_toTopOf="@+id/pagerBar" />
 
@@ -92,13 +92,13 @@
 
         <ImageButton
             android:id="@+id/btnPrevPage"
-            android:layout_width="64dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/lx_pager_button_width"
+            android:layout_height="@dimen/lx_pager_button_height"
             android:src="@drawable/ic_chevron_left"
             android:background="@drawable/bg_btn_secondary"
             android:scaleType="centerInside"
-            android:padding="12dp"
-            app:tint="@color/lx_text_primary"
+            android:padding="@dimen/lx_space_sm"
+            app:tint="@color/selector_action_content"
             android:focusable="true"
             android:nextFocusUp="@id/rvPlaylists"
             android:nextFocusRight="@id/btnNextPage"
@@ -106,23 +106,23 @@
 
         <TextView
             android:id="@+id/tvPageNumber"
-            android:layout_width="72dp"
+            android:layout_width="@dimen/lx_pager_number_width"
             android:layout_height="match_parent"
             android:gravity="center"
             android:text="1"
-            android:textSize="20sp"
+            android:textSize="@dimen/lx_type_section"
             android:textStyle="bold"
             android:textColor="@color/lx_text_secondary" />
 
         <ImageButton
             android:id="@+id/btnNextPage"
-            android:layout_width="64dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/lx_pager_button_width"
+            android:layout_height="@dimen/lx_pager_button_height"
             android:src="@drawable/ic_chevron_right"
             android:background="@drawable/bg_btn_secondary"
             android:scaleType="centerInside"
-            android:padding="12dp"
-            app:tint="@color/lx_text_primary"
+            android:padding="@dimen/lx_space_sm"
+            app:tint="@color/selector_action_content"
             android:focusable="true"
             android:nextFocusUp="@id/rvPlaylists"
             android:nextFocusLeft="@id/btnPrevPage"

@@ -55,13 +55,13 @@
         <!-- Mode Toggle Button -->
         <Button
             android:id="@+id/btnToggleMode"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="@dimen/lx_button_wide_width"
+            android:layout_height="@dimen/lx_control_standard"
             android:text="扫码配置"
             android:textColor="@color/selector_primary_button_text"
-            android:background="@drawable/bg_btn_primary_tv"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
+            android:background="@drawable/bg_btn_primary"
+            android:paddingStart="@dimen/lx_space_lg"
+            android:paddingEnd="@dimen/lx_space_lg"
             android:focusable="true"
             android:nextFocusRight="@+id/etUrl" />
 
@@ -104,14 +104,14 @@
             android:layout_height="wrap_content"
             android:text="选择使用方式"
             android:textColor="@color/lx_text_secondary"
-            android:textSize="13sp"
+            android:textSize="@dimen/lx_type_body"
             android:layout_marginBottom="8dp" />
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="@dimen/lx_control_standard"
             android:orientation="horizontal"
-            android:layout_marginBottom="24dp">
+            android:layout_marginBottom="@dimen/lx_space_lg">
 
             <Button
                 android:id="@+id/btnModeDirect"
@@ -119,8 +119,8 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:text="直接使用音源"
-                android:textColor="@color/selector_primary_button_text"
-                android:background="@drawable/bg_btn_primary_tv"
+                android:textColor="@color/selector_selectable_content"
+                android:background="@drawable/selector_tab_bg"
                 android:focusable="true"
                 android:nextFocusDown="@id/etSourceUrl"
                 android:nextFocusLeft="@id/btnToggleMode"
@@ -131,10 +131,10 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="@dimen/lx_space_sm"
                 android:text="连接 LXserver"
-                android:textColor="@color/lx_text_primary"
-                android:background="@drawable/bg_btn_secondary"
+                android:textColor="@color/selector_selectable_content"
+                android:background="@drawable/selector_tab_bg"
                 android:focusable="true"
                 android:nextFocusDown="@id/etUrl"
                 android:nextFocusLeft="@id/btnModeDirect"
@@ -153,13 +153,13 @@
                 android:layout_height="wrap_content"
                 android:text="LX 自定义音源脚本地址"
                 android:textColor="@color/lx_text_secondary"
-                android:textSize="13sp"
-                android:layout_marginBottom="6dp" />
+                android:textSize="@dimen/lx_type_body"
+                android:layout_marginBottom="@dimen/lx_space_xs" />
 
             <EditText
                 android:id="@+id/etSourceUrl"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
+                android:layout_height="@dimen/lx_control_standard"
                 android:background="@drawable/bg_input_field"
                 android:hint="例如 https://example.com/source.js"
                 android:inputType="textUri"
@@ -167,7 +167,7 @@
                 android:paddingEnd="16dp"
                 android:textColor="@color/lx_text_primary"
                 android:textColorHint="@color/lx_text_muted"
-                android:textSize="15sp"
+                android:textSize="@dimen/lx_type_control"
                 android:singleLine="true"
                 android:imeOptions="actionDone"
                 android:focusable="true"
@@ -180,12 +180,12 @@
             <Button
                 android:id="@+id/btnImportSource"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="20dp"
-                android:background="@drawable/bg_btn_primary_tv"
+                android:layout_height="@dimen/lx_control_standard"
+                android:layout_marginTop="@dimen/lx_space_lg"
+                android:background="@drawable/bg_btn_primary"
                 android:text="下载、检测并启用"
                 android:textColor="@color/selector_primary_button_text"
-                android:textSize="17sp"
+                android:textSize="@dimen/lx_type_control"
                 android:textStyle="bold"
                 android:stateListAnimator="@null"
                 android:focusable="true"
@@ -201,16 +201,16 @@
                 android:layout_marginTop="18dp"
                 android:text="音源将在电视本地运行；127.0.0.1 表示电视本机。"
                 android:textColor="@color/lx_text_muted"
-                android:textSize="13sp" />
+                android:textSize="@dimen/lx_type_body" />
 
             <Button
                 android:id="@+id/btnRollbackSource"
                 android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginTop="14dp"
+                android:layout_height="@dimen/lx_control_standard"
+                android:layout_marginTop="@dimen/lx_space_md"
                 android:background="@drawable/bg_btn_secondary"
                 android:text="回滚到上一版音源"
-                android:textColor="@color/lx_text_primary"
+                android:textColor="@color/selector_action_content"
                 android:visibility="gone"
                 android:focusable="true"
                 android:nextFocusUp="@id/btnImportSource"
@@ -233,13 +233,13 @@
                 android:layout_height="wrap_content"
                 android:text="服务地址"
                 android:textColor="@color/lx_text_secondary"
-                android:textSize="13sp"
-                android:layout_marginBottom="6dp" />
+                android:textSize="@dimen/lx_type_body"
+                android:layout_marginBottom="@dimen/lx_space_xs" />
 
             <EditText
                 android:id="@+id/etUrl"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
+                android:layout_height="@dimen/lx_control_standard"
                 android:background="@drawable/bg_input_field"
                 android:hint="例如 http://192.168.1.100:9527"
                 android:inputType="textUri"
@@ -247,7 +247,7 @@
                 android:paddingEnd="16dp"
                 android:textColor="@color/lx_text_primary"
                 android:textColorHint="@color/lx_text_muted"
-                android:textSize="15sp"
+                android:textSize="@dimen/lx_type_control"
                 android:singleLine="true"
                 android:imeOptions="actionNext"
                 android:focusable="true"
@@ -264,13 +264,13 @@
                 android:layout_height="wrap_content"
                 android:text="lxserver 用户名"
                 android:textColor="@color/lx_text_secondary"
-                android:textSize="13sp"
-                android:layout_marginBottom="6dp" />
+                android:textSize="@dimen/lx_type_body"
+                android:layout_marginBottom="@dimen/lx_space_xs" />
 
             <EditText
                 android:id="@+id/etUsername"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
+                android:layout_height="@dimen/lx_control_standard"
                 android:background="@drawable/bg_input_field"
                 android:hint="请输入用户名"
                 android:inputType="textPersonName"
@@ -278,7 +278,7 @@
                 android:paddingEnd="16dp"
                 android:textColor="@color/lx_text_primary"
                 android:textColorHint="@color/lx_text_muted"
-                android:textSize="15sp"
+                android:textSize="@dimen/lx_type_control"
                 android:singleLine="true"
                 android:imeOptions="actionNext"
                 android:focusable="true"
@@ -295,13 +295,13 @@
                 android:layout_height="wrap_content"
                 android:text="lxserver 密码"
                 android:textColor="@color/lx_text_secondary"
-                android:textSize="13sp"
-                android:layout_marginBottom="6dp" />
+                android:textSize="@dimen/lx_type_body"
+                android:layout_marginBottom="@dimen/lx_space_xs" />
 
             <EditText
                 android:id="@+id/etPassword"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
+                android:layout_height="@dimen/lx_control_standard"
                 android:background="@drawable/bg_input_field"
                 android:hint="Password"
                 android:inputType="textPassword"
@@ -309,7 +309,7 @@
                 android:paddingEnd="16dp"
                 android:textColor="@color/lx_text_primary"
                 android:textColorHint="@color/lx_text_muted"
-                android:textSize="15sp"
+                android:textSize="@dimen/lx_type_control"
                 android:singleLine="true"
                 android:imeOptions="actionNext"
                 android:focusable="true"
@@ -326,13 +326,13 @@
                 android:layout_height="wrap_content"
                 android:text="用户 Token (选填)"
                 android:textColor="@color/lx_text_secondary"
-                android:textSize="13sp"
-                android:layout_marginBottom="6dp" />
+                android:textSize="@dimen/lx_type_body"
+                android:layout_marginBottom="@dimen/lx_space_xs" />
 
             <EditText
                 android:id="@+id/etToken"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
+                android:layout_height="@dimen/lx_control_standard"
                 android:background="@drawable/bg_input_field"
                 android:hint="请输入用户 Token"
                 android:inputType="text"
@@ -340,7 +340,7 @@
                 android:paddingEnd="16dp"
                 android:textColor="@color/lx_text_primary"
                 android:textColorHint="@color/lx_text_muted"
-                android:textSize="15sp"
+                android:textSize="@dimen/lx_type_control"
                 android:singleLine="true"
                 android:imeOptions="actionDone"
                 android:focusable="true"
@@ -355,11 +355,11 @@
             <Button
                 android:id="@+id/btnConnect"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:background="@drawable/bg_btn_primary_tv"
+                android:layout_height="@dimen/lx_control_standard"
+                android:background="@drawable/bg_btn_primary"
                 android:text="连接 lxserver"
                 android:textColor="@color/selector_primary_button_text"
-                android:textSize="18sp"
+                android:textSize="@dimen/lx_type_control"
                 android:textStyle="bold"
                 android:stateListAnimator="@null"
                 android:focusable="true"

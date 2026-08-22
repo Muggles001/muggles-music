@@ -1,18 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="4dp"
+    android:layout_marginBottom="@dimen/lx_space_xxs"
     android:orientation="vertical"
     android:background="@drawable/selector_item_bg"
     android:clickable="true"
     android:focusable="true"
-    android:padding="4dp">
+    android:padding="@dimen/lx_space_xxs">
 
-    <FrameLayout
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="@dimen/lx_radius_small"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@android:color/transparent">
 
         <ImageView
             android:id="@+id/ivCover"
@@ -23,13 +27,14 @@
             tools:src="@drawable/ic_playlist_music"
             android:contentDescription="cover"/>
 
-    </FrameLayout>
+    </androidx.cardview.widget.CardView>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingTop="4dp">
+        android:paddingTop="@dimen/lx_space_xxs"
+        android:duplicateParentState="true">
 
         <TextView
             android:id="@+id/tvName"
@@ -38,10 +43,11 @@
             android:layout_marginTop="2dp"
             android:ellipsize="end"
             android:maxLines="2"
-            android:textColor="@color/lx_text_primary"
-            android:textSize="11sp"
+            android:textColor="@color/selector_selectable_content"
+            android:textSize="13sp"
             android:textStyle="bold"
-            tools:text="歌单名称"/>
+            tools:text="歌单名称"
+            android:duplicateParentState="true"/>
 
         <TextView
             android:id="@+id/tvInfo"
@@ -50,15 +56,17 @@
             android:layout_marginTop="1dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:textColor="@color/lx_text_secondary"
-            android:textSize="9sp"
-            tools:text="50首"/>
+            android:textColor="@color/selector_action_secondary_content"
+            android:textSize="@dimen/lx_type_caption"
+            tools:text="50首"
+            android:duplicateParentState="true"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="1dp"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:duplicateParentState="true">
 
             <TextView
                 android:id="@+id/tvCreator"
@@ -67,20 +75,22 @@
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="@color/lx_text_muted"
-                android:textSize="8sp"
-                tools:text="创建者"/>
+                android:textColor="@color/selector_action_secondary_content"
+                android:textSize="11sp"
+                tools:text="创建者"
+                android:duplicateParentState="true"/>
 
             <TextView
                 android:id="@+id/tvSongCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/lx_space_sm"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="@color/lx_text_muted"
-                android:textSize="8sp"
-                tools:text="50首"/>
+                android:textColor="@color/selector_action_secondary_content"
+                android:textSize="11sp"
+                tools:text="50首"
+                android:duplicateParentState="true"/>
 
         </LinearLayout>
 

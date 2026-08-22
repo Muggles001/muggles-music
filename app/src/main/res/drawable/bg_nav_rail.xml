@@ -4,8 +4,9 @@
         <shape android:shape="rectangle">
             <!-- A light glass wash, not an opaque white sidebar. The page
                  gradient remains the only continuous background underneath. -->
-            <solid android:color="#66FFFFFF" />
+            <solid android:color="@color/lx_glass_regular" />
             <corners android:radius="@dimen/lx_rail_radius" />
+            <stroke android:width="@dimen/lx_stroke_hairline" android:color="@color/lx_glass_highlight" />
         </shape>
     </item>
 </layer-list>

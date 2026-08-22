@@ -3,44 +3,47 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="4dp"
+    android:layout_marginBottom="@dimen/lx_space_xxs"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:minHeight="62dp"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp"
+    android:paddingStart="@dimen/lx_space_md"
+    android:paddingEnd="@dimen/lx_space_md"
+    android:minHeight="@dimen/lx_list_row_height"
+    android:paddingTop="@dimen/lx_space_xxs"
+    android:paddingBottom="@dimen/lx_space_xxs"
     android:background="@drawable/selector_item_bg"
     android:clickable="true"
     android:focusable="true">
 
     <TextView
         android:id="@+id/tvIndex"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="@dimen/lx_icon_default"
+        android:layout_height="@dimen/lx_icon_default"
         android:gravity="center"
         android:text="1"
-        android:textColor="@color/lx_text_muted"
+        android:textColor="@color/selector_action_secondary_content"
         android:fontFamily="monospace"
-        android:textSize="12sp" />
+        android:textSize="@dimen/lx_type_caption"
+        android:duplicateParentState="true" />
 
     <androidx.cardview.widget.CardView
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginStart="6dp"
+        android:layout_width="@dimen/lx_list_cover_size"
+        android:layout_height="@dimen/lx_list_cover_size"
+        android:layout_marginStart="@dimen/lx_space_xs"
         app:cardBackgroundColor="@android:color/transparent"
-        app:cardCornerRadius="4dp"
-        app:cardElevation="0dp">
+        app:cardCornerRadius="@dimen/lx_radius_small"
+        app:cardElevation="0dp"
+        android:duplicateParentState="true">
 
         <ImageView
             android:id="@+id/ivIcon"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:src="@drawable/ic_playlist_music"
-            app:tint="@color/lx_brand"
+            app:tint="@color/selector_selectable_content"
             android:scaleType="centerInside"
-            android:padding="7dp"
+            android:padding="@dimen/lx_space_sm"
+            android:duplicateParentState="true"
             android:contentDescription="歌单" />
     </androidx.cardview.widget.CardView>
 
@@ -48,19 +51,21 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginStart="8dp"
-        android:orientation="vertical">
+        android:layout_marginStart="@dimen/lx_space_sm"
+        android:orientation="vertical"
+        android:duplicateParentState="true">
 
         <TextView
             android:id="@+id/tvName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="歌单名称"
-            android:textSize="15sp"
+            android:textSize="@dimen/lx_type_control"
             android:textStyle="bold"
-            android:textColor="@color/lx_text_primary"
+            android:textColor="@color/selector_selectable_content"
             android:maxLines="1"
-            android:ellipsize="end" />
+            android:ellipsize="end"
+            android:duplicateParentState="true" />
 
         <TextView
             android:id="@+id/tvCount"
@@ -68,9 +73,10 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="1dp"
             android:text="0 首歌曲"
-            android:textSize="12sp"
-            android:textColor="@color/lx_text_secondary"
-            android:maxLines="1" />
+            android:textSize="@dimen/lx_type_caption"
+            android:textColor="@color/selector_action_secondary_content"
+            android:maxLines="1"
+            android:duplicateParentState="true" />
     </LinearLayout>
 
 </LinearLayout>

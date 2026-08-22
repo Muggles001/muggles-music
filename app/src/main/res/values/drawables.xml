@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <drawable name="media3_notification_small_icon">@drawable/ic_logo</drawable>
+    <item name="selector_item_bg" type="drawable">@drawable/selector_selectable_surface</item>
+    <item name="selector_nav_item" type="drawable">@drawable/selector_selectable_surface</item>
+    <item name="selector_source_item" type="drawable">@drawable/selector_selectable_surface</item>
+    <item name="selector_ranking_board" type="drawable">@drawable/selector_selectable_surface</item>
+    <item name="selector_tab_bg" type="drawable">@drawable/selector_selectable_surface</item>
 </resources>

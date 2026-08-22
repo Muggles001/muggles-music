@@ -12,12 +12,12 @@
         android:layout_width="@dimen/lx_rail_width"
         android:layout_height="0dp"
         android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingTop="22dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="18dp"
+        android:paddingStart="@dimen/lx_space_md"
+        android:paddingTop="@dimen/lx_space_lg"
+        android:paddingEnd="@dimen/lx_space_md"
+        android:paddingBottom="@dimen/lx_space_md"
         android:background="@drawable/bg_nav_rail"
-        android:elevation="20dp"
+        android:elevation="@dimen/lx_elevation_surface"
         android:outlineProvider="background"
         android:clipToOutline="true"
         android:layout_marginStart="@dimen/lx_shell_margin"
@@ -33,12 +33,12 @@
             android:layout_height="@dimen/lx_primary_item_height"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp">
+            android:paddingStart="@dimen/lx_space_sm"
+            android:paddingEnd="@dimen/lx_space_sm">
 
             <ImageView
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="@dimen/lx_icon_large"
+                android:layout_height="@dimen/lx_icon_large"
                 android:src="@drawable/ic_logo"
                 android:scaleType="centerCrop"
                 android:contentDescription="麻瓜音乐" />
@@ -48,14 +48,14 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:layout_marginStart="10dp">
+                android:layout_marginStart="@dimen/lx_space_sm">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="麻瓜音乐"
                     android:textColor="@color/lx_text_primary"
-                    android:textSize="16sp"
+                    android:textSize="@dimen/lx_type_control"
                     android:textStyle="bold" />
 
                 <TextView
@@ -64,7 +64,7 @@
                     android:layout_marginTop="2dp"
                     android:text="MUGGLES MUSIC"
                     android:textColor="@color/lx_text_muted"
-                    android:textSize="9sp"
+                    android:textSize="@dimen/lx_type_caption"
                     android:letterSpacing="0.12" />
             </LinearLayout>
         </LinearLayout>
@@ -72,18 +72,18 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginTop="18dp"
-            android:layout_marginBottom="18dp"
+            android:layout_marginTop="@dimen/lx_space_md"
+            android:layout_marginBottom="@dimen/lx_space_md"
             android:background="@color/lx_border" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginStart="@dimen/lx_space_sm"
+            android:layout_marginBottom="@dimen/lx_space_xs"
             android:text="浏览"
             android:textColor="@color/lx_text_muted"
-            android:textSize="11sp"
+            android:textSize="@dimen/lx_type_caption"
             android:textStyle="bold" />
 
         <ScrollView
@@ -95,6 +95,8 @@
             android:scrollbars="vertical"
             android:fadeScrollbars="false"
             android:scrollbarSize="4dp"
+            android:paddingEnd="@dimen/lx_space_sm"
+            android:clipToPadding="false"
             android:scrollbarThumbVertical="@drawable/scrollbar_thumb">
 
         <LinearLayout
@@ -109,9 +111,8 @@
                 android:layout_height="@dimen/lx_primary_item_height"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:layout_marginEnd="24dp"
+                android:paddingStart="@dimen/lx_space_md"
+                android:paddingEnd="@dimen/lx_space_md"
                 android:focusable="true"
                 android:clickable="true"
                 android:nextFocusRight="@id/rvSourceList"
@@ -119,13 +120,13 @@
 
                 <ImageButton
                     android:id="@+id/btnSongSquare"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="@dimen/lx_icon_default"
+                    android:layout_height="@dimen/lx_icon_default"
                     android:src="@drawable/ic_playlist"
                     android:background="@android:color/transparent"
                     android:scaleType="fitCenter"
-                    android:alpha="0.55"
                     android:focusable="false"
+                    android:duplicateParentState="true"
                     app:tint="@color/selector_nav_tint"
                     android:contentDescription="歌单广场" />
 
@@ -133,9 +134,10 @@
                     android:id="@+id/tvSongSquare"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="@dimen/lx_space_sm"
                     android:text="歌单广场"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/lx_type_body"
+                    android:duplicateParentState="true"
                     android:textColor="@color/selector_nav_tint" />
             </LinearLayout>
 
@@ -145,9 +147,8 @@
                 android:layout_height="@dimen/lx_primary_item_height"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:layout_marginEnd="24dp"
+                android:paddingStart="@dimen/lx_space_md"
+                android:paddingEnd="@dimen/lx_space_md"
                 android:focusable="true"
                 android:clickable="true"
                 android:nextFocusRight="@id/etSearch"
@@ -155,13 +156,13 @@
 
                 <ImageButton
                     android:id="@+id/btnSearch"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="@dimen/lx_icon_default"
+                    android:layout_height="@dimen/lx_icon_default"
                     android:src="@drawable/ic_search"
                     android:background="@android:color/transparent"
                     android:scaleType="fitCenter"
-                    android:alpha="0.55"
                     android:focusable="false"
+                    android:duplicateParentState="true"
                     app:tint="@color/selector_nav_tint"
                     android:contentDescription="搜索" />
 
@@ -169,9 +170,10 @@
                     android:id="@+id/tvSearch"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="@dimen/lx_space_sm"
                     android:text="搜索"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/lx_type_body"
+                    android:duplicateParentState="true"
                     android:textColor="@color/selector_nav_tint" />
             </LinearLayout>
 
@@ -181,9 +183,8 @@
                 android:layout_height="@dimen/lx_primary_item_height"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:layout_marginEnd="24dp"
+                android:paddingStart="@dimen/lx_space_md"
+                android:paddingEnd="@dimen/lx_space_md"
                 android:focusable="true"
                 android:clickable="true"
                 android:nextFocusRight="@id/rvBoards"
@@ -191,13 +192,13 @@
 
                 <ImageButton
                     android:id="@+id/btnRanking"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="@dimen/lx_icon_default"
+                    android:layout_height="@dimen/lx_icon_default"
                     android:src="@drawable/ic_ranking"
                     android:background="@android:color/transparent"
                     android:scaleType="fitCenter"
-                    android:alpha="0.55"
                     android:focusable="false"
+                    android:duplicateParentState="true"
                     app:tint="@color/selector_nav_tint"
                     android:contentDescription="排行榜" />
 
@@ -205,9 +206,10 @@
                     android:id="@+id/tvRanking"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="@dimen/lx_space_sm"
                     android:text="排行榜"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/lx_type_body"
+                    android:duplicateParentState="true"
                     android:textColor="@color/selector_nav_tint" />
             </LinearLayout>
 
@@ -217,9 +219,8 @@
                 android:layout_height="@dimen/lx_primary_item_height"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:layout_marginEnd="24dp"
+                android:paddingStart="@dimen/lx_space_md"
+                android:paddingEnd="@dimen/lx_space_md"
                 android:focusable="true"
                 android:clickable="true"
                 android:nextFocusRight="@id/tabAllSongs"
@@ -227,13 +228,13 @@
 
                 <ImageButton
                     android:id="@+id/btnLibrary"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="@dimen/lx_icon_default"
+                    android:layout_height="@dimen/lx_icon_default"
                     android:src="@drawable/ic_favorite"
                     android:background="@android:color/transparent"
                     android:scaleType="fitCenter"
-                    android:alpha="0.55"
                     android:focusable="false"
+                    android:duplicateParentState="true"
                     app:tint="@color/selector_nav_tint"
                     android:contentDescription="我的歌单" />
 
@@ -241,9 +242,10 @@
                     android:id="@+id/tvLibrary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="@dimen/lx_space_sm"
                     android:text="我的歌单"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/lx_type_body"
+                    android:duplicateParentState="true"
                     android:textColor="@color/selector_nav_tint" />
             </LinearLayout>
 
@@ -253,9 +255,8 @@
                 android:layout_height="@dimen/lx_primary_item_height"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:layout_marginEnd="24dp"
+                android:paddingStart="@dimen/lx_space_md"
+                android:paddingEnd="@dimen/lx_space_md"
                 android:focusable="true"
                 android:clickable="true"
                 android:nextFocusRight="@id/layoutServerConfig"
@@ -263,13 +264,13 @@
 
                 <ImageButton
                     android:id="@+id/btnSettings"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="@dimen/lx_icon_default"
+                    android:layout_height="@dimen/lx_icon_default"
                     android:src="@drawable/ic_settings"
                     android:background="@android:color/transparent"
                     android:scaleType="fitCenter"
-                    android:alpha="0.55"
                     android:focusable="false"
+                    android:duplicateParentState="true"
                     app:tint="@color/selector_nav_tint"
                     android:contentDescription="设置" />
 
@@ -277,9 +278,10 @@
                     android:id="@+id/tvSettings"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="@dimen/lx_space_sm"
                     android:text="设置"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/lx_type_body"
+                    android:duplicateParentState="true"
                     android:textColor="@color/selector_nav_tint" />
             </LinearLayout>
         </LinearLayout>
@@ -288,24 +290,24 @@
         <LinearLayout
             android:id="@+id/navFooter"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="@dimen/lx_control_compact"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp">
+            android:paddingStart="@dimen/lx_space_sm"
+            android:paddingEnd="@dimen/lx_space_sm">
 
             <View
-                android:layout_width="7dp"
-                android:layout_height="7dp"
+                android:layout_width="@dimen/lx_space_xs"
+                android:layout_height="@dimen/lx_space_xs"
                 android:background="@drawable/bg_count_chip" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/lx_space_xs"
                 android:text="已连接到音乐服务"
                 android:textColor="@color/lx_text_muted"
-                android:textSize="10sp" />
+                android:textSize="@dimen/lx_type_caption" />
         </LinearLayout>
     </LinearLayout>
 

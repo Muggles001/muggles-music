@@ -25,23 +25,23 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="我的歌单"
-            android:textSize="24sp"
+            android:textSize="@dimen/lx_type_title"
             android:textStyle="bold"
             android:textColor="@color/lx_text_primary" />
 
         <ImageButton
             android:id="@+id/btnBackToPlaylists"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="12dp"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
+            android:layout_marginStart="@dimen/lx_space_sm"
             android:src="@drawable/ic_back"
             android:background="@drawable/btn_focused_circle"
             android:scaleType="centerInside"
-            android:padding="8dp"
+            android:padding="@dimen/lx_space_sm"
             android:visibility="gone"
             android:focusable="true"
             android:contentDescription="返回歌单列表"
-            app:tint="@color/lx_text_primary" />
+            app:tint="@color/selector_action_content" />
 
     </LinearLayout>
 
@@ -64,13 +64,13 @@
         <TextView
             android:id="@+id/tabAllSongs"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="@dimen/lx_control_compact"
             android:text="全部歌曲"
-            android:textSize="14sp"
-            android:textColor="@color/lx_text_primary"
+            android:textSize="@dimen/lx_type_body"
+            android:textColor="@color/selector_selectable_content"
             android:gravity="center"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
+            android:paddingStart="@dimen/lx_space_md"
+            android:paddingEnd="@dimen/lx_space_md"
             android:background="@drawable/selector_tab_bg"
             android:focusable="true"
             android:nextFocusLeft="@id/tabLibrary"
@@ -80,20 +80,20 @@
         <TextView
             android:id="@+id/tabLoveList"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="@dimen/lx_control_compact"
             android:text="我的收藏"
-            android:textSize="14sp"
-            android:textColor="@color/lx_text_secondary"
+            android:textSize="@dimen/lx_type_body"
+            android:textColor="@color/selector_selectable_content"
             android:gravity="center"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:layout_marginStart="8dp"
+            android:paddingStart="@dimen/lx_space_md"
+            android:paddingEnd="@dimen/lx_space_md"
+            android:layout_marginStart="@dimen/lx_space_sm"
             android:background="@drawable/selector_tab_bg"
             android:focusable="true"
             android:nextFocusLeft="@id/tabAllSongs" />
 
         <View
-            android:layout_width="12dp"
+            android:layout_width="@dimen/lx_space_sm"
             android:layout_height="1dp" />
 
         <TextView
@@ -102,7 +102,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="歌单"
-            android:textSize="18sp"
+            android:textSize="@dimen/lx_type_section"
             android:textStyle="bold"
             android:textColor="@color/lx_text_primary"
             android:maxLines="1"
@@ -113,9 +113,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="0 首"
-            android:textSize="14sp"
+            android:textSize="@dimen/lx_type_body"
             android:textColor="@color/lx_text_secondary"
-            android:layout_marginStart="12dp" />
+            android:layout_marginStart="@dimen/lx_space_sm" />
 
     </LinearLayout>
 
@@ -124,14 +124,14 @@
         android:layout_width="0dp"
         android:layout_height="@dimen/lx_secondary_nav_height"
         android:layout_marginStart="@dimen/lx_nav_gutter"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="@dimen/lx_space_sm"
         android:layout_marginEnd="@dimen/lx_nav_gutter"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="@dimen/lx_nav_gutter"
         android:paddingEnd="@dimen/lx_nav_gutter"
         android:background="@drawable/bg_floating_glass"
-        android:elevation="8dp"
+        android:elevation="@dimen/lx_elevation_surface"
         android:outlineProvider="background"
         android:clipToOutline="true"
         android:visibility="gone"
@@ -143,7 +143,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="播放控制"
-            android:textSize="14sp"
+            android:textSize="@dimen/lx_type_body"
             android:textStyle="bold"
             android:textColor="@color/lx_text_secondary" />
 
@@ -154,33 +154,33 @@
 
         <ImageButton
             android:id="@+id/btnPlayAllSongs"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
             android:src="@drawable/ic_play"
             android:background="@drawable/btn_focused_circle"
             android:scaleType="centerInside"
-            android:padding="10dp"
+            android:padding="@dimen/lx_space_sm"
             android:focusable="true"
             android:nextFocusLeft="@id/tabLibrary"
             android:nextFocusRight="@id/btnPlayOrderToggle"
             android:nextFocusDown="@id/rvSongs"
             android:contentDescription="全部播放"
-            app:tint="@color/lx_text_primary" />
+            app:tint="@color/selector_action_content" />
 
         <ImageButton
             android:id="@+id/btnPlayOrderToggle"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="8dp"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
+            android:layout_marginStart="@dimen/lx_space_sm"
             android:src="@drawable/ic_repeat"
-            android:background="@drawable/btn_focused_circle"
+            android:background="@drawable/btn_selectable_circle"
             android:scaleType="centerInside"
-            android:padding="10dp"
+            android:padding="@dimen/lx_space_sm"
             android:focusable="true"
             android:nextFocusLeft="@id/btnPlayAllSongs"
             android:nextFocusDown="@id/rvSongs"
             android:contentDescription="切换为随机播放"
-            app:tint="@color/lx_text_primary" />
+            app:tint="@color/selector_selectable_content" />
 
     </LinearLayout>
 
@@ -191,13 +191,13 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginStart="@dimen/lx_nav_gutter"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="@dimen/lx_space_sm"
         android:layout_marginEnd="@dimen/lx_nav_gutter"
         android:background="@android:color/transparent"
         android:paddingStart="@dimen/lx_nav_gutter"
         android:paddingEnd="@dimen/lx_nav_gutter"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp"
+        android:paddingTop="@dimen/lx_space_sm"
+        android:paddingBottom="@dimen/lx_space_sm"
         android:clipToPadding="false"
         android:focusable="true"
         android:nextFocusLeft="@id/tabLibrary"
@@ -222,41 +222,41 @@
 
         <ImageButton
             android:id="@+id/btnLibraryPrevPage"
-            android:layout_width="64dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/lx_pager_button_width"
+            android:layout_height="@dimen/lx_pager_button_height"
             android:src="@drawable/ic_chevron_left"
             android:background="@drawable/bg_btn_secondary"
             android:scaleType="centerInside"
-            android:padding="12dp"
+            android:padding="@dimen/lx_space_sm"
             android:focusable="true"
             android:nextFocusUp="@id/rvPlaylists"
             android:nextFocusRight="@id/btnLibraryNextPage"
             android:nextFocusDown="@id/tabLibrary"
-            app:tint="@color/lx_text_primary" />
+            app:tint="@color/selector_action_content" />
 
         <TextView
             android:id="@+id/tvLibraryPageNumber"
-            android:layout_width="72dp"
+            android:layout_width="@dimen/lx_pager_number_width"
             android:layout_height="match_parent"
             android:gravity="center"
             android:text="1"
-            android:textSize="20sp"
+            android:textSize="@dimen/lx_type_section"
             android:textStyle="bold"
             android:textColor="@color/lx_text_secondary" />
 
         <ImageButton
             android:id="@+id/btnLibraryNextPage"
-            android:layout_width="64dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/lx_pager_button_width"
+            android:layout_height="@dimen/lx_pager_button_height"
             android:src="@drawable/ic_chevron_right"
             android:background="@drawable/bg_btn_secondary"
             android:scaleType="centerInside"
-            android:padding="12dp"
+            android:padding="@dimen/lx_space_sm"
             android:focusable="true"
             android:nextFocusUp="@id/rvPlaylists"
             android:nextFocusLeft="@id/btnLibraryPrevPage"
             android:nextFocusDown="@id/tabLibrary"
-            app:tint="@color/lx_text_primary" />
+            app:tint="@color/selector_action_content" />
 
     </LinearLayout>
 
@@ -265,11 +265,11 @@
         android:id="@+id/rvSongs"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:paddingStart="28dp"
-        android:paddingEnd="28dp"
-        android:paddingTop="24dp"
-        android:layout_marginTop="12dp"
-        android:paddingBottom="24dp"
+        android:paddingStart="@dimen/lx_title_gutter"
+        android:paddingEnd="@dimen/lx_title_gutter"
+        android:paddingTop="@dimen/lx_nav_gutter"
+        android:layout_marginTop="@dimen/lx_space_sm"
+        android:paddingBottom="@dimen/lx_nav_gutter"
         android:visibility="gone"
         android:focusable="false"
         android:clipToPadding="false"

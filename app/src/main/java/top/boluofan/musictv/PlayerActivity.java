@@ -423,7 +423,7 @@ public class PlayerActivity extends AppCompatActivity {
         
         layoutBottomControls.setVisibility(View.VISIBLE);
         ObjectAnimator.ofFloat(layoutBottomControls, "alpha", layoutBottomControls.getAlpha(), 1f)
-                .setDuration(300)
+                .setDuration(getResources().getInteger(R.integer.lx_motion_panel))
                 .start();
         
         btnPlayPause.requestFocus();
@@ -434,7 +434,7 @@ public class PlayerActivity extends AppCompatActivity {
         if (layoutBottomControls.getVisibility() == View.GONE) return;
 
         ObjectAnimator animator = ObjectAnimator.ofFloat(layoutBottomControls, "alpha", layoutBottomControls.getAlpha(), 0f);
-        animator.setDuration(300);
+        animator.setDuration(getResources().getInteger(R.integer.lx_motion_panel));
         animator.addListener(new android.animation.AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(android.animation.Animator animation) {

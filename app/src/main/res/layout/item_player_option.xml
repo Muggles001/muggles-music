@@ -3,19 +3,20 @@
     android:id="@+id/itemContainer"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
+    android:layout_marginBottom="@dimen/lx_space_sm"
     android:focusable="true"
     android:clickable="true"
-    android:background="@drawable/selector_menu_item">
+    android:background="@drawable/selector_drawer_item">
 
     <TextView
         android:id="@+id/tvOptionName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
+        android:padding="@dimen/lx_space_md"
         android:text="Option Name"
-        android:textColor="#CCFFFFFF"
-        android:textSize="18sp"
-        android:gravity="center_vertical" />
+        android:textColor="@color/selector_drawer_primary_content"
+        android:textSize="@dimen/lx_type_control"
+        android:gravity="center_vertical"
+        android:duplicateParentState="true" />
 
 </FrameLayout>

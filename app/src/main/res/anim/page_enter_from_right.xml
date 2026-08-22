@@ -1,17 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <set xmlns:android="http://schemas.android.com/apk/res/android"
-    android:duration="260"
+    android:duration="@integer/lx_motion_panel"
     android:interpolator="@android:interpolator/decelerate_quint">
     <translate
-        android:fromXDelta="3%p"
+        android:fromXDelta="2%p"
         android:toXDelta="0" />
-    <scale
-        android:fromXScale="0.985"
-        android:toXScale="1.0"
-        android:fromYScale="0.985"
-        android:toYScale="1.0"
-        android:pivotX="50%"
-        android:pivotY="50%" />
     <alpha
         android:fromAlpha="0.96"
         android:toAlpha="1.0" />

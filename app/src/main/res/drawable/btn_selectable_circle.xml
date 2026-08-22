@@ -2,6 +2,8 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_enabled="false"><shape android:shape="oval"><solid android:color="@color/lx_disabled_fill" /></shape></item>
     <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="@color/lx_brand_pressed" /></shape></item>
+    <item android:state_selected="true" android:state_focused="true"><shape android:shape="oval"><solid android:color="@color/lx_selected_focused_fill" /><stroke android:width="@dimen/lx_stroke_focus" android:color="@color/lx_focus_ring_strong" /></shape></item>
     <item android:state_focused="true"><shape android:shape="oval"><solid android:color="@color/lx_bg_focus" /><stroke android:width="@dimen/lx_stroke_focus" android:color="@color/lx_focus_ring_strong" /></shape></item>
+    <item android:state_selected="true"><shape android:shape="oval"><solid android:color="@color/lx_brand_soft" /><stroke android:width="@dimen/lx_stroke_selected" android:color="@color/lx_brand" /></shape></item>
     <item><shape android:shape="oval"><solid android:color="@android:color/transparent" /></shape></item>
 </selector>

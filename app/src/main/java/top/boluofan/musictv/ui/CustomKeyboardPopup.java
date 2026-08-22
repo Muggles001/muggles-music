@@ -172,29 +172,16 @@ public class CustomKeyboardPopup {
         if (button == null) return;
         button.setAllCaps(false);
         button.setTextColor(modeTextColors());
+        button.setBackgroundResource(R.drawable.selector_tab_bg);
         button.setSelected(false);
     }
 
     private ColorStateList modeTextColors() {
-        int primary = context.getResources().getColor(R.color.lx_text_primary);
-        return new ColorStateList(
-                new int[][] {
-                        new int[] { android.R.attr.state_focused },
-                        new int[] { android.R.attr.state_selected },
-                        new int[] {}
-                },
-                new int[] { Color.WHITE, Color.WHITE, primary });
+        return context.getResources().getColorStateList(R.color.selector_selectable_content);
     }
 
     private ColorStateList keyTextColors() {
-        int primary = context.getResources().getColor(R.color.lx_text_primary);
-        return new ColorStateList(
-                new int[][] {
-                        new int[] { android.R.attr.state_focused },
-                        new int[] { android.R.attr.state_pressed },
-                        new int[] {}
-                },
-                new int[] { Color.WHITE, Color.WHITE, primary });
+        return context.getResources().getColorStateList(R.color.selector_action_content);
     }
 
     private void setupTipCloseButton() {
@@ -267,26 +254,19 @@ public class CustomKeyboardPopup {
     private void addKeyView(LinearLayout parent, String key) {
         TextView tv = new TextView(context);
         tv.setText(key);
-        tv.setTextSize(18);
+        tv.setTextSize(16);
         tv.setTextColor(keyTextColors());
         tv.setGravity(Gravity.CENTER);
         tv.setBackgroundResource(R.drawable.bg_keyboard_key);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, 80, 1.0f);
-        params.setMarginStart(4);
-        params.setMarginEnd(4);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0, dimension(R.dimen.lx_control_compact), 1.0f);
+        params.setMarginStart(dimension(R.dimen.lx_space_xxs));
+        params.setMarginEnd(dimension(R.dimen.lx_space_xxs));
         tv.setLayoutParams(params);
         tv.setFocusable(true);
         tv.setClickable(true);
 
         tv.setOnClickListener(v -> onKeyPressed(key));
-        tv.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                tv.setBackgroundResource(R.drawable.bg_keyboard_key_action);
-            } else {
-                tv.setBackgroundResource(R.drawable.bg_keyboard_key);
-            }
-        });
-
         parent.addView(tv);
     }
 
@@ -297,9 +277,10 @@ public class CustomKeyboardPopup {
         btn.setTextColor(Color.WHITE);
         btn.setAllCaps(false);
         btn.setBackgroundResource(R.drawable.bg_keyboard_key_action);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, 80, weight);
-        params.setMarginStart(4);
-        params.setMarginEnd(4);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0, dimension(R.dimen.lx_control_compact), weight);
+        params.setMarginStart(dimension(R.dimen.lx_space_xxs));
+        params.setMarginEnd(dimension(R.dimen.lx_space_xxs));
         btn.setLayoutParams(params);
         btn.setFocusable(true);
 
@@ -360,9 +341,6 @@ public class CustomKeyboardPopup {
         btnModePinYin.setSelected(keyboardMode == MODE_PINYIN);
         btnModeAbc.setSelected(keyboardMode == MODE_ABC);
         btnMode123.setSelected(keyboardMode == MODE_123);
-        btnModePinYin.setBackgroundResource(keyboardMode == MODE_PINYIN ? R.drawable.bg_keyboard_key_action : R.drawable.bg_keyboard_key);
-        btnModeAbc.setBackgroundResource(keyboardMode == MODE_ABC ? R.drawable.bg_keyboard_key_action : R.drawable.bg_keyboard_key);
-        btnMode123.setBackgroundResource(keyboardMode == MODE_123 ? R.drawable.bg_keyboard_key_action : R.drawable.bg_keyboard_key);
     }
 
     private void requestKeyboardFocus() {
@@ -435,8 +413,9 @@ public class CustomKeyboardPopup {
                 tv.setLayoutParams(new RecyclerView.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.MATCH_PARENT));
-                tv.setPadding(24, 0, 24, 0);
-                tv.setTextSize(13);
+                tv.setPadding(dimension(R.dimen.lx_space_md), 0,
+                        dimension(R.dimen.lx_space_md), 0);
+                tv.setTextSize(14);
                 tv.setTextColor(keyTextColors());
                 tv.setBackgroundResource(R.drawable.bg_keyboard_key);
                 tv.setGravity(Gravity.CENTER_VERTICAL);
@@ -468,6 +447,10 @@ public class CustomKeyboardPopup {
                 return tipWords.size();
             }
         });
+    }
+
+    private int dimension(int resourceId) {
+        return context.getResources().getDimensionPixelSize(resourceId);
     }
 
     private void hideTipSuggestions() {

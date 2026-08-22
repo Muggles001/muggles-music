@@ -18,6 +18,7 @@ import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.util.FocusAnimationHelper;
 
 public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHolder> {
+    private static final int FOCUS_RETRY_ATTEMPTS = 8;
     private List<MusicInfo> songs = new ArrayList<>();
     private OnItemClickListener listener;
     private OnPlayClickListener playListener;
@@ -162,6 +163,16 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
     public boolean hasFocusHistory() {
         return lastFocusedPosition != RecyclerView.NO_POSITION
                 || pendingFocusPosition != RecyclerView.NO_POSITION;
+    }
+
+    public boolean requestFocusAt(RecyclerView recyclerView, int position) {
+        if (recyclerView == null || !recyclerView.isShown()
+                || position < 0 || position >= getItemCount()) {
+            return false;
+        }
+        cancelDeferredActionFocusForNavigation();
+        int generation = ++focusMoveGeneration;
+        return focusRowControl(recyclerView, position, R.id.item_song_root, generation);
     }
 
     public void setSongs(List<MusicInfo> songs) {
@@ -423,7 +434,9 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
             } else {
                 pendingFocusPosition = position;
                 pendingFocusControlId = controlId;
-                postFocusRetry(recyclerView, position, controlId, generation, 2);
+                holdRecyclerViewFocus(recyclerView);
+                postFocusRetry(recyclerView, position, controlId,
+                        generation, FOCUS_RETRY_ATTEMPTS);
             }
             // This is still an in-list transition. Consume the key even when
             // RecyclerView is between a rebind and its next layout pass.
@@ -431,14 +444,23 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         }
         pendingFocusPosition = position;
         pendingFocusControlId = controlId;
+        holdRecyclerViewFocus(recyclerView);
         recyclerView.scrollToPosition(position);
-        postFocusRetry(recyclerView, position, controlId, generation, 2);
+        postFocusRetry(recyclerView, position, controlId,
+                generation, FOCUS_RETRY_ATTEMPTS);
         return true;
+    }
+
+    private void holdRecyclerViewFocus(RecyclerView recyclerView) {
+        int descendantFocusability = recyclerView.getDescendantFocusability();
+        recyclerView.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+        recyclerView.requestFocus();
+        recyclerView.setDescendantFocusability(descendantFocusability);
     }
 
     private void postFocusRetry(RecyclerView recyclerView, int position, int controlId,
                                 int generation, int attemptsLeft) {
-        recyclerView.postDelayed(() -> {
+        recyclerView.postOnAnimation(() -> {
             if (generation != focusMoveGeneration
                     || pendingFocusPosition != position
                     || pendingFocusControlId != controlId
@@ -462,7 +484,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
                     pendingFocusPosition = RecyclerView.NO_POSITION;
                 }
             }
-        }, 24L);
+        });
     }
 
     private void rememberFocusedPosition(int position, int controlId) {
@@ -648,6 +670,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         }
 
         void bind(MusicInfo song, boolean isCurrentSong, boolean isPlayingNow, int indexOffset) {
+            itemView.setActivated(isCurrentSong);
             tvName.setText(song.getName());
             tvArtist.setText(song.getSinger() != null ? song.getSinger() : "未知歌手");
             

@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.drawable.AnimationDrawable;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
@@ -107,46 +106,19 @@ public class DrawerSongAdapter extends RecyclerView.Adapter<DrawerSongAdapter.Vi
         }
 
         boolean isPlaying = (position == playingIndex);
-        
-        // Explicitly handle focus visual changes with animation
+        holder.itemView.setActivated(isPlaying);
+
         holder.itemView.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                holder.tvTitle.setTextColor(Color.BLACK);
-                holder.tvArtist.setTextColor(Color.parseColor("#666666"));
-                holder.ivArrow.setAlpha(1.0f);
-                v.animate().scaleX(1.03f).scaleY(1.03f).setDuration(200).start();
-                v.setElevation(20f);
-            } else {
-                if (isPlaying) {
-                    holder.tvTitle.setTextColor(Color.parseColor("#26a2ff"));
-                } else {
-                    holder.tvTitle.setTextColor(Color.WHITE);
-                }
-                holder.tvArtist.setTextColor(Color.parseColor("#B3FFFFFF"));
-                holder.ivArrow.setAlpha(0f);
-                v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(200).start();
-                v.setElevation(4f);
-            }
+            holder.ivArrow.setAlpha(hasFocus ? 1f : 0f);
+            v.animate().cancel();
+            v.animate().translationZ(hasFocus
+                            ? v.getResources().getDimension(R.dimen.lx_elevation_control) : 0f)
+                    .setDuration(v.getResources().getInteger(R.integer.lx_motion_focus)).start();
         });
 
-        // Initial state sync
-        if (holder.itemView.isFocused()) {
-            holder.tvTitle.setTextColor(Color.BLACK);
-            holder.tvArtist.setTextColor(Color.parseColor("#666666"));
-            holder.ivArrow.setAlpha(1.0f);
-            holder.itemView.setScaleX(1.05f);
-            holder.itemView.setScaleY(1.05f);
-        } else {
-            if (isPlaying) {
-                holder.tvTitle.setTextColor(Color.parseColor("#26a2ff"));
-            } else {
-                holder.tvTitle.setTextColor(Color.WHITE);
-            }
-            holder.tvArtist.setTextColor(Color.parseColor("#B3FFFFFF"));
-            holder.ivArrow.setAlpha(0f);
-            holder.itemView.setScaleX(1.0f);
-            holder.itemView.setScaleY(1.0f);
-        }
+        holder.ivArrow.setAlpha(holder.itemView.isFocused() ? 1f : 0f);
+        holder.itemView.setTranslationZ(holder.itemView.isFocused()
+                ? holder.itemView.getResources().getDimension(R.dimen.lx_elevation_control) : 0f);
 
         // Show equalizer if playing
         if (isPlaying) {

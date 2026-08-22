@@ -6,15 +6,15 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:padding="4dp"
+    android:padding="@dimen/lx_space_xs"
     android:background="@drawable/bg_floating_player"
     android:visibility="gone">
 
     <androidx.cardview.widget.CardView
         android:id="@+id/cvFloatingCover"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        app:cardCornerRadius="20dp"
+        android:layout_width="@dimen/lx_control_compact"
+        android:layout_height="@dimen/lx_control_compact"
+        app:cardCornerRadius="22dp"
         app:cardElevation="0dp"
         app:cardBackgroundColor="@color/lx_bg_focus">
 
@@ -37,14 +37,14 @@
 
     <TextView
         android:id="@+id/tvFloatingTitle"
-        android:layout_width="100dp"
+        android:layout_width="@dimen/lx_floating_player_title_width"
         android:layout_height="wrap_content"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="4dp"
+        android:layout_marginStart="@dimen/lx_space_sm"
+        android:layout_marginEnd="@dimen/lx_space_xs"
         android:ellipsize="marquee"
         android:marqueeRepeatLimit="marquee_forever"
         android:singleLine="true"
         android:textColor="@color/lx_text_primary"
-        android:textSize="12sp" />
+        android:textSize="@dimen/lx_type_caption" />
 
 </LinearLayout>

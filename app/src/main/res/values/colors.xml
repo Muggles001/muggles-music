@@ -8,6 +8,11 @@
     <color name="lx_bg_header">#B3FFFFFF</color>
     <color name="lx_bg_overlay">#B3FFFFFF</color>
 
+    <color name="lx_glass_regular">#D9FFFFFF</color>
+    <color name="lx_glass_floating">#B8FFFFFF</color>
+    <color name="lx_glass_clear">#80FFFFFF</color>
+    <color name="lx_glass_highlight">#CCFFFFFF</color>
+
     <color name="lx_text_primary">#10231B</color>
     <color name="lx_text_secondary">#4B685A</color>
     <color name="lx_text_muted">#789187</color>
@@ -19,6 +24,17 @@
     <color name="lx_brand_soft">#3320C878</color>
     <color name="lx_brand_pale">#E9FFF4</color>
     <color name="lx_focus_ring">#00A965</color>
+    <color name="lx_focus_ring_strong">#008C55</color>
+    <color name="lx_selected_focused_fill">#F2FFFFFF</color>
+    <color name="lx_disabled_fill">#4DFFFFFF</color>
+    <color name="lx_shadow_tint">#28005032</color>
+
+    <color name="player_bg">#FF000000</color>
+    <color name="player_text_primary">#FFFFFFFF</color>
+    <color name="player_text_secondary">#B3FFFFFF</color>
+    <color name="player_text_muted">#66FFFFFF</color>
+    <color name="player_glass">#4D101A16</color>
+    <color name="player_glass_border">#4DFFFFFF</color>
 
     <!-- Keep the original public names for source and dependency compatibility. -->
     <color name="colorPrimary">@color/lx_brand</color>
@@ -26,4 +42,8 @@
     <color name="colorAccent">@color/lx_brand</color>
     <color name="white">#FFFFFFFF</color>
     <color name="black">#FF000000</color>
+    <item name="selector_nav_tint" type="color">@color/selector_nav_content</item>
+    <item name="selector_source_item_text" type="color">@color/selector_selectable_content</item>
+    <item name="selector_ranking_board_text" type="color">@color/selector_selectable_content</item>
+    <item name="selector_primary_button_text" type="color">@color/selector_primary_action_content</item>
 </resources>

@@ -12,7 +12,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.LinearInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -32,11 +31,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 public class FloatingPlayerWindow {
     private static final String TAG = "FloatingPlayerWindow";
 
-    private static final int FADE_DURATION = 300;
-    private static final int AUTO_FADE_DELAY = 3000;
-    private static final int PLAYER_MARGIN_BOTTOM = 24;
-    private static final int PLAYER_MARGIN_END = 24;
-
     private final Activity activity;
     private final Context context;
     private final View floatingView;
@@ -48,11 +42,9 @@ public class FloatingPlayerWindow {
     private MediaController player;
     private ListenableFuture<MediaController> controllerFuture;
     private Player.Listener playerListener;
-    private ObjectAnimator rotateAnim;
     private ObjectAnimator fadeAnim;
     private Handler fadeHandler;
     private Runnable fadeOutRunnable;
-    private boolean isPlaying = false;
     private boolean isConnected = false;
     private boolean isReleased = false;
     private boolean isFadedOut = false;
@@ -66,8 +58,8 @@ public class FloatingPlayerWindow {
     public FloatingPlayerWindow(Activity activity) {
         this.activity = activity;
         this.context = activity.getApplicationContext();
-        collapsedWidth = dp(56);
-        expandedWidth = dp(220);
+        collapsedWidth = dimension(R.dimen.lx_floating_player_collapsed_width);
+        expandedWidth = dimension(R.dimen.lx_floating_player_expanded_width);
 
         LayoutInflater inflater = LayoutInflater.from(activity);
         floatingView = inflater.inflate(R.layout.layout_floating_player, null);
@@ -93,7 +85,8 @@ public class FloatingPlayerWindow {
                 collapsedWidth,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         );
-        params.setMargins(0, 0, dp(PLAYER_MARGIN_END), dp(PLAYER_MARGIN_BOTTOM));
+        int margin = dimension(R.dimen.lx_floating_player_margin);
+        params.setMargins(0, 0, margin, margin);
         params.gravity = android.view.Gravity.BOTTOM | android.view.Gravity.END;
         
         container.setLayoutParams(params);
@@ -109,13 +102,6 @@ public class FloatingPlayerWindow {
         container.setFocusableInTouchMode(true);
         container.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         
-        cvCover.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        rotateAnim = ObjectAnimator.ofFloat(cvCover, "rotation", 0f, 360f);
-        rotateAnim.setDuration(10000);
-        rotateAnim.setInterpolator(new LinearInterpolator());
-        rotateAnim.setRepeatCount(ObjectAnimator.INFINITE);
-        rotateAnim.setRepeatMode(ObjectAnimator.RESTART);
-
         fadeHandler = new Handler(Looper.getMainLooper());
         fadeOutRunnable = this::fadeOut;
     }
@@ -126,11 +112,9 @@ public class FloatingPlayerWindow {
         container.setOnFocusChangeListener((v, hasFocus) -> {
             isFocused = hasFocus;
             if (hasFocus) {
-                container.setBackgroundResource(R.drawable.bg_floating_player_focused);
                 tvTitle.setSelected(true);
                 expandPlayer();
             } else {
-                container.setBackgroundResource(R.drawable.bg_floating_player);
                 tvTitle.setSelected(false);
                 collapsePlayer();
             }
@@ -162,12 +146,15 @@ public class FloatingPlayerWindow {
             container.setLayoutParams(params);
         }
         tvTitle.setAlpha(0f);
-        tvTitle.animate().alpha(1f).setDuration(180L).start();
+        tvTitle.animate().alpha(1f)
+                .setDuration(context.getResources().getInteger(R.integer.lx_motion_focus)).start();
     }
 
     private void collapsePlayer() {
         tvTitle.animate().cancel();
-        tvTitle.animate().alpha(0f).setDuration(120L).withEndAction(() -> {
+        tvTitle.animate().alpha(0f)
+                .setDuration(context.getResources().getInteger(R.integer.lx_motion_press))
+                .withEndAction(() -> {
             if (!isFocused && container.getParent() != null) {
                 FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) container.getLayoutParams();
                 params.width = collapsedWidth;
@@ -176,8 +163,8 @@ public class FloatingPlayerWindow {
         }).start();
     }
 
-    private int dp(int value) {
-        return Math.round(value * activity.getResources().getDisplayMetrics().density);
+    private int dimension(int resourceId) {
+        return activity.getResources().getDimensionPixelSize(resourceId);
     }
 
     private void fadeIn() {
@@ -195,7 +182,7 @@ public class FloatingPlayerWindow {
         
         container.setVisibility(View.VISIBLE);
         fadeAnim = ObjectAnimator.ofFloat(container, "alpha", container.getAlpha(), 1.0f);
-        fadeAnim.setDuration(FADE_DURATION);
+        fadeAnim.setDuration(context.getResources().getInteger(R.integer.lx_motion_panel));
         fadeAnim.start();
     }
 
@@ -211,7 +198,7 @@ public class FloatingPlayerWindow {
         isFadedOut = true;
         
         fadeAnim = ObjectAnimator.ofFloat(container, "alpha", container.getAlpha(), 0.0f);
-        fadeAnim.setDuration(FADE_DURATION);
+        fadeAnim.setDuration(context.getResources().getInteger(R.integer.lx_motion_panel));
         fadeAnim.addListener(new android.animation.AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(android.animation.Animator animation) {
@@ -243,12 +230,6 @@ public class FloatingPlayerWindow {
                 isConnected = true;
                 playerListener = new Player.Listener() {
                     @Override
-                    public void onIsPlayingChanged(boolean playing) {
-                        isPlaying = playing;
-                        updatePlayPauseButton();
-                    }
-
-                    @Override
                     public void onMediaItemTransition(MediaItem mediaItem, int reason) {
                         updateUI();
                     }
@@ -266,19 +247,6 @@ public class FloatingPlayerWindow {
                 Log.e(TAG, "Failed to get MediaController: " + e.getMessage());
             }
         }, androidx.core.content.ContextCompat.getMainExecutor(activity));
-    }
-
-    private void updatePlayPauseButton() {
-        activity.runOnUiThread(() -> {
-            if (rotateAnim != null) {
-                if (isPlaying) {
-                    if (rotateAnim.isPaused()) rotateAnim.resume();
-                    else if (!rotateAnim.isRunning()) rotateAnim.start();
-                } else {
-                    rotateAnim.pause();
-                }
-            }
-        });
     }
 
     public void showIfPlaying() {
@@ -309,17 +277,6 @@ public class FloatingPlayerWindow {
         }
 
         activity.runOnUiThread(() -> {
-            isPlaying = player.isPlaying();
-            
-            if (rotateAnim != null) {
-                if (isPlaying) {
-                    if (rotateAnim.isPaused()) rotateAnim.resume();
-                    else if (!rotateAnim.isRunning()) rotateAnim.start();
-                } else {
-                    rotateAnim.pause();
-                }
-            }
-
             MediaMetadata metadata = currentItem.mediaMetadata;
             if (metadata != null) {
                 CharSequence title = metadata.title;
@@ -362,10 +319,6 @@ public class FloatingPlayerWindow {
         isReleased = true;
         isFocused = false;
         tvTitle.animate().cancel();
-        if (rotateAnim != null) {
-            rotateAnim.cancel();
-            rotateAnim = null;
-        }
         if (fadeAnim != null) {
             fadeAnim.cancel();
             fadeAnim = null;
@@ -389,7 +342,6 @@ public class FloatingPlayerWindow {
                 params.width = collapsedWidth;
                 container.setLayoutParams(params);
             }
-            container.setBackgroundResource(R.drawable.bg_floating_player);
             tvTitle.setSelected(false);
             
             ViewGroup parent = (ViewGroup) container.getParent();
@@ -459,6 +411,11 @@ public class FloatingPlayerWindow {
             return requestFocusFrom(currentFocus);
         }
 
+        // Song controls already define an exact left-to-right graph. Applying
+        // the lower-right geometry shortcut inside a row can skip its remaining
+        // actions when larger TV focus targets happen to overlap that zone.
+        if (isInsideSongRow(currentFocus)) return false;
+
         int[] decorLocation = new int[2];
         int[] focusLocation = new int[2];
         View decor = activity.getWindow().getDecorView();
@@ -468,8 +425,10 @@ public class FloatingPlayerWindow {
         int focusRight = focusLocation[0] - decorLocation[0] + currentFocus.getWidth();
         int decorHeight = decor.getHeight();
         int decorWidth = decor.getWidth();
-        boolean nearBottom = focusBottom >= decorHeight - dp(144);
-        boolean nearRight = focusRight >= decorWidth - dp(220);
+        boolean nearBottom = focusBottom >= decorHeight
+                - dimension(R.dimen.lx_floating_entry_bottom);
+        boolean nearRight = focusRight >= decorWidth
+                - dimension(R.dimen.lx_floating_player_expanded_width);
 
         boolean rightPressFromBroadRow = keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
                 && currentFocus instanceof ViewGroup
@@ -481,6 +440,16 @@ public class FloatingPlayerWindow {
         if (shouldEnter) {
             focusReturnView = currentFocus;
             return requestFocus();
+        }
+        return false;
+    }
+
+    private boolean isInsideSongRow(View view) {
+        View current = view;
+        while (current != null) {
+            if (current.getId() == R.id.item_song_root) return true;
+            if (!(current.getParent() instanceof View)) return false;
+            current = (View) current.getParent();
         }
         return false;
     }

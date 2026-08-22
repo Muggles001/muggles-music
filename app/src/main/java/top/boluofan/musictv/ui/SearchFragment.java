@@ -82,6 +82,8 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private RecyclerView rvSearchResults;
     private LxMusicAdapter songAdapter;
     private ProgressBar loadingProgress;
+    private TextView tvTitle;
+    private TextView tvSearchSubtitle;
     private TextView tvNoResults;
     private TextView tvResultCount;
     private TextView tvHotSearchTitle;
@@ -170,6 +172,8 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         rvHotSearch = rootView.findViewById(R.id.rvHotSearch);
         rvSearchResults = rootView.findViewById(R.id.rvSearchResults);
         loadingProgress = rootView.findViewById(R.id.loadingProgress);
+        tvTitle = rootView.findViewById(R.id.tvTitle);
+        tvSearchSubtitle = rootView.findViewById(R.id.tvSearchSubtitle);
         tvNoResults = rootView.findViewById(R.id.tvNoResults);
         tvResultCount = rootView.findViewById(R.id.tvResultCount);
         tvHotSearchTitle = rootView.findViewById(R.id.tvHotSearchTitle);
@@ -240,8 +244,8 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         rvHotSearch.addItemDecoration(new RecyclerView.ItemDecoration() {
             @Override
             public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
-                outRect.left = dp(2);
-                outRect.right = dp(2);
+                outRect.left = dp(3);
+                outRect.right = dp(3);
             }
         });
         hotSearchAdapter = new androidx.recyclerview.widget.RecyclerView.Adapter<HotSearchViewHolder>() {
@@ -252,9 +256,9 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
                 tv.setLayoutParams(new RecyclerView.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT));
-                tv.setPadding(dp(18), dp(6), dp(18), dp(6));
-                tv.setTextSize(12);
-                tv.setTextColor(getResources().getColorStateList(R.color.lx_brand));
+                tv.setPadding(dp(16), dp(6), dp(16), dp(6));
+                tv.setTextSize(14);
+                tv.setTextColor(getResources().getColorStateList(R.color.selector_action_content));
                 tv.setBackgroundResource(R.drawable.bg_tab_selected);
                 tv.setFocusable(true);
                 tv.setClickable(true);
@@ -306,8 +310,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         View.OnKeyListener actionNavigation = (v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                requestFirstResultFocus();
-                return true;
+                return requestFirstResultFocus();
             }
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
                 return focusSearchHeader();
@@ -337,8 +340,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         View.OnKeyListener pagerNavigation = (v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                requestLastResultFocus();
-                return true;
+                return requestLastResultFocus();
             }
             if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) return true;
             return false;
@@ -348,24 +350,16 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         updatePlaybackModeButton();
     }
 
-    private void requestFirstResultFocus() {
-        if (rvSearchResults == null || allResults.isEmpty()) return;
+    private boolean requestFirstResultFocus() {
+        if (rvSearchResults == null || songAdapter.getItemCount() == 0) return true;
         rvSearchResults.setVisibility(View.VISIBLE);
-        rvSearchResults.scrollToPosition(0);
-        rvSearchResults.post(() -> {
-            RecyclerView.ViewHolder holder = rvSearchResults.findViewHolderForAdapterPosition(0);
-            if (holder != null) holder.itemView.requestFocus();
-        });
+        return songAdapter.requestFocusAt(rvSearchResults, 0);
     }
 
-    private void requestLastResultFocus() {
-        if (rvSearchResults == null || songAdapter.getItemCount() == 0) return;
+    private boolean requestLastResultFocus() {
+        if (rvSearchResults == null || songAdapter.getItemCount() == 0) return true;
         int position = songAdapter.getItemCount() - 1;
-        rvSearchResults.scrollToPosition(position);
-        rvSearchResults.post(() -> {
-            RecyclerView.ViewHolder holder = rvSearchResults.findViewHolderForAdapterPosition(position);
-            if (holder != null) holder.itemView.requestFocus();
-        });
+        return songAdapter.requestFocusAt(rvSearchResults, position);
     }
 
     private boolean focusSearchHeader() {
@@ -867,12 +861,15 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         boolean hasSearchResults = !allResults.isEmpty();
         updateSearchFocusPath(hasSearchResults);
 
-        tvHotSearchTitle.setVisibility(hasHotSearch ? View.VISIBLE : View.GONE);
-        rvHotSearch.setVisibility(hasHotSearch ? View.VISIBLE : View.GONE);
+        tvTitle.setVisibility(hasSearchResults ? View.GONE : View.VISIBLE);
+        tvSearchSubtitle.setVisibility(hasSearchResults ? View.GONE : View.VISIBLE);
+        boolean showDiscovery = hasHotSearch && !hasSearchResults;
+        tvHotSearchTitle.setVisibility(showDiscovery ? View.VISIBLE : View.GONE);
+        rvHotSearch.setVisibility(showDiscovery ? View.VISIBLE : View.GONE);
 
         if (hasSearchResults) {
             tvResultCount.setVisibility(View.VISIBLE);
-            tvResultCount.setText("共 " + allResults.size() + " 首");
+            tvResultCount.setText("共 " + allResults.size() + " 首 · 播放控制");
             layoutSearchActions.setVisibility(View.VISIBLE);
             layoutSearchPager.setVisibility(View.VISIBLE);
             rvSearchResults.setVisibility(View.VISIBLE);
