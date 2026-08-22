@@ -16,6 +16,42 @@ public interface ExternalApiService {
     Call<JsonObject> search(@Query("s") String name, @Query("type") int type, @Query("limit") int limit);
 
     @Headers({
+        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer: https://music.163.com"
+    })
+    @GET("api/cloudsearch/pc")
+    Call<JsonObject> cloudSearch(
+            @Query("s") String name,
+            @Query("type") int type,
+            @Query("limit") int limit,
+            @Query("offset") int offset
+    );
+
+    @Headers({
+        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer: https://music.163.com"
+    })
+    @GET("api/playlist/list")
+    Call<JsonObject> getPublicPlaylists(
+            @Query("cat") String category,
+            @Query("order") String order,
+            @Query("offset") int offset,
+            @Query("total") boolean total,
+            @Query("limit") int limit
+    );
+
+    @Headers({
+        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer: https://music.163.com"
+    })
+    @GET("api/playlist/detail")
+    Call<JsonObject> getPublicPlaylistDetail(
+            @Query("id") String id,
+            @Query("n") int limit,
+            @Query("s") int subscribers
+    );
+
+    @Headers({
         "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
         "Referer: https://music.163.com",
         "Cookie: os=pc; osver=Microsoft-Windows-10-Professional-build-19045-64bit; appver=2.9.7"

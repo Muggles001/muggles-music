@@ -29,6 +29,8 @@ import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
+import top.boluofan.musictv.backend.MusicApiProvider;
+import top.boluofan.musictv.backend.BackendPreferences;
 import top.boluofan.musictv.api.model.ListData;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.api.model.Playlist;
@@ -272,14 +274,14 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
     }
     
     private void loadUserData() {
-        if (!LxRetrofitClient.isLoggedIn(requireContext())) {
+        if (!LxRetrofitClient.isLoggedIn(requireContext()) && !BackendPreferences.usesLocalLibrary(requireContext())) {
             Toast.makeText(requireContext(), "未登录，仅显示公共功能", Toast.LENGTH_SHORT).show();
             tabLoveList.setVisibility(View.GONE);
             tabAllSongs.setVisibility(View.GONE);
             return;
         }
         
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
         String token = LxRetrofitClient.getToken(requireContext());

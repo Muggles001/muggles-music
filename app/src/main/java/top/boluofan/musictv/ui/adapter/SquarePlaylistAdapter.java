@@ -122,18 +122,6 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
             viewHolder.ivCover.setImageResource(R.drawable.ic_playlist_music);
         }
 
-        Long playCount = playlist.getPlayCount();
-        String playCountStr = playlist.getPlayCountStr();
-        boolean hasPlayCount = (playCount != null && playCount > 0) || 
-                               (playCountStr != null && !playCountStr.isEmpty()) ||
-                               (playlist.getInfo() != null && playlist.getInfo().getPlayCount() != null && !playlist.getInfo().getPlayCount().isEmpty());
-        if (hasPlayCount) {
-            viewHolder.tvPlayCount.setVisibility(View.VISIBLE);
-            viewHolder.tvPlayCount.setText(playlist.getFormattedPlayCount());
-        } else {
-            viewHolder.tvPlayCount.setVisibility(View.GONE);
-        }
-
         String creator = playlist.getCreator();
         int songCount = playlist.getSongCount();
         
@@ -185,7 +173,6 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView ivCover;
-        TextView tvPlayCount;
         TextView tvName;
         TextView tvInfo;
         TextView tvCreator;
@@ -194,7 +181,6 @@ public class SquarePlaylistAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         ViewHolder(View itemView) {
             super(itemView);
             ivCover = itemView.findViewById(R.id.ivCover);
-            tvPlayCount = itemView.findViewById(R.id.tvPlayCount);
             tvName = itemView.findViewById(R.id.tvName);
             tvInfo = itemView.findViewById(R.id.tvInfo);
             tvCreator = itemView.findViewById(R.id.tvCreator);

@@ -43,7 +43,17 @@ public class LxRetrofitClient {
         }
 
         currentBaseUrl = baseUrl;
+        retrofit = createRetrofit(context, baseUrl);
+        return retrofit;
+    }
 
+    public static LxApiService createApiService(Context context, String rawUrl) {
+        String baseUrl = normalizeServerUrl(rawUrl);
+        if (baseUrl == null) throw new IllegalArgumentException("LXserver address is invalid");
+        return createRetrofit(context, baseUrl).create(LxApiService.class);
+    }
+
+    private static Retrofit createRetrofit(Context context, String baseUrl) {
         HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
         // BODY logging buffers and prints complete playlist/lyric responses,
         // which is expensive on low-memory TVs and can expose account data.
@@ -54,18 +64,17 @@ public class LxRetrofitClient {
                 : HttpLoggingInterceptor.Level.NONE);
 
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
+                .callTimeout(25, TimeUnit.SECONDS)
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .writeTimeout(20, TimeUnit.SECONDS)
                 .addInterceptor(logging);
 
-        retrofit = new Retrofit.Builder()
+        return new Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(builder.build())
                 .build();
-
-        return retrofit;
     }
 
     public static LxApiService getApiService(Context context) {

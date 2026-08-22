@@ -79,6 +79,7 @@
                 android:nextFocusLeft="@id/tabSettings">
 
                 <TextView
+                    android:id="@+id/tvConnectionLabel"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -119,6 +120,7 @@
                 android:nextFocusLeft="@id/tabSettings">
 
                 <TextView
+                    android:id="@+id/tvLibraryLabel"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -191,6 +193,7 @@
                 android:clickable="true">
 
                 <TextView
+                    android:id="@+id/tvClearLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="清除配置"

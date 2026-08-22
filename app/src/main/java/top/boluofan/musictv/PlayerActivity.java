@@ -77,7 +77,6 @@ public class PlayerActivity extends AppCompatActivity {
     private Player.Listener playerListener;
     private LyricAdapter lyricAdapter;
     private top.boluofan.musictv.api.LxApiService apiService;
-    private String baseUrl;
     private SongScraper songScraper;
     private String currentScrapingId = "";
     private String currentSongSource = "mg";
@@ -231,9 +230,7 @@ public class PlayerActivity extends AppCompatActivity {
         // Optimize Marquee performance and isolation
         // Removed Hardware Layer to prevent artifacts during layout updates
 
-        SharedPreferences settings = getSharedPreferences("LxMusicPrefs", 0);
-        baseUrl = settings.getString("server_url", "");
-        apiService = top.boluofan.musictv.api.LxRetrofitClient.getApiService(this);
+        apiService = top.boluofan.musictv.backend.MusicApiProvider.get(this);
 
         // Enable marquee
         tvBigTitle.setSelected(true);
@@ -773,7 +770,8 @@ public class PlayerActivity extends AppCompatActivity {
             Glide.with(this).load(data)
                 .placeholder(R.drawable.ic_cover_placeholder)
                 .error(R.drawable.ic_cover_placeholder)
-                .transform(new RoundedCorners(80)).into(ivBigCover);
+                .transform(new RoundedCorners(getResources().getDimensionPixelSize(
+                        R.dimen.player_cover_corner_radius))).into(ivBigCover);
             loadBlurredBackground(data);
             hasArtwork = true;
         } else if (mediaItem.mediaMetadata.artworkUri != null) {
@@ -782,7 +780,8 @@ public class PlayerActivity extends AppCompatActivity {
             Glide.with(this).load(uri)
                 .placeholder(R.drawable.ic_cover_placeholder)
                 .error(R.drawable.ic_cover_placeholder)
-                .transform(new RoundedCorners(80)).into(ivBigCover);
+                .transform(new RoundedCorners(getResources().getDimensionPixelSize(
+                        R.dimen.player_cover_corner_radius))).into(ivBigCover);
             loadBlurredBackground(uri);
             hasArtwork = true;
         } else {
@@ -1009,7 +1008,8 @@ public class PlayerActivity extends AppCompatActivity {
                             .apply(new RequestOptions()
                                 .placeholder(R.drawable.ic_cover_placeholder)
                                 .error(R.drawable.ic_cover_placeholder)
-                                .transform(new RoundedCorners(80)))
+                                .transform(new RoundedCorners(getResources().getDimensionPixelSize(
+                                        R.dimen.player_cover_corner_radius))))
                             .listener(new com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable>() {
                                 @Override
                                 public boolean onLoadFailed(@Nullable com.bumptech.glide.load.engine.GlideException e, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {

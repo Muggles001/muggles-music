@@ -28,6 +28,8 @@ import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxRetrofitClient;
+import top.boluofan.musictv.backend.BackendMode;
+import top.boluofan.musictv.backend.BackendPreferences;
 import top.boluofan.musictv.util.FocusAnimationHelper;
 import top.boluofan.musictv.ui.SongSquareFragment;
 
@@ -79,8 +81,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        String serverUrl = LxRetrofitClient.getServerUrl(this);
-        if (LxRetrofitClient.normalizeServerUrl(serverUrl) == null) {
+        BackendMode backendMode = BackendPreferences.getMode(this);
+        if (backendMode == BackendMode.NONE) {
             startActivity(new Intent(this, top.boluofan.musictv.ConfigActivity.class));
             finish();
             return;
@@ -97,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
         int initialPage = savedInstanceState != null
                 ? savedInstanceState.getInt(STATE_SELECTED_PAGE, PAGE_SONG_SQUARE)
                 : PAGE_SONG_SQUARE;
-        if (initialPage == PAGE_LIBRARY && !LxRetrofitClient.isLoggedIn(this)) {
+        if (initialPage == PAGE_LIBRARY && !isLibraryAvailable()) {
             initialPage = PAGE_SONG_SQUARE;
         }
         selectPrimaryPage(initialPage, false);
@@ -162,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
         tvRanking = findViewById(R.id.tvRanking);
         tvSettings = findViewById(R.id.tvSettings);
         
-        if (!LxRetrofitClient.isLoggedIn(this)) {
+        if (!isLibraryAvailable()) {
             tabLibrary.setVisibility(View.GONE);
         }
     }
@@ -173,6 +175,10 @@ public class MainActivity extends AppCompatActivity {
         bindPrimaryTab(tabRanking, PAGE_RANKING);
         bindPrimaryTab(tabLibrary, PAGE_LIBRARY);
         bindPrimaryTab(tabSettings, PAGE_SETTINGS);
+    }
+
+    private boolean isLibraryAvailable() {
+        return BackendPreferences.usesLocalLibrary(this) || LxRetrofitClient.isLoggedIn(this);
     }
 
     private void bindPrimaryTab(View tab, int page) {
@@ -268,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void selectPrimaryPage(int page, boolean animate) {
-        if (page == PAGE_LIBRARY && !LxRetrofitClient.isLoggedIn(this)) return;
+        if (page == PAGE_LIBRARY && !isLibraryAvailable()) return;
         if (page < PAGE_SEARCH || page > PAGE_SETTINGS) return;
 
         Fragment current = currentSelectedTab >= 0

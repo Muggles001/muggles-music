@@ -15,4 +15,6 @@
     <dimen name="lx_pager_height">56dp</dimen>
     <dimen name="lx_glass_radius">24dp</dimen>
     <dimen name="lx_rail_radius">28dp</dimen>
+    <dimen name="player_cover_corner_radius">54dp</dimen>
+    <dimen name="player_lyric_horizontal_padding">24dp</dimen>
 </resources>

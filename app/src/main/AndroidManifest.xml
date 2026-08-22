@@ -38,24 +38,8 @@
             android:exported="false" />
 
         <activity
-            android:name="top.boluofan.musictv.ui.LibraryActivity"
-            android:label="Library" />
-
-        <activity
             android:name="top.boluofan.musictv.PlayerActivity"
             android:label="Now Playing" />
-
-        <activity
-            android:name="top.boluofan.musictv.ui.SearchActivity"
-            android:label="搜索" />
-
-        <activity
-            android:name="top.boluofan.musictv.ui.RankingActivity"
-            android:label="排行榜" />
-
-        <activity
-            android:name="top.boluofan.musictv.ui.SettingsActivity"
-            android:label="设置" />
 
         <activity
             android:name="top.boluofan.musictv.ui.PlaylistDetailActivity"
@@ -80,6 +64,11 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
         </service>
+
+        <service
+            android:name="top.boluofan.musictv.source.SourceRuntimeService"
+            android:process=":source_runtime"
+            android:exported="false" />
     </application>
 
 </manifest>

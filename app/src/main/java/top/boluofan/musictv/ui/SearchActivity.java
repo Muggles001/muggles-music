@@ -52,6 +52,8 @@ import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.PlayerActivity;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
+import top.boluofan.musictv.backend.MusicApiProvider;
+import top.boluofan.musictv.backend.BackendPreferences;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
 import top.boluofan.musictv.util.DialogHelper;
@@ -390,7 +392,7 @@ public class SearchActivity extends AppCompatActivity {
             return;
         }
         
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
         apiService.getHotSearch(source).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
@@ -669,7 +671,7 @@ public class SearchActivity extends AppCompatActivity {
     private void searchAllSources(String keyword) {
         List<MusicInfo>[] results = new List[ALL_SOURCES.length];
         int[] completed = new int[1];
-        LxApiService apiService = LxRetrofitClient.getApiService(SearchActivity.this);
+        LxApiService apiService = MusicApiProvider.get(SearchActivity.this);
         
         for (int i = 0; i < ALL_SOURCES.length; i++) {
             final int index = i;
@@ -732,7 +734,7 @@ public class SearchActivity extends AppCompatActivity {
     }
     
     private void searchSingleSource(String keyword, String source) {
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
         apiService.searchMusic(keyword, source, currentPage, 30).enqueue(new Callback<List<MusicInfo>>() {
             @Override
             public void onResponse(Call<List<MusicInfo>> call, Response<List<MusicInfo>> response) {
@@ -1082,7 +1084,7 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void collectSingleSong(MusicInfo song) {
-        if (!LxRetrofitClient.isLoggedIn(this)) {
+        if (!LxRetrofitClient.isLoggedIn(this) && !BackendPreferences.usesLocalLibrary(this)) {
             Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(this, top.boluofan.musictv.ConfigActivity.class);
             intent.putExtra("server_url", LxRetrofitClient.getServerUrl(this));
@@ -1093,7 +1095,7 @@ public class SearchActivity extends AppCompatActivity {
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
         String token = LxRetrofitClient.getToken(this);
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
 
         apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
@@ -1132,7 +1134,7 @@ public class SearchActivity extends AppCompatActivity {
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
         String token = LxRetrofitClient.getToken(this);
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
 
         List<MusicInfo> songList = playlist.getSongs();
         if (songList == null) {
@@ -1172,7 +1174,7 @@ public class SearchActivity extends AppCompatActivity {
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
         String token = LxRetrofitClient.getToken(this);
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
 
         apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override

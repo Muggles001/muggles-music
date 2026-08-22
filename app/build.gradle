@@ -16,8 +16,8 @@ android {
         applicationId "io.github.muggles001.mugglesmusic"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 22
-        versionName "1.0.4"
+        versionCode 25
+        versionName "2.0.0-beta3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -97,6 +97,11 @@ dependencies {
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
     // QR Code Generation
     implementation 'com.google.zxing:core:3.5.3'
+    // LX-compatible custom source scripts run in the same lightweight engine used by LX Music Mobile.
+    implementation 'wang.harlon.quickjs:wrapper-android:2.4.0'
+
+    implementation 'androidx.room:room-runtime:2.7.2'
+    annotationProcessor 'androidx.room:room-compiler:2.7.2'
 
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

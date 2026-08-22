@@ -27,6 +27,15 @@ Maintenance repository:
 Backend project used by this client:
   https://github.com/XCQ0607/lxserver
 
+LX custom source compatibility references:
+  https://github.com/lyswhut/lx-music-doc
+  https://github.com/lyswhut/lx-music-mobile
+
+JavaScript runtime dependency:
+  HarlonWang/quickjs-wrapper
+  https://github.com/HarlonWang/quickjs-wrapper
+  Apache License 2.0
+
 The modifications in the Muggles Music independent edition were generated
 and implemented entirely by OpenAI Codex, with runtime validation by the
 project maintainer. This statement does not apply to upstream code.

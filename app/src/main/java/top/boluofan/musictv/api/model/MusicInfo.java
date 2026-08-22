@@ -36,6 +36,15 @@ public class MusicInfo {
     @SerializedName("songId")
     private String songId;
 
+    @SerializedName("albumMid")
+    private String albumMid;
+
+    @SerializedName("strMediaMid")
+    private String strMediaMid;
+
+    @SerializedName("_interval")
+    private Long rawInterval;
+
     @SerializedName("hash")
     private String hash;
 
@@ -181,6 +190,38 @@ public class MusicInfo {
 
     public void setSongmid(String songmid) {
         this.songmid = songmid;
+    }
+
+    public String getSongId() {
+        return songId;
+    }
+
+    public void setSongId(String songId) {
+        this.songId = songId;
+    }
+
+    public String getAlbumMid() {
+        return albumMid;
+    }
+
+    public void setAlbumMid(String albumMid) {
+        this.albumMid = albumMid;
+    }
+
+    public String getStrMediaMid() {
+        return strMediaMid;
+    }
+
+    public void setStrMediaMid(String strMediaMid) {
+        this.strMediaMid = strMediaMid;
+    }
+
+    public Long getRawInterval() {
+        return rawInterval;
+    }
+
+    public void setRawInterval(Long rawInterval) {
+        this.rawInterval = rawInterval;
     }
 
     public String getHash() {
@@ -367,6 +408,9 @@ public class MusicInfo {
         @SerializedName("size")
         private String size;
 
+        @SerializedName("hash")
+        private String hash;
+
         public String getType() {
             return type;
         }
@@ -382,11 +426,22 @@ public class MusicInfo {
         public void setSize(String size) {
             this.size = size;
         }
+
+        public String getHash() {
+            return hash;
+        }
+
+        public void setHash(String hash) {
+            this.hash = hash;
+        }
     }
 
     public static class QualityDetail {
         @SerializedName("size")
         private String size;
+
+        @SerializedName("hash")
+        private String hash;
 
         public String getSize() {
             return size;
@@ -394,6 +449,14 @@ public class MusicInfo {
 
         public void setSize(String size) {
             this.size = size;
+        }
+
+        public String getHash() {
+            return hash;
+        }
+
+        public void setHash(String hash) {
+            this.hash = hash;
         }
     }
 }

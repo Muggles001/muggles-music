@@ -41,6 +41,8 @@ import top.boluofan.musictv.util.DialogHelper;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
+import top.boluofan.musictv.backend.MusicApiProvider;
+import top.boluofan.musictv.backend.BackendPreferences;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
 import android.net.Uri;
@@ -208,7 +210,7 @@ public class RankingActivity extends AppCompatActivity {
     }
     
     private void collectPlaylist() {
-        if (!LxRetrofitClient.isLoggedIn(this)) {
+        if (!LxRetrofitClient.isLoggedIn(this) && !BackendPreferences.usesLocalLibrary(this)) {
             Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(this, top.boluofan.musictv.ConfigActivity.class);
             intent.putExtra("server_url", LxRetrofitClient.getServerUrl(this));
@@ -224,7 +226,7 @@ public class RankingActivity extends AppCompatActivity {
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
         String token = LxRetrofitClient.getToken(this);
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
         
         btnFavorite.setEnabled(false);
         
@@ -291,7 +293,7 @@ public class RankingActivity extends AppCompatActivity {
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
         String token = LxRetrofitClient.getToken(this);
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
         
         top.boluofan.musictv.api.model.Playlist newPlaylist;
         if (existingPlaylist != null) {
@@ -336,7 +338,7 @@ public class RankingActivity extends AppCompatActivity {
     }
 
     private void collectSingleSong(MusicInfo song) {
-        if (!LxRetrofitClient.isLoggedIn(this)) {
+        if (!LxRetrofitClient.isLoggedIn(this) && !BackendPreferences.usesLocalLibrary(this)) {
             Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(this, top.boluofan.musictv.ConfigActivity.class);
             intent.putExtra("server_url", LxRetrofitClient.getServerUrl(this));
@@ -347,7 +349,7 @@ public class RankingActivity extends AppCompatActivity {
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
         String token = LxRetrofitClient.getToken(this);
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
 
         apiService.getUserList(username, password,token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
@@ -387,7 +389,7 @@ public class RankingActivity extends AppCompatActivity {
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
         String token = LxRetrofitClient.getToken(this);
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
 
         apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
@@ -431,7 +433,7 @@ public class RankingActivity extends AppCompatActivity {
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
         String token = LxRetrofitClient.getToken(this);
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
 
         List<MusicInfo> songList = playlist.getSongs();
         if (songList == null) {
@@ -537,7 +539,7 @@ public class RankingActivity extends AppCompatActivity {
     private void loadBoards() {
         showLoading(true);
         
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
         apiService.getLeaderboardBoards(currentSource).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
@@ -596,7 +598,7 @@ public class RankingActivity extends AppCompatActivity {
         
         showLoading(true);
         
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
         apiService.getLeaderboardList(currentSource, currentBoardId, 1).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {

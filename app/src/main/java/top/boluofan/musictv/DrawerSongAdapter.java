@@ -47,16 +47,12 @@ public class DrawerSongAdapter extends RecyclerView.Adapter<DrawerSongAdapter.Vi
     private int playingIndex = -1;
     private boolean isPlayerPlaying = false;
     private Context context;
-    private top.boluofan.musictv.api.LxApiService apiService;
-    private String baseUrl;
 
     private Map<String, String> coverUrlCache = new HashMap<>();
     private Map<String, String> artistCache = new HashMap<>();
 
     public DrawerSongAdapter(Context context) {
         this.context = context;
-        this.apiService = top.boluofan.musictv.api.LxRetrofitClient.getApiService(context);
-        this.baseUrl = top.boluofan.musictv.api.LxRetrofitClient.getServerUrl(context);
     }
 
     public interface OnItemClickListener {

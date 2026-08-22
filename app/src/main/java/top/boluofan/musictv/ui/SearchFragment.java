@@ -53,6 +53,10 @@ import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.PlayerActivity;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
+import top.boluofan.musictv.backend.MusicApiProvider;
+import top.boluofan.musictv.backend.BackendMode;
+import top.boluofan.musictv.backend.BackendPreferences;
+import top.boluofan.musictv.backend.DirectSourcePlatforms;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
 import top.boluofan.musictv.util.DialogHelper;
@@ -108,11 +112,11 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private int searchGeneration = 0;
     private int hotSearchGeneration = 0;
 
-    private final String[] SOURCES = {"all", "kw", "kg", "tx", "wy", "mg"};
-    private final String[] SOURCE_NAMES = {"聚合搜索", "酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
+    private String[] SOURCES = {"all", "kw", "kg", "tx", "wy", "mg"};
+    private String[] SOURCE_NAMES = {"聚合搜索", "酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
 
-    private final String[] ALL_SOURCES = {"kw", "kg", "tx", "wy", "mg"};
-    private final String[] ALL_SOURCE_NAMES = {"酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
+    private String[] ALL_SOURCES = {"kw", "kg", "tx", "wy", "mg"};
+    private String[] ALL_SOURCE_NAMES = {"酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
 
     private static final int SEARCH_SERVER_PORT = 8089;
     private SearchWebServer searchWebServer;
@@ -135,6 +139,16 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        if (BackendPreferences.getMode(requireContext()) == BackendMode.DIRECT_SOURCE) {
+            ALL_SOURCES = DirectSourcePlatforms.codes(requireContext());
+            ALL_SOURCE_NAMES = DirectSourcePlatforms.names(requireContext());
+            SOURCES = new String[ALL_SOURCES.length + 1];
+            SOURCE_NAMES = new String[ALL_SOURCE_NAMES.length + 1];
+            SOURCES[0] = "all";
+            SOURCE_NAMES[0] = "聚合搜索";
+            System.arraycopy(ALL_SOURCES, 0, SOURCES, 1, ALL_SOURCES.length);
+            System.arraycopy(ALL_SOURCE_NAMES, 0, SOURCE_NAMES, 1, ALL_SOURCE_NAMES.length);
+        }
         // MainActivity owns the single full-window gradient. Keeping the
         // fragment transparent prevents the background from restarting at the
         // content rail boundary.
@@ -441,7 +455,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
             return;
         }
 
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
         apiService.getHotSearch(source).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
@@ -740,7 +754,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private void searchAllSources(String keyword, int generation) {
         List<MusicInfo>[] results = new List[ALL_SOURCES.length];
         int[] completed = new int[1];
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
 
         for (int i = 0; i < ALL_SOURCES.length; i++) {
             final int index = i;
@@ -809,7 +823,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     }
 
     private void searchSingleSource(String keyword, String source, int generation) {
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
         apiService.searchMusic(keyword, source, currentPage, 30).enqueue(new Callback<List<MusicInfo>>() {
             @Override
             public void onResponse(Call<List<MusicInfo>> call, Response<List<MusicInfo>> response) {
@@ -1151,7 +1165,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     }
 
     private void collectSingleSong(MusicInfo song) {
-        if (!LxRetrofitClient.isLoggedIn(requireContext())) {
+        if (!LxRetrofitClient.isLoggedIn(requireContext()) && !BackendPreferences.usesLocalLibrary(requireContext())) {
             Toast.makeText(requireContext(), "请先登录", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(requireContext(), top.boluofan.musictv.ConfigActivity.class);
             intent.putExtra("server_url", LxRetrofitClient.getServerUrl(requireContext()));
@@ -1162,7 +1176,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
         String token = LxRetrofitClient.getToken(requireContext());
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
 
         apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
@@ -1204,7 +1218,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
         String token = LxRetrofitClient.getToken(requireContext());
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
 
         List<MusicInfo> songList = playlist.getSongs();
         if (songList == null) {
@@ -1246,7 +1260,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
         String token = LxRetrofitClient.getToken(requireContext());
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
 
         apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override

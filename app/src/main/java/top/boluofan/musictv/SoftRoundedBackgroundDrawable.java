@@ -15,6 +15,7 @@ public final class SoftRoundedBackgroundDrawable extends Drawable {
     // Cubic Bezier approximation of a quarter circle. Unlike sampled superellipse points,
     // this gives the corner and straight edge exactly the same tangent at their join.
     private static final float QUARTER_CIRCLE_CONTROL = 0.55228475f;
+    static final float MAX_CORNER_HEIGHT_FRACTION = 0.22f;
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
@@ -38,8 +39,11 @@ public final class SoftRoundedBackgroundDrawable extends Drawable {
         float top = bounds.top;
         float right = bounds.right;
         float bottom = bounds.bottom;
+        // Half-height corners turn short lyric rows into pills. This ratio keeps the
+        // cover's rounded-corner-to-straight-edge balance while preserving tangency.
         float extent = Math.min(requestedExtent,
-                Math.min((right - left) / 2f, (bottom - top) / 2f));
+                Math.min((right - left) / 2f,
+                        (bottom - top) * MAX_CORNER_HEIGHT_FRACTION));
         float control = extent * QUARTER_CIRCLE_CONTROL;
 
         path.moveTo(left + extent, top);

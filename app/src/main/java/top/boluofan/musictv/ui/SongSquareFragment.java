@@ -23,6 +23,10 @@ import retrofit2.Response;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
+import top.boluofan.musictv.backend.MusicApiProvider;
+import top.boluofan.musictv.backend.BackendMode;
+import top.boluofan.musictv.backend.BackendPreferences;
+import top.boluofan.musictv.backend.DirectSourcePlatforms;
 import top.boluofan.musictv.api.model.Playlist;
 import top.boluofan.musictv.ui.adapter.SquarePlaylistAdapter;
 import top.boluofan.musictv.util.FocusAnimationHelper;
@@ -46,8 +50,8 @@ public class SongSquareFragment extends Fragment {
     private String currentSource = "mg";
     private int currentSourceIndex = 0;
     
-    private final String[] SOURCES = {"mg", "kw", "kg", "tx", "wy"};
-    private final String[] SOURCE_NAMES = {"咪咕", "酷我", "酷狗", "QQ音乐", "网易云"};
+    private String[] SOURCES = {"mg", "kw", "kg", "tx", "wy"};
+    private String[] SOURCE_NAMES = {"咪咕", "酷我", "酷狗", "QQ音乐", "网易云"};
     
     private SquarePlaylistAdapter playlistAdapter;
     private int currentPage = 1;
@@ -73,6 +77,12 @@ public class SongSquareFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         view.setBackgroundResource(0);
+        if (BackendPreferences.getMode(requireContext()) == BackendMode.DIRECT_SOURCE) {
+            SOURCES = DirectSourcePlatforms.codes(requireContext());
+            SOURCE_NAMES = DirectSourcePlatforms.names(requireContext());
+            currentSource = SOURCES.length == 0 ? "wy" : SOURCES[0];
+            currentSourceIndex = 0;
+        }
         
         initViews(view);
         setupRecyclerViews();
@@ -235,7 +245,7 @@ public class SongSquareFragment extends Fragment {
         showLoading(true);
         updatePager();
         
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
         activePageCall = apiService.getSongListList(currentSource, "", "hot", remotePage);
         activePageCall.enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override

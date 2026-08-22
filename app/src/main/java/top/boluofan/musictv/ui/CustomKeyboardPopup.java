@@ -28,6 +28,7 @@ import retrofit2.Response;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
+import top.boluofan.musictv.backend.MusicApiProvider;
 
 public class CustomKeyboardPopup {
 
@@ -387,7 +388,7 @@ public class CustomKeyboardPopup {
     }
 
     private void loadTipSearch(String keyword) {
-        LxApiService apiService = LxRetrofitClient.getApiService(context);
+        LxApiService apiService = MusicApiProvider.get(context);
         apiService.tipSearch(keyword, currentSource).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {

@@ -21,16 +21,24 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import retrofit2.Response;
+import top.boluofan.musictv.backend.BackendMode;
+import top.boluofan.musictv.backend.BackendPreferences;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.api.model.LoginResponse;
+import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.api.model.MusicUrlResponse;
+import top.boluofan.musictv.source.SourceRuntimeManager;
 
 public class MusicService extends MediaSessionService {
     private static final String TAG = "MusicService";
     private static final String RESOLVE_SCHEME = "lxmusic";
     private static final String RESOLVE_HOST = "resolve";
+    private static final Gson GSON = new Gson();
 
     private MediaSession mediaSession;
     private ExoPlayer player;
@@ -52,6 +60,7 @@ public class MusicService extends MediaSessionService {
                         String source = uri.getQueryParameter("source");
                         String songmid = uri.getQueryParameter("songmid");
                         String name = uri.getQueryParameter("name");
+                        String payload = uri.getQueryParameter("payload");
 
                         if (source == null || songmid == null || songmid.isEmpty()) {
                             throw new IOException("Missing or empty source or songmid for URL resolution");
@@ -59,7 +68,7 @@ public class MusicService extends MediaSessionService {
 
                         Log.d(TAG, "Resolving URL for: source=" + source + ", songmid=" + songmid + ", name=" + name);
 
-                        String resolvedUrl = resolveMusicUrlSync(source, songmid, name);
+                        String resolvedUrl = resolveMusicUrlSync(source, songmid, name, payload);
                         if (resolvedUrl == null || resolvedUrl.isEmpty()) {
                             throw new IOException("Failed to resolve music URL");
                         }
@@ -114,6 +123,15 @@ public class MusicService extends MediaSessionService {
 
     private String preparePlaybackUrl(String url) throws IOException {
         String resolvedUrl = fixUrlFormat(url);
+        if (BackendPreferences.getMode(this) == BackendMode.DIRECT_SOURCE) {
+            Uri directUri = Uri.parse(resolvedUrl);
+            String directScheme = directUri.getScheme();
+            if (!"http".equalsIgnoreCase(directScheme)
+                    && !"https".equalsIgnoreCase(directScheme)) {
+                throw new IOException("直连音源必须返回完整的 HTTP/HTTPS 播放地址");
+            }
+            return resolvedUrl;
+        }
         String serverBaseUrl = LxRetrofitClient.getPureServerUrl(this);
         if (serverBaseUrl == null || serverBaseUrl.isEmpty()) {
             throw new IOException("未配置有效的 LXserver 地址，请先在设置中保存服务器地址");
@@ -173,7 +191,24 @@ public class MusicService extends MediaSessionService {
         }
     }
 
-    private String resolveMusicUrlSync(String source, String songmid, String name) throws IOException {
+    private String resolveMusicUrlSync(String source, String songmid, String name, String payload)
+            throws IOException {
+        if (BackendPreferences.getMode(this) == BackendMode.DIRECT_SOURCE) {
+            JsonObject musicInfo = new JsonObject();
+            if (payload != null && !payload.isEmpty()) {
+                try {
+                    com.google.gson.JsonElement parsed = new JsonParser().parse(payload);
+                    if (parsed.isJsonObject()) musicInfo = parsed.getAsJsonObject();
+                } catch (Exception ignored) {
+                }
+            }
+            musicInfo.addProperty("source", source);
+            musicInfo.addProperty("songmid", songmid);
+            if (name != null && !name.isEmpty()) musicInfo.addProperty("name", name);
+            return SourceRuntimeManager.get(this).resolveMusicUrlBlocking(
+                    source, musicInfo, LxRetrofitClient.getQuality(this));
+        }
+
         String serverUrl = LxRetrofitClient.getServerUrl(this);
         if (LxRetrofitClient.normalizeServerUrl(serverUrl) == null) {
             throw new IOException("未配置有效的 LXserver 地址，请先在设置中保存服务器地址");
@@ -278,6 +313,17 @@ public class MusicService extends MediaSessionService {
         if (name != null) {
             builder.appendQueryParameter("name", name);
         }
+        return builder.build();
+    }
+
+    public static Uri buildResolveUri(MusicInfo song) {
+        Uri.Builder builder = new Uri.Builder()
+                .scheme(RESOLVE_SCHEME)
+                .authority(RESOLVE_HOST)
+                .appendQueryParameter("source", song.getSource())
+                .appendQueryParameter("songmid", song.getSongmid())
+                .appendQueryParameter("payload", GSON.toJson(song));
+        if (song.getName() != null) builder.appendQueryParameter("name", song.getName());
         return builder.build();
     }
 

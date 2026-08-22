@@ -25,6 +25,12 @@ import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxRetrofitClient;
+import top.boluofan.musictv.backend.BackendMode;
+import top.boluofan.musictv.backend.BackendPreferences;
+import top.boluofan.musictv.local.LocalLibraryStore;
+import top.boluofan.musictv.source.ImportedSource;
+import top.boluofan.musictv.source.SourceScriptStore;
+import top.boluofan.musictv.source.SourceRuntimeManager;
 
 public class SettingsFragment extends Fragment implements MainActivity.PrimaryPageKeyHandler {
     private View rootView;
@@ -54,6 +60,7 @@ public class SettingsFragment extends Fragment implements MainActivity.PrimaryPa
 
         String serverUrl = LxRetrofitClient.getServerUrl(requireContext());
         String username = LxRetrofitClient.getUsername(requireContext());
+        boolean direct = BackendPreferences.getMode(requireContext()) == BackendMode.DIRECT_SOURCE;
 
         LinearLayout layoutServerConfig = rootView.findViewById(R.id.layoutServerConfig);
         layoutServerConfig.setOnClickListener(v -> {
@@ -65,7 +72,7 @@ public class SettingsFragment extends Fragment implements MainActivity.PrimaryPa
 
         LinearLayout layoutUserInfo = rootView.findViewById(R.id.layoutUserInfo);
         layoutUserInfo.setOnClickListener(v -> {
-            if (LxRetrofitClient.isLoggedIn(requireContext())) {
+            if (direct || LxRetrofitClient.isLoggedIn(requireContext())) {
                 ((MainActivity) requireActivity()).selectPrimaryPage(MainActivity.PAGE_LIBRARY, true);
             } else {
                 Intent intent = new Intent(requireContext(), ConfigActivity.class);
@@ -78,10 +85,21 @@ public class SettingsFragment extends Fragment implements MainActivity.PrimaryPa
         layoutLogout.setOnClickListener(v -> clearConfigAndLogout());
 
         TextView tvServerUrl = rootView.findViewById(R.id.tvServerUrl);
-        tvServerUrl.setText(serverUrl);
+        TextView tvConnectionLabel = rootView.findViewById(R.id.tvConnectionLabel);
+        TextView tvLibraryLabel = rootView.findViewById(R.id.tvLibraryLabel);
+        TextView tvClearLabel = rootView.findViewById(R.id.tvClearLabel);
+        if (direct) {
+            ImportedSource source = new SourceScriptStore(requireContext()).getActive();
+            tvConnectionLabel.setText("当前音源");
+            tvServerUrl.setText(source == null ? "未配置" : source.metadata.name);
+            tvLibraryLabel.setText("本地歌单");
+            tvClearLabel.setText("删除当前音源并重新配置");
+        } else {
+            tvServerUrl.setText(serverUrl.isEmpty() ? "未配置" : serverUrl);
+        }
 
         TextView tvUsername = rootView.findViewById(R.id.tvUsername);
-        tvUsername.setText(username.isEmpty() ? "未登录" : username);
+        tvUsername.setText(direct ? "仅保存在本机" : (username.isEmpty() ? "未登录" : username));
 
         ImageButton btnBackgroundPlay = rootView.findViewById(R.id.btnBackgroundPlay);
         LinearLayout layoutBackgroundPlay = rootView.findViewById(R.id.layoutBackgroundPlay);
@@ -107,7 +125,16 @@ public class SettingsFragment extends Fragment implements MainActivity.PrimaryPa
             player.stop();
             player.clearMediaItems();
         }
-        LxRetrofitClient.clearConfig(requireContext());
+        if (BackendPreferences.getMode(requireContext()) == BackendMode.DIRECT_SOURCE) {
+            android.content.Context appContext = requireContext().getApplicationContext();
+            new SourceScriptStore(appContext).clear();
+            SourceRuntimeManager.get(appContext).invalidate();
+            new Thread(() -> new LocalLibraryStore(appContext).clear()).start();
+            BackendPreferences.clearMode(appContext);
+        } else {
+            LxRetrofitClient.clearConfig(requireContext());
+            BackendPreferences.clearMode(requireContext());
+        }
         Toast.makeText(requireContext(), "配置已清除", Toast.LENGTH_SHORT).show();
         Intent intent = new Intent(requireContext(), ConfigActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

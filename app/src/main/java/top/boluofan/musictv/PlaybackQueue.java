@@ -54,7 +54,7 @@ public final class PlaybackQueue {
 
         return new MediaItem.Builder()
                 .setMediaId(songmid)
-                .setUri(MusicService.buildResolveUri(source, songmid, song.getName()))
+                .setUri(MusicService.buildResolveUri(song))
                 .setMediaMetadata(metadata.build())
                 .build();
     }

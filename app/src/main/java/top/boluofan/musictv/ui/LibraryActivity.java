@@ -26,6 +26,7 @@ import top.boluofan.musictv.R;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
+import top.boluofan.musictv.backend.MusicApiProvider;
 import top.boluofan.musictv.api.model.ListData;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.api.model.Playlist;
@@ -137,7 +138,7 @@ public class LibraryActivity extends AppCompatActivity {
     }
 
     private void loadUserData() {
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
         
         String username = LxRetrofitClient.getUsername(this);
         String password = LxRetrofitClient.getPassword(this);
@@ -349,7 +350,7 @@ public class LibraryActivity extends AppCompatActivity {
             return;
         }
 
-        LxApiService apiService = LxRetrofitClient.getApiService(this);
+        LxApiService apiService = MusicApiProvider.get(this);
 
         apiService.getUserList(username, password,token).enqueue(new Callback<ListData>() {
             @Override

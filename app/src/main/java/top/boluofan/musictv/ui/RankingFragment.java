@@ -42,6 +42,10 @@ import top.boluofan.musictv.util.DialogHelper;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
+import top.boluofan.musictv.backend.MusicApiProvider;
+import top.boluofan.musictv.backend.BackendMode;
+import top.boluofan.musictv.backend.BackendPreferences;
+import top.boluofan.musictv.backend.DirectSourcePlatforms;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
 import top.boluofan.musictv.util.FocusAnimationHelper;
@@ -72,8 +76,8 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     private String currentBoardId = "";
     private int currentBoardIndex = 0;
 
-    private final String[] SOURCES = {"tx", "mg", "kw", "kg", "wy"};
-    private final String[] SOURCE_NAMES = {"QQ音乐", "咪咕", "酷我", "酷狗", "网易云"};
+    private String[] SOURCES = {"tx", "mg", "kw", "kg", "wy"};
+    private String[] SOURCE_NAMES = {"QQ音乐", "咪咕", "酷我", "酷狗", "网易云"};
 
     private List<BoardInfo> boards = new ArrayList<>();
     private List<MusicInfo> songs = new ArrayList<>();
@@ -101,6 +105,12 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        if (BackendPreferences.getMode(requireContext()) == BackendMode.DIRECT_SOURCE) {
+            SOURCES = DirectSourcePlatforms.codes(requireContext());
+            SOURCE_NAMES = DirectSourcePlatforms.names(requireContext());
+            currentSource = SOURCES.length == 0 ? "wy" : SOURCES[0];
+            currentSourceIndex = 0;
+        }
         view.setBackgroundResource(0);
         rootView = view;
         initViews();
@@ -337,7 +347,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     }
 
     private void collectPlaylist() {
-        if (!LxRetrofitClient.isLoggedIn(requireContext())) {
+        if (!LxRetrofitClient.isLoggedIn(requireContext()) && !BackendPreferences.usesLocalLibrary(requireContext())) {
             Toast.makeText(requireContext(), "请先登录", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(requireContext(), top.boluofan.musictv.ConfigActivity.class);
             intent.putExtra("server_url", LxRetrofitClient.getServerUrl(requireContext()));
@@ -367,7 +377,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
         String token = LxRetrofitClient.getToken(requireContext());
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
 
         btnFavorite.setEnabled(false);
 
@@ -432,7 +442,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
         String token = LxRetrofitClient.getToken(requireContext());
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
 
         top.boluofan.musictv.api.model.Playlist newPlaylist;
         if (existingPlaylist != null) {
@@ -479,7 +489,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     }
 
     private void collectSingleSong(MusicInfo song) {
-        if (!LxRetrofitClient.isLoggedIn(requireContext())) {
+        if (!LxRetrofitClient.isLoggedIn(requireContext()) && !BackendPreferences.usesLocalLibrary(requireContext())) {
             Toast.makeText(requireContext(), "请先登录", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(requireContext(), top.boluofan.musictv.ConfigActivity.class);
             intent.putExtra("server_url", LxRetrofitClient.getServerUrl(requireContext()));
@@ -490,7 +500,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
         String token = LxRetrofitClient.getToken(requireContext());
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
 
         apiService.getUserList(username, password,token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
@@ -532,7 +542,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
         String token = LxRetrofitClient.getToken(requireContext());
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
 
         apiService.getUserList(username, password, token).enqueue(new Callback<top.boluofan.musictv.api.model.ListData>() {
             @Override
@@ -578,7 +588,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         String username = LxRetrofitClient.getUsername(requireContext());
         String password = LxRetrofitClient.getPassword(requireContext());
         String token = LxRetrofitClient.getToken(requireContext());
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
 
         List<MusicInfo> songList = playlist.getSongs();
         if (songList == null) {
@@ -696,7 +706,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         songRequestGeneration++;
         showLoading(true);
 
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
         apiService.getLeaderboardBoards(sourceSnapshot).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
@@ -755,7 +765,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
         showLoading(true);
 
-        LxApiService apiService = LxRetrofitClient.getApiService(requireContext());
+        LxApiService apiService = MusicApiProvider.get(requireContext());
         apiService.getLeaderboardList(sourceSnapshot, boardIdSnapshot, 1).enqueue(new Callback<okhttp3.ResponseBody>() {
             @Override
             public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
