@@ -14,7 +14,7 @@
 
 ## 最新版本
 
-当前版本为 [`v2.0.1`](https://github.com/Muggles001/muggles-music/releases/tag/v2.0.1)。本版完善沉浸式播放页、白绿流体玻璃浏览界面、完整设置体系和全局 TV 遥控器焦点导航。
+当前版本为 [`v2.0.1`]（目前推荐v2.0.0新版本性能优化问题未解决）(https://github.com/Muggles001/muggles-music/releases/tag/v2.0.1)。本版完善沉浸式播放页、白绿流体玻璃浏览界面、完整设置体系和全局 TV 遥控器焦点导航。
 
 发布页提供 Android 5.0（API 21）及以上可安装的通用 APK。`v1.0.2` 已启用新的发布证书；已安装 `v1.0.2` 及之后版本的用户可以直接覆盖更新。
 
