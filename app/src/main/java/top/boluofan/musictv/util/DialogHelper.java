@@ -105,12 +105,17 @@ public class DialogHelper {
         androidx.appcompat.app.AlertDialog.Builder builder =
                 new androidx.appcompat.app.AlertDialog.Builder(context, R.style.CustomAlertDialog);
         builder.setView(dialogView);
+        builder.setNegativeButton("关闭", null);
         
         androidx.appcompat.app.AlertDialog dialog = builder.create();
         
         dialog.setOnShowListener(d -> {
             if (dialog.getWindow() != null) {
                 dialog.getWindow().setBackgroundDrawableResource(R.drawable.bg_dialog);
+            }
+            Button negativeButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (negativeButton != null) {
+                styleDialogButton(context, negativeButton, false, true);
             }
         });
         

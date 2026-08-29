@@ -20,7 +20,7 @@ import top.boluofan.musictv.ConfigActivity;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.backend.BackendMode;
 import top.boluofan.musictv.backend.BackendPreferences;
-import top.boluofan.musictv.local.LocalLibraryStore;
+import top.boluofan.musictv.local.MugglesDatabase;
 
 @RunWith(AndroidJUnit4.class)
 public class DirectModeUiInstrumentedTest {
@@ -58,7 +58,7 @@ public class DirectModeUiInstrumentedTest {
         assertEquals(BackendMode.DIRECT_SOURCE, BackendPreferences.getMode(context));
         fixture.stop();
         new SourceScriptStore(context).clear();
-        new LocalLibraryStore(context).clear();
+        MugglesDatabase.get(context).clearAllTables();
         BackendPreferences.clearMode(context);
     }
 }

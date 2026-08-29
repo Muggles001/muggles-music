@@ -1,12 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <!-- A translucent surface lets the page gradient remain visible. The
-         elevation supplied by the host view provides the floating separation
-         without adding another hard divider line. -->
-    <solid android:color="@color/lx_glass_floating" />
-    <corners android:radius="@dimen/lx_glass_radius" />
-    <stroke
-        android:width="@dimen/lx_stroke_hairline"
-        android:color="@color/lx_glass_highlight" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/lx_glass_floating" />
+            <corners android:radius="@dimen/lx_glass_radius" />
+            <stroke
+                android:width="@dimen/lx_stroke_hairline"
+                android:color="@color/lx_glass_edge" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="@color/lx_glass_highlight"
+                android:centerY="0.18"
+                android:centerColor="@color/lx_glass_specular_mid"
+                android:endColor="@color/lx_glass_specular_clear" />
+            <corners android:radius="@dimen/lx_glass_radius" />
+        </shape>
+    </item>
+</layer-list>

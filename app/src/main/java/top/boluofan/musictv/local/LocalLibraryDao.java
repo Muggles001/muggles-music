@@ -12,7 +12,4 @@ public interface LocalLibraryDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void put(LocalLibraryEntity entity);
-
-    @Query("DELETE FROM local_library")
-    void clear();
 }

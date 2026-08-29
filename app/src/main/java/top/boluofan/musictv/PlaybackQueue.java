@@ -4,6 +4,7 @@ import android.net.Uri;
 import androidx.annotation.Nullable;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
+import androidx.media3.common.Player;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -54,7 +55,7 @@ public final class PlaybackQueue {
 
         return new MediaItem.Builder()
                 .setMediaId(songmid)
-                .setUri(MusicService.buildResolveUri(song))
+                .setUri(PlaybackUrlResolver.buildResolveUri(song))
                 .setMediaMetadata(metadata.build())
                 .build();
     }
@@ -69,6 +70,29 @@ public final class PlaybackQueue {
 
     public boolean isEmpty() {
         return mediaItems.isEmpty();
+    }
+
+    public void play(Player player, int queueIndex) {
+        player.setMediaItems(mediaItems, queueIndex, 0);
+        player.prepare();
+        player.play();
+    }
+
+    public boolean playSourceIndex(Player player, int sourceIndex) {
+        int queueIndex = queueIndexForSourceIndex(sourceIndex);
+        if (queueIndex < 0) return false;
+        play(player, queueIndex);
+        return true;
+    }
+
+    public boolean playSourceIndex(Player player, int sourceIndex, boolean shuffle) {
+        int queueIndex = queueIndexForSourceIndex(sourceIndex);
+        if (queueIndex < 0) return false;
+        player.setMediaItems(mediaItems, queueIndex, 0);
+        player.setShuffleModeEnabled(shuffle);
+        player.prepare();
+        player.play();
+        return true;
     }
 
     /** Returns the queue position for an index in the original server list. */

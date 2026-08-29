@@ -45,6 +45,11 @@
             android:name="top.boluofan.musictv.ui.PlaylistDetailActivity"
             android:label="歌单详情" />
 
+        <activity
+            android:name="top.boluofan.musictv.ui.SettingsDetailActivity"
+            android:label="@string/settings_title"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

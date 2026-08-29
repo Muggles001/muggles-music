@@ -11,6 +11,7 @@
     android:background="@drawable/selector_item_bg"
     android:clickable="true"
     android:focusable="true"
+    android:nextFocusRight="@id/btnItemPlay"
     android:descendantFocusability="afterDescendants"
     android:paddingStart="@dimen/lx_space_md"
     android:paddingEnd="@dimen/lx_space_md"
@@ -74,29 +75,46 @@
             android:textColor="@color/selector_selectable_content"
             android:textSize="@dimen/lx_type_control"
             android:textStyle="bold"
-            android:maxLines="2"
-            android:ellipsize="end"
-            android:duplicateParentState="true"/>
-
-        <TextView
-            android:id="@+id/tvArtist"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Unknown Artist"
-            android:textColor="@color/selector_action_secondary_content"
-            android:textSize="@dimen/lx_type_caption"
             android:maxLines="1"
             android:ellipsize="end"
             android:duplicateParentState="true"/>
 
-        <TextView
-            android:id="@+id/tvSource"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/selector_selectable_content"
-            android:textSize="@dimen/lx_type_caption"
-            android:layout_marginTop="0dp"
-            android:duplicateParentState="true"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:duplicateParentState="true">
+
+            <TextView
+                android:id="@+id/tvArtist"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Unknown Artist"
+                android:textColor="@color/selector_action_secondary_content"
+                android:textSize="@dimen/lx_type_caption"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:duplicateParentState="true" />
+
+            <TextView
+                android:id="@+id/tvSource"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/lx_space_sm"
+                android:background="@drawable/bg_count_chip"
+                android:paddingStart="@dimen/lx_space_sm"
+                android:paddingTop="2dp"
+                android:paddingEnd="@dimen/lx_space_sm"
+                android:paddingBottom="2dp"
+                android:textColor="@color/selector_action_secondary_content"
+                android:textSize="@dimen/lx_type_caption"
+                android:maxWidth="96dp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:duplicateParentState="true" />
+        </LinearLayout>
 
     </LinearLayout>
 

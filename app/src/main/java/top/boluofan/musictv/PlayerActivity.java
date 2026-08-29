@@ -4,32 +4,33 @@ import android.animation.ObjectAnimator;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
 import androidx.media3.session.MediaController;
-import androidx.media3.session.SessionToken;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.load.resource.bitmap.CenterCrop;
-import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
-import com.bumptech.glide.request.RequestOptions;
-import com.google.common.util.concurrent.ListenableFuture;
+import com.bumptech.glide.request.target.CustomTarget;
+import com.bumptech.glide.request.transition.Transition;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
@@ -45,23 +46,35 @@ import retrofit2.Response;
 import okhttp3.ResponseBody;
 import android.content.SharedPreferences;
 import com.google.gson.JsonObject;
+import androidx.palette.graphics.Palette;
 import jp.wasabeef.glide.transformations.BlurTransformation;
+import top.boluofan.musictv.player.control.PlayerControlsStateMachine;
+import top.boluofan.musictv.player.lyrics.LyricTimeline;
+import top.boluofan.musictv.player.session.MediaControllerConnection;
+import top.boluofan.musictv.player.visual.AsciiRibbonView;
+import top.boluofan.musictv.player.visual.SpatialLyricsView;
+import top.boluofan.musictv.player.visual.VinylTurntableView;
+import top.boluofan.musictv.player.visual.WaveformProgressView;
+import top.boluofan.musictv.settings.AppSettingsPreferences;
+import top.boluofan.musictv.settings.LyricTimingPreferences;
 
 public class PlayerActivity extends AppCompatActivity {
     private static final String TAG = "PlayerActivity";
     private static final int BLURRED_ARTWORK_WIDTH = 640;
     private static final int BLURRED_ARTWORK_HEIGHT = 360;
-    private ImageView ivBigCover;
+    private static final float METADATA_TEXT_REDUCTION_PX = 18f;
     private ImageView ivBlurBackground;
+    private AsciiRibbonView asciiRibbonView;
+    private VinylTurntableView vinylTurntableView;
+    private WaveformProgressView waveformProgressView;
+    private SpatialLyricsView spatialLyricsView;
     private TextView tvBigTitle;
     private TextView tvBigArtist;
-    private RecyclerView rvLyrics;
-    private TextView tvNoLyrics; 
-    private SeekBar progressBar; // Changed to SeekBar
-    private TextView tvCurrentTime, tvDuration;
-    private TextView tvTooltip, tvSeekProgress, tvPlaylistName, tvPlaylistCount;
-    private android.widget.LinearLayout layoutTooltip, layoutSeekProgress;
+    private TextView tvNoLyrics;
+    private TextView tvSeekProgress, tvPlaylistName, tvPlaylistCount;
+    private android.widget.LinearLayout layoutSeekProgress;
     private ImageButton btnRepeat, btnPrev, btnPlayPause, btnNext, btnScrape, btnQueue;
+    private ImageButton btnOptionMenuBack;
     private android.view.View layoutDrawer;
     private android.view.ViewGroup layoutMainContent;
     private RecyclerView rvDrawerSongs;
@@ -73,9 +86,9 @@ public class PlayerActivity extends AppCompatActivity {
     private String scrapedArtist = ""; // 用于保存刮削到的歌手名
 
     private MediaController player;
-    private ListenableFuture<MediaController> controllerFuture;
+    private MediaControllerConnection controllerConnection;
     private Player.Listener playerListener;
-    private LyricAdapter lyricAdapter;
+    private LyricTimeline lyricTimeline;
     private top.boluofan.musictv.api.LxApiService apiService;
     private SongScraper songScraper;
     private String currentScrapingId = "";
@@ -85,24 +98,61 @@ public class PlayerActivity extends AppCompatActivity {
     private boolean hasArtwork = false;
     private long lyricRequestGeneration = 0;
     private long lyricTimingAdjustmentMs = 0L;
+    private long artworkGeneration = 0L;
     private Runnable scrapeTimeoutRunnable;
+    private AppSettingsPreferences settingsPreferences;
+    private LyricTimingPreferences lyricTimingPreferences;
+    private String currentPrimaryLyrics = "";
+    private String currentTranslatedLyrics = "";
+    private boolean lyricTranslationEnabled;
+    private boolean activityResumed;
+    private long playbackErrorGeneration;
+
+    private final CustomTarget<Bitmap> artworkTarget = new CustomTarget<Bitmap>(720, 720) {
+        @Override
+        public void onResourceReady(Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+            if (isFinishing() || isDestroyed()) return;
+            long generation = artworkGeneration;
+            vinylTurntableView.setArtwork(resource);
+            Palette.from(resource).resizeBitmapArea(112 * 112).generate(palette -> {
+                if (palette == null || generation != artworkGeneration
+                        || isFinishing() || isDestroyed()) {
+                    return;
+                }
+                int dominant = palette.getVibrantColor(
+                        palette.getMutedColor(palette.getDominantColor(0xFF845F52))
+                );
+                asciiRibbonView.setAmbientColor(dominant);
+            });
+        }
+
+        @Override
+        public void onLoadCleared(@Nullable Drawable placeholder) {
+            if (vinylTurntableView == null) return;
+            vinylTurntableView.setArtworkDrawable(
+                    androidx.core.content.ContextCompat.getDrawable(
+                            PlayerActivity.this,
+                            R.drawable.ic_album_placeholder
+                    )
+            );
+            if (asciiRibbonView != null) asciiRibbonView.setAmbientColor(0xFF845F52);
+        }
+    };
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable progressUpdater = new Runnable() {
         @Override
         public void run() {
-            updateProgress();
+            updatePlaybackClock();
             // Keep the lyric clock alive while the player screen exists. MediaController's
             // isPlaying flag can briefly toggle during buffering even though playback resumes.
             handler.postDelayed(this, 100);
         }
     };
 
-    // Auto-hide bottom controls logic
     private android.view.View layoutBottomControls;
-    private static final int CONTROLS_HIDE_DELAY_MS = 10000;
-    private final Runnable hideControlsRunnable = this::hideBottomControls;
-
+    private PlayerControlsStateMachine controlsStateMachine;
+    private float lastPointerY = Float.NaN;
     // Remote capture long press / double click
     private long lastLeftClickTime = 0;
     private long lastRightClickTime = 0;
@@ -153,8 +203,7 @@ public class PlayerActivity extends AppCompatActivity {
     private void showShortcutHint() {
         handler.removeCallbacks(showShortcutHintRunnable);
         handler.removeCallbacks(hideSeekHintRunnable);
-        // Increase delay to 500ms to ensure long press (which starts around 300-500ms) 
-        // has enough time to cancel this hint.
+        // Delay until a long press has had enough time to suppress the tap hint.
         handler.postDelayed(showShortcutHintRunnable, 500);
     }
 
@@ -162,21 +211,23 @@ public class PlayerActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_player);
+        settingsPreferences = new AppSettingsPreferences(this);
+        lyricTimingPreferences = new LyricTimingPreferences(this);
+        lyricTranslationEnabled = settingsPreferences.isLyricTranslationEnabled();
 
-        ivBigCover = findViewById(R.id.ivBigCover);
         ivBlurBackground = findViewById(R.id.ivBlurBackground);
+        asciiRibbonView = findViewById(R.id.asciiRibbonView);
+        vinylTurntableView = findViewById(R.id.vinylTurntableView);
+        waveformProgressView = findViewById(R.id.waveformProgressView);
         tvBigTitle = findViewById(R.id.tvBigTitle);
         tvBigArtist = findViewById(R.id.tvBigArtist);
-        rvLyrics = findViewById(R.id.rvLyrics);
-        tvNoLyrics = findViewById(R.id.tvNoLyrics); 
-        progressBar = findViewById(R.id.progressBar);
-        tvCurrentTime = findViewById(R.id.tvCurrentTime);
-        tvDuration = findViewById(R.id.tvDuration);
-        tvTooltip = findViewById(R.id.tvTooltip);
+        reduceMetadataTextSize(tvBigTitle);
+        reduceMetadataTextSize(tvBigArtist);
+        spatialLyricsView = findViewById(R.id.spatialLyricsView);
+        tvNoLyrics = findViewById(R.id.tvNoLyrics);
         tvSeekProgress = findViewById(R.id.tvSeekProgress);
         tvPlaylistName = findViewById(R.id.tvPlaylistName);
         tvPlaylistCount = findViewById(R.id.tvPlaylistCount);
-        layoutTooltip = findViewById(R.id.layoutTooltip);
         layoutSeekProgress = findViewById(R.id.layoutSeekProgress);
 
         btnRepeat = findViewById(R.id.btnRepeat);
@@ -189,14 +240,29 @@ public class PlayerActivity extends AppCompatActivity {
         layoutMainContent = findViewById(R.id.layoutMainContent);
         layoutBottomControls = findViewById(R.id.layoutBottomControls);
         layoutOptionMenu = findViewById(R.id.layoutOptionMenu);
+        btnOptionMenuBack = findViewById(R.id.btnOptionMenuBack);
         rvOptions = findViewById(R.id.rvOptions);
         
         rvDrawerSongs = findViewById(R.id.rvDrawerSongs);
+
+        controlsStateMachine = new PlayerControlsStateMachine(
+                layoutBottomControls,
+                handler,
+                state -> {
+                    if (state == PlayerControlsStateMachine.State.SHOWING) {
+                        updateProgress();
+                        waveformProgressView.setAnimationEnabled(true);
+                        btnPlayPause.post(() -> btnPlayPause.requestFocus());
+                    } else if (state == PlayerControlsStateMachine.State.HIDDEN) {
+                        waveformProgressView.setAnimationEnabled(false);
+                        layoutMainContent.post(() -> layoutMainContent.requestFocus());
+                    }
+                }
+        );
+        waveformProgressView.setAnimationEnabled(false);
         
-        rvLyrics.setLayoutManager(new LinearLayoutManager(this));
-        rvLyrics.setItemAnimator(null); // Disable animations to prevent marquee reset
-        lyricAdapter = new LyricAdapter();
-        rvLyrics.setAdapter(lyricAdapter);
+        lyricTimeline = new LyricTimeline();
+        spatialLyricsView.setFocusFraction(0.50f);
 
         // Option Menu Setup
         rvOptions.setLayoutManager(new LinearLayoutManager(this));
@@ -213,7 +279,24 @@ public class PlayerActivity extends AppCompatActivity {
         });
         optionAdapter.setOptionDisabled("保存当前歌词", true);
         rvOptions.setAdapter(optionAdapter);
+        btnOptionMenuBack.setOnClickListener(v -> toggleOptionMenu(false));
+        btnOptionMenuBack.setOnKeyListener((view, keyCode, event) -> {
+            if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                    && event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+                focusFirstOption();
+                return true;
+            }
+            return false;
+        });
         layoutOptionMenu.findViewById(R.id.viewOptionMenuDim).setOnClickListener(v -> toggleOptionMenu(false));
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (closeTopPlayerLayer()) return;
+                finish();
+            }
+        });
 
         // Sidebar Drawer Setup
         rvDrawerSongs.setLayoutManager(new LinearLayoutManager(this));
@@ -227,54 +310,33 @@ public class PlayerActivity extends AppCompatActivity {
             }
         });
         
-        // Optimize Marquee performance and isolation
-        // Removed Hardware Layer to prevent artifacts during layout updates
-
         apiService = top.boluofan.musictv.backend.MusicApiProvider.get(this);
 
         // Enable marquee
         tvBigTitle.setSelected(true);
         tvBigArtist.setSelected(true);
 
-        progressBar.setOnFocusChangeListener((v, hasFocus) -> {
-            layoutTooltip.setVisibility(hasFocus ? View.VISIBLE : View.INVISIBLE);
-            if (hasFocus) {
-                updateProgress();
-                resetControlsTimer();
-            }
-        });
-
-        btnPlayPause.post(() -> btnPlayPause.requestFocus());
         setupControls();
-        setupSeekBarListener();
+        setupWaveformProgress();
+        layoutMainContent.post(() -> layoutMainContent.requestFocus());
 
-        // Keep screen on while this activity is in foreground
-        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        
         songScraper = new SongScraper();
-        resetControlsTimer();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        SessionToken token = new SessionToken(this, new android.content.ComponentName(this, MusicService.class));
-        final ListenableFuture<MediaController> pendingController =
-                new MediaController.Builder(this, token).buildAsync();
-        controllerFuture = pendingController;
-        pendingController.addListener(() -> {
-            try {
-                MediaController resolvedController = pendingController.get();
-                if (isFinishing() || isDestroyed() || controllerFuture != pendingController) {
-                    MediaController.releaseFuture(pendingController);
-                    return;
-                }
-                player = resolvedController;
-                setupPlayer();
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to connect media controller", e);
-            }
-        }, androidx.core.content.ContextCompat.getMainExecutor(this));
+        if (controllerConnection == null) {
+            controllerConnection = new MediaControllerConnection(
+                    this,
+                    () -> !isFinishing() && !isDestroyed(),
+                    resolvedController -> {
+                        player = resolvedController;
+                        setupPlayer();
+                    },
+                    error -> Log.e(TAG, "Failed to connect media controller", error));
+        }
+        controllerConnection.connect();
     }
 
     private void setupControls() {
@@ -298,11 +360,7 @@ public class PlayerActivity extends AppCompatActivity {
         });
 
         btnScrape.setOnClickListener(v -> {
-            String songName = tvBigTitle.getText().toString();
-            if (!songName.isEmpty() && !songName.equals("Song Title")) {
-                startScrapeAnimation();
-                startExternalScrapeFlow(songName);
-            }
+            toggleOptionMenu(true);
             resetControlsTimer();
         });
 
@@ -400,57 +458,44 @@ public class PlayerActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public void onBackPressed() {
+    private boolean closeTopPlayerLayer() {
         if (layoutOptionMenu.getVisibility() == View.VISIBLE) {
             toggleOptionMenu(false);
+            return true;
         } else if (layoutDrawer.getVisibility() == View.VISIBLE) {
             toggleDrawer(false);
             resetControlsTimer();
+            return true;
         } else if (isControlsVisible()) {
             hideBottomControls();
-        } else {
-            super.onBackPressed();
+            return true;
         }
+        return false;
     }
 
     private boolean isControlsVisible() {
-        return layoutBottomControls.getVisibility() == View.VISIBLE && layoutBottomControls.getAlpha() > 0;
-    }
-
-    private void showBottomControls() {
-        if (layoutBottomControls.getVisibility() == View.VISIBLE && layoutBottomControls.getAlpha() == 1f) return;
-        
-        layoutBottomControls.setVisibility(View.VISIBLE);
-        ObjectAnimator.ofFloat(layoutBottomControls, "alpha", layoutBottomControls.getAlpha(), 1f)
-                .setDuration(getResources().getInteger(R.integer.lx_motion_panel))
-                .start();
-        
-        btnPlayPause.requestFocus();
-        resetControlsTimer();
+        return controlsStateMachine != null && controlsStateMachine.isDisplayed();
     }
 
     private void hideBottomControls() {
-        if (layoutBottomControls.getVisibility() == View.GONE) return;
-
-        ObjectAnimator animator = ObjectAnimator.ofFloat(layoutBottomControls, "alpha", layoutBottomControls.getAlpha(), 0f);
-        animator.setDuration(getResources().getInteger(R.integer.lx_motion_panel));
-        animator.addListener(new android.animation.AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(android.animation.Animator animation) {
-                layoutBottomControls.setVisibility(View.GONE);
-                layoutTooltip.setVisibility(View.INVISIBLE);
-            }
-        });
-        animator.start();
+        if (controlsStateMachine != null) controlsStateMachine.hideNow();
     }
 
     private void resetControlsTimer() {
-        handler.removeCallbacks(hideControlsRunnable);
-        // If controls are visible or currently animating into visibility
-        if (layoutBottomControls != null && layoutBottomControls.getVisibility() == View.VISIBLE) {
-            handler.postDelayed(hideControlsRunnable, CONTROLS_HIDE_DELAY_MS);
+        if (controlsStateMachine != null && controlsStateMachine.isDisplayed()) {
+            controlsStateMachine.onInteraction();
         }
+    }
+
+    private void reduceMetadataTextSize(TextView textView) {
+        textView.setTextSize(
+                TypedValue.COMPLEX_UNIT_PX,
+                textView.getTextSize() - METADATA_TEXT_REDUCTION_PX
+        );
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     @Override
@@ -467,12 +512,11 @@ public class PlayerActivity extends AppCompatActivity {
                 toggleOptionMenu(true);
                 return true;
             }
+            if (controlsStateMachine != null && controlsStateMachine.onRevealKey(keyCode)) {
+                return true;
+            }
             resetControlsTimer();
             if (!isControlsVisible()) {
-                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
-                    showBottomControls();
-                    return true;
-                }
                 if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
                     if (event.getRepeatCount() == 0) {
                         long now = System.currentTimeMillis();
@@ -557,6 +601,36 @@ public class PlayerActivity extends AppCompatActivity {
         return super.dispatchKeyEvent(event);
     }
 
+    @Override
+    public boolean dispatchGenericMotionEvent(MotionEvent event) {
+        trackPointerMotion(event);
+        return super.dispatchGenericMotionEvent(event);
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        trackPointerMotion(event);
+        return super.dispatchTouchEvent(event);
+    }
+
+    private void trackPointerMotion(MotionEvent event) {
+        int action = event.getActionMasked();
+        if (action != MotionEvent.ACTION_MOVE && action != MotionEvent.ACTION_HOVER_MOVE) {
+            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_HOVER_ENTER) {
+                lastPointerY = event.getY();
+            }
+            return;
+        }
+        float y = event.getY();
+        if (!Float.isNaN(lastPointerY)) {
+            float deltaY = y - lastPointerY;
+            if (deltaY >= dp(4) && controlsStateMachine != null) {
+                controlsStateMachine.onPointerMoved(deltaY);
+            }
+        }
+        lastPointerY = y;
+    }
+
     private void skipToPrevious() {
         if (player == null) return;
         // If the track has played for a while, seekToPrevious normally just restarts the current song.
@@ -568,47 +642,28 @@ public class PlayerActivity extends AppCompatActivity {
         player.seekToPrevious();
     }
     
-    // This was originally inside setupControls(), moved out as per instruction's implied structure
-    // to accommodate toggleDrawer and onBackPressed.
-    private void setupSeekBarListener() {
-        progressBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser && player != null) {
-                    long duration = player.getDuration();
-                    if (duration > 0) {
-                         long newPos = (duration * progress) / 100;
-                         tvCurrentTime.setText(formatTime(newPos));
-                         player.seekTo(newPos);
-                         
-                         // Instantly trace tooltip changes
-                         if (layoutTooltip.getVisibility() == View.VISIBLE) {
-                             tvTooltip.setText(formatTime(newPos) + "/" + formatTime(duration));
-                             int availableWidth = seekBar.getWidth() - seekBar.getPaddingLeft() - seekBar.getPaddingRight();
-                             float thumbX = seekBar.getPaddingLeft() + (availableWidth * (float) progress / 100f);
-                             layoutTooltip.setTranslationX(thumbX - (layoutTooltip.getWidth() / 2f));
-                         }
-                    }
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                 stopProgressUpdater();
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                 startProgressUpdater();
+    private void setupWaveformProgress() {
+        waveformProgressView.setOnSeekListener(positionMs -> {
+            if (player == null) return;
+            player.seekTo(positionMs);
+            updateProgress();
+            resetControlsTimer();
+        });
+        waveformProgressView.setOnFocusChangeListener((view, hasFocus) -> {
+            if (hasFocus) {
+                updateProgress();
+                resetControlsTimer();
             }
         });
     }
 
     private void updateControlsUI() {
         if (player == null) return;
-        
-        // Play/Pause
-        btnPlayPause.setImageResource(player.isPlaying() ? R.drawable.ic_pause : R.drawable.ic_play); 
+        boolean playing = player.isPlaying();
+        btnPlayPause.setImageResource(playing ? R.drawable.ic_pause : R.drawable.ic_play);
+        asciiRibbonView.setPlaying(playing);
+        vinylTurntableView.setPlaying(playing);
+        waveformProgressView.setPlaying(playing);
 
         // Mode Display
         int repeatMode = player.getRepeatMode();
@@ -643,12 +698,22 @@ public class PlayerActivity extends AppCompatActivity {
         playerListener = new Player.Listener() {
             @Override
             public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
+                playbackErrorGeneration++;
                 updateMetadata(mediaItem);
             }
             @Override
             public void onIsPlayingChanged(boolean isPlaying) {
                 startProgressUpdater();
                 updateControlsUI();
+                updateKeepScreenOn();
+            }
+            @Override
+            public void onPlaybackStateChanged(int playbackState) {
+                updateKeepScreenOn();
+            }
+            @Override
+            public void onPlayWhenReadyChanged(boolean playWhenReady, int reason) {
+                updateKeepScreenOn();
             }
             @Override
             public void onRepeatModeChanged(int repeatMode) {
@@ -670,7 +735,15 @@ public class PlayerActivity extends AppCompatActivity {
                     depth++;
                 }
                 Log.e(TAG, "Player Error: " + errorMsg);
-                showPlaybackError(errorMsg);
+                final String finalErrorMessage = errorMsg;
+                long generation = ++playbackErrorGeneration;
+                handler.postDelayed(() -> {
+                    if (generation != playbackErrorGeneration || player == null
+                            || player.getPlayerError() == null || !activityResumed) {
+                        return;
+                    }
+                    showPlaybackError(finalErrorMessage);
+                }, 600L);
             }
         };
         player.addListener(playerListener);
@@ -767,27 +840,19 @@ public class PlayerActivity extends AppCompatActivity {
         hasArtwork = false;
         if (mediaItem.mediaMetadata.artworkData != null) {
             byte[] data = mediaItem.mediaMetadata.artworkData;
-            Glide.with(this).load(data)
-                .placeholder(R.drawable.ic_cover_placeholder)
-                .error(R.drawable.ic_cover_placeholder)
-                .transform(new RoundedCorners(getResources().getDimensionPixelSize(
-                        R.dimen.player_cover_corner_radius))).into(ivBigCover);
+            loadPrimaryArtwork(data);
             loadBlurredBackground(data);
             hasArtwork = true;
         } else if (mediaItem.mediaMetadata.artworkUri != null) {
             String uri = mediaItem.mediaMetadata.artworkUri.toString();
             Log.d(TAG, "Loading artwork from metadata: " + uri);
-            Glide.with(this).load(uri)
-                .placeholder(R.drawable.ic_cover_placeholder)
-                .error(R.drawable.ic_cover_placeholder)
-                .transform(new RoundedCorners(getResources().getDimensionPixelSize(
-                        R.dimen.player_cover_corner_radius))).into(ivBigCover);
+            loadPrimaryArtwork(uri);
             loadBlurredBackground(uri);
             hasArtwork = true;
         } else {
             // 如果当前在抓取中，不要轻易重置图片，避免闪烁
             if (!isCurrentlyScraping) {
-                ivBigCover.setImageResource(R.drawable.ic_cover_placeholder);
+                clearPrimaryArtwork();
                 Glide.with(this).clear(ivBlurBackground);
                 ivBlurBackground.setImageResource(android.R.color.black);
             }
@@ -865,7 +930,8 @@ public class PlayerActivity extends AppCompatActivity {
         putLyricParam(params, "lrcUrl", extras.getString("lrcUrl", ""));
         putLyricParam(params, "mrcUrl", extras.getString("mrcUrl", ""));
         putLyricParam(params, "trcUrl", extras.getString("trcUrl", ""));
-        putLyricParam(params, "quality", top.boluofan.musictv.api.LxRetrofitClient.getQuality(this));
+        putLyricParam(params, "quality", settingsPreferences
+                .getPreferredQuality().getStorageValue());
 
         String username = top.boluofan.musictv.api.LxRetrofitClient.getUsername(this);
         String password = top.boluofan.musictv.api.LxRetrofitClient.getPassword(this);
@@ -961,7 +1027,7 @@ public class PlayerActivity extends AppCompatActivity {
             scrapeTimeoutRunnable = null;
             Toast.makeText(PlayerActivity.this, "刮削超时", Toast.LENGTH_SHORT).show();
             stopScrapeAnimation();
-            if (lyricAdapter.getItemCount() <= 0) {
+            if (lyricTimeline.size() <= 0) {
                 showNoLyrics("暂无歌词 (请求超时)");
             }
         };
@@ -1003,27 +1069,7 @@ public class PlayerActivity extends AppCompatActivity {
                     
                     // 更新封面：只有当封面不存在时才更新
                     if (!hasArtwork && picUrl != null && !picUrl.isEmpty()) {
-                        Glide.with(PlayerActivity.this)
-                            .load(picUrl)
-                            .apply(new RequestOptions()
-                                .placeholder(R.drawable.ic_cover_placeholder)
-                                .error(R.drawable.ic_cover_placeholder)
-                                .transform(new RoundedCorners(getResources().getDimensionPixelSize(
-                                        R.dimen.player_cover_corner_radius))))
-                            .listener(new com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable>() {
-                                @Override
-                                public boolean onLoadFailed(@Nullable com.bumptech.glide.load.engine.GlideException e, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
-                                    Log.e(TAG, "Glide 加载封面失败: " + picUrl, e);
-                                    return false;
-                                }
-                                @Override
-                                public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, com.bumptech.glide.load.DataSource dataSource, boolean isFirstResource) {
-                                    Log.d(TAG, "Glide 加载封面成功: " + picUrl);
-                                    return false;
-                                }
-                            })
-                            .into(ivBigCover);
-                            
+                        loadPrimaryArtwork(picUrl);
                         loadBlurredBackground(picUrl);
                     }
                     
@@ -1082,10 +1128,9 @@ public class PlayerActivity extends AppCompatActivity {
 
 
     private void showNoLyrics(String msg) {
-        rvLyrics.setVisibility(View.GONE);
+        spatialLyricsView.setVisibility(View.GONE);
         tvNoLyrics.setVisibility(View.VISIBLE);
         tvNoLyrics.setText(msg);
-        // Toast.makeText(this, msg, Toast.LENGTH_SHORT).show(); // Optional toast
     }
 
     private void parseLyrics(String lrc) {
@@ -1093,10 +1138,15 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void parseLyrics(String lrc, String translatedLrc) {
+        currentPrimaryLyrics = lrc == null ? "" : lrc;
+        currentTranslatedLyrics = translatedLrc == null ? "" : translatedLrc;
+        lyricTranslationEnabled = settingsPreferences.isLyricTranslationEnabled();
+        String visibleTranslation = lyricTranslationEnabled ? currentTranslatedLyrics : "";
+        lrc = currentPrimaryLyrics;
         Log.d(TAG, "Parsing lyrics length: " + lrc.length());
-        List<LyricAdapter.LyricLine> lines = new ArrayList<>();
-        for (LyricParser.Line parsedLine : LyricParser.parse(lrc, translatedLrc)) {
-            lines.add(new LyricAdapter.LyricLine(
+        List<LyricTimeline.Line> lines = new ArrayList<>();
+        for (LyricParser.Line parsedLine : LyricParser.parse(lrc, visibleTranslation)) {
+            lines.add(new LyricTimeline.Line(
                     parsedLine.timeMs,
                     parsedLine.text,
                     parsedLine.rawLine
@@ -1113,15 +1163,15 @@ public class PlayerActivity extends AppCompatActivity {
              } else {
                  showNoLyrics("没有歌词");
              }
-             lyricAdapter.setLyrics(new ArrayList<>());
+             lyricTimeline.setLines(Collections.emptyList());
+             spatialLyricsView.setLyrics(lyricTimeline.getLines());
         } else {
-             rvLyrics.setVisibility(View.VISIBLE);
+             spatialLyricsView.setVisibility(View.VISIBLE);
              tvNoLyrics.setVisibility(View.GONE);
-             lyricAdapter.setLyrics(lines);
-             rvLyrics.scrollToPosition(0);
+             lyricTimeline.setLines(lines);
+             spatialLyricsView.setLyrics(lyricTimeline.getLines());
              long currentPosition = player != null ? player.getCurrentPosition() : 0L;
              updateLyric(Math.max(0L, currentPosition + lyricTimingAdjustmentMs));
-             // Toast.makeText(this, "Loaded " + lines.size() + " lines", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -1157,94 +1207,28 @@ public class PlayerActivity extends AppCompatActivity {
         if (player == null) return;
         long current = player.getCurrentPosition();
         long duration = player.getDuration();
-        
-        tvCurrentTime.setText(formatTime(current));
-        tvDuration.setText(formatTime(duration));
-        if (duration > 0) {
-            int prog = (int) ((current * 100) / duration);
-            progressBar.setProgress(prog);
-            
-            // Update Tooltip
-            if (layoutTooltip.getVisibility() == View.VISIBLE) {
-                tvTooltip.setText(formatTime(current) + "/" + formatTime(duration));
-                int availableWidth = progressBar.getWidth() - progressBar.getPaddingLeft() - progressBar.getPaddingRight();
-                float thumbX = progressBar.getPaddingLeft() + (availableWidth * (float) prog / 100f);
-                layoutTooltip.setTranslationX(thumbX - (layoutTooltip.getWidth() / 2f));
-            }
-        }
+        waveformProgressView.setProgress(current, duration > 0L ? duration : 0L);
+        updateLyric(Math.max(0L, current + lyricTimingAdjustmentMs));
+    }
 
-        // Sync Lyric
+    private void updatePlaybackClock() {
+        if (player == null) return;
+        long current = player.getCurrentPosition();
+        long duration = player.getDuration();
+        if (player.isPlaying() && isControlsVisible()) {
+            waveformProgressView.setProgress(current, duration > 0L ? duration : 0L);
+        }
         updateLyric(Math.max(0L, current + lyricTimingAdjustmentMs));
     }
 
     private void updateLyric(long currentPos) {
-        if (lyricAdapter.getItemCount() == 0) return;
+        int activeIdx = lyricTimeline.findActiveIndex(currentPos);
         
-        // 注意：因为 LyricAdapter 内部在 setLyrics 时在开头加了一个空行，
-        // 这里的原始数据索引需要对应调整。
-        List<LyricAdapter.LyricLine> rawLyrics = lyricAdapter.getLyrics();
-        if (rawLyrics.size() < 3) return; // 只有空行，没有实际歌词
-
-        int low = 1;
-        int high = rawLyrics.size() - 2;
-        int activeIdx = -1;
-        while (low <= high) {
-            int mid = low + (high - low) / 2;
-            if (currentPos >= rawLyrics.get(mid).timeMs) {
-                activeIdx = mid;
-                low = mid + 1;
-            } else {
-                high = mid - 1;
-            }
-        }
-        
-        if (activeIdx != -1 && activeIdx != lyricAdapter.getCurrentIndex()) {
-            int previousIndex = lyricAdapter.getCurrentIndex();
+        if (activeIdx != -1 && activeIdx != lyricTimeline.getCurrentIndex()) {
+            int previousIndex = lyricTimeline.getCurrentIndex();
             boolean animate = previousIndex >= 0 && Math.abs(activeIdx - previousIndex) <= 2;
-            lyricAdapter.setCurrentIndex(activeIdx);
-            centerActiveLyric(activeIdx, animate, true);
-        }
-    }
-
-    private void centerActiveLyric(int adapterPosition, boolean animate, boolean afterLayout) {
-        if (lyricAdapter.getCurrentIndex() != adapterPosition) return;
-        if (afterLayout) {
-            rvLyrics.post(() -> centerActiveLyric(adapterPosition, animate, false));
-            return;
-        }
-
-        RecyclerView.LayoutManager layoutManager = rvLyrics.getLayoutManager();
-        if (!(layoutManager instanceof LinearLayoutManager)) {
-            if (layoutManager != null) rvLyrics.scrollToPosition(adapterPosition);
-            return;
-        }
-
-        LinearLayoutManager linearLayoutManager = (LinearLayoutManager) layoutManager;
-        View activeView = linearLayoutManager.findViewByPosition(adapterPosition);
-        if (activeView == null) {
-            linearLayoutManager.scrollToPositionWithOffset(adapterPosition, 0);
-            rvLyrics.post(() -> centerActiveLyric(adapterPosition, false, false));
-            return;
-        }
-
-        int itemHeight = activeView.getHeight();
-        // The list has 200dp top/bottom padding. Calculating against only the remaining
-        // inner viewport makes percentage changes nearly invisible on TV densities.
-        // Use the full lyrics panel and allow a negative offset from startAfterPadding.
-        int targetCenter = Math.round(rvLyrics.getHeight() * 0.38f);
-        int targetTop = targetCenter - itemHeight / 2;
-        int offsetFromStartPadding = targetTop - rvLyrics.getPaddingTop();
-        int deltaY = activeView.getTop() - targetTop;
-        if (animate && Math.abs(deltaY) > 1) {
-            rvLyrics.stopScroll();
-            rvLyrics.smoothScrollBy(
-                    0,
-                    deltaY,
-                    new android.view.animation.DecelerateInterpolator(1.6f),
-                    360
-            );
-        } else {
-            linearLayoutManager.scrollToPositionWithOffset(adapterPosition, offsetFromStartPadding);
+            lyricTimeline.setCurrentIndex(activeIdx);
+            spatialLyricsView.setCurrentIndex(activeIdx, animate);
         }
     }
 
@@ -1259,19 +1243,23 @@ public class PlayerActivity extends AppCompatActivity {
             if (layoutMainContent != null) {
                 layoutMainContent.setDescendantFocusability(android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS);
             }
-            rvOptions.postDelayed(() -> {
-                if (rvOptions.getChildCount() > 0) {
-                    View firstItem = rvOptions.getChildAt(0);
-                    if (firstItem != null) firstItem.requestFocus();
-                } else {
-                    rvOptions.requestFocus();
-                }
-            }, 100);
+            rvOptions.postDelayed(this::focusFirstOption, 100);
         } else {
             layoutOptionMenu.setVisibility(View.GONE);
             if (layoutMainContent != null) {
                 layoutMainContent.setDescendantFocusability(android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS);
             }
+            if (controlsStateMachine != null) controlsStateMachine.reveal();
+            btnScrape.post(btnScrape::requestFocus);
+        }
+    }
+
+    private void focusFirstOption() {
+        RecyclerView.ViewHolder first = rvOptions.findViewHolderForAdapterPosition(0);
+        if (first != null) {
+            first.itemView.requestFocus();
+        } else {
+            rvOptions.requestFocus();
         }
     }
 
@@ -1308,8 +1296,8 @@ public class PlayerActivity extends AppCompatActivity {
             case "保存当前歌词":
                 // 拼合歌词
                 StringBuilder sb = new StringBuilder();
-                List<LyricAdapter.LyricLine> lyricLines = lyricAdapter.getLyrics();
-                for (LyricAdapter.LyricLine l : lyricLines) {
+                List<LyricTimeline.Line> lyricLines = lyricTimeline.getLines();
+                for (LyricTimeline.Line l : lyricLines) {
                     if (l.rawLine != null && !l.rawLine.isEmpty()) {
                         sb.append(l.rawLine).append("\n");
                     }
@@ -1397,21 +1385,13 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void loadLyricTimingAdjustment() {
-        lyricTimingAdjustmentMs = getSharedPreferences("LyricTimingPrefs", MODE_PRIVATE)
-                .getLong(getLyricTimingPreferenceKey(), 0L);
+        lyricTimingAdjustmentMs = lyricTimingPreferences.getAdjustmentMs(
+                currentSongSource, currentSongMid);
     }
 
     private void saveLyricTimingAdjustment() {
-        getSharedPreferences("LyricTimingPrefs", MODE_PRIVATE)
-                .edit()
-                .putLong(getLyricTimingPreferenceKey(), lyricTimingAdjustmentMs)
-                .apply();
-    }
-
-    private String getLyricTimingPreferenceKey() {
-        String source = currentSongSource == null ? "" : currentSongSource;
-        String songmid = currentSongMid == null ? "" : currentSongMid;
-        return "lyric_timing_" + source + "_" + songmid;
+        lyricTimingPreferences.setAdjustmentMs(
+                currentSongSource, currentSongMid, lyricTimingAdjustmentMs);
     }
 
     private interface OnSubmitListener {
@@ -1447,10 +1427,26 @@ public class PlayerActivity extends AppCompatActivity {
         }
     }
 
+    private void loadPrimaryArtwork(Object artwork) {
+        if (artwork == null || isFinishing() || isDestroyed()) return;
+        artworkGeneration++;
+        Glide.with(this).clear(artworkTarget);
+        Glide.with(this)
+                .asBitmap()
+                .load(artwork)
+                .override(720, 720)
+                .centerCrop()
+                .error(R.drawable.ic_album_placeholder)
+                .into(artworkTarget);
+    }
+
+    private void clearPrimaryArtwork() {
+        artworkGeneration++;
+        Glide.with(this).clear(artworkTarget);
+    }
+
     /**
-     * Decode the decorative full-screen artwork at a fixed TV-safe size before
-     * blurring it. Decoding a 4K source at the ImageView's full dimensions can
-     * hold more than 30 MiB for the input bitmap alone and crash low-memory TVs.
+     * A fixed decorative decode avoids retaining a full 4K bitmap on low-memory TVs.
      */
     private void loadBlurredBackground(Object artwork) {
         if (artwork == null || isFinishing() || isDestroyed()) return;
@@ -1464,14 +1460,25 @@ public class PlayerActivity extends AppCompatActivity {
                 .into(ivBlurBackground);
     }
 
-    private String getStringOrEmpty(JsonObject obj, String key) {
-        if (obj == null || !obj.has(key) || obj.get(key).isJsonNull()) return "";
-        return obj.get(key).getAsString();
-    }
-
     @Override
     protected void onStop() {
         super.onStop();
+        activityResumed = false;
+        playbackErrorGeneration++;
+        updateKeepScreenOn();
+        if (controlsStateMachine != null) controlsStateMachine.hideNow();
+        asciiRibbonView.setPlaying(false);
+        asciiRibbonView.setAnimationEnabled(false);
+        vinylTurntableView.setPlaying(false);
+        vinylTurntableView.onHostPause();
+        spatialLyricsView.onHostPause();
+        waveformProgressView.setAnimationEnabled(false);
+        handler.removeCallbacks(showShortcutHintRunnable);
+        handler.removeCallbacks(hideSeekHintRunnable);
+        handler.removeCallbacks(seekForwardRunnable);
+        handler.removeCallbacks(seekBackwardRunnable);
+        isSeeking = false;
+        layoutSeekProgress.setVisibility(View.GONE);
         lyricRequestGeneration++;
         if (lyricCall != null) {
             lyricCall.cancel();
@@ -1488,10 +1495,8 @@ public class PlayerActivity extends AppCompatActivity {
         }
         playerListener = null;
         player = null;
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
-            controllerFuture = null;
-        }
+        if (controllerConnection != null) controllerConnection.disconnect();
+        clearPrimaryArtwork();
         Glide.with(this).clear(ivBlurBackground);
         stopProgressUpdater();
     }
@@ -1499,8 +1504,43 @@ public class PlayerActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (btnPlayPause != null) {
-            btnPlayPause.post(() -> btnPlayPause.requestFocus());
+        activityResumed = true;
+        boolean showTranslation = settingsPreferences.isLyricTranslationEnabled();
+        if (showTranslation != lyricTranslationEnabled && !currentPrimaryLyrics.isEmpty()) {
+            parseLyrics(currentPrimaryLyrics, currentTranslatedLyrics);
         }
+        updateKeepScreenOn();
+        asciiRibbonView.setAnimationEnabled(true);
+        vinylTurntableView.onHostResume();
+        spatialLyricsView.onHostResume();
+        if (!isControlsVisible()) layoutMainContent.post(() -> layoutMainContent.requestFocus());
+    }
+
+    @Override
+    protected void onPause() {
+        activityResumed = false;
+        updateKeepScreenOn();
+        super.onPause();
+    }
+
+    private void updateKeepScreenOn() {
+        boolean playbackActive = player != null && (player.isPlaying()
+                || (player.getPlaybackState() == Player.STATE_BUFFERING
+                && player.getPlayWhenReady()));
+        boolean keepScreenOn = activityResumed
+                && settingsPreferences != null
+                && settingsPreferences.isKeepScreenOnEnabled()
+                && playbackActive;
+        if (keepScreenOn) {
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (controlsStateMachine != null) controlsStateMachine.dispose();
+        super.onDestroy();
     }
 }

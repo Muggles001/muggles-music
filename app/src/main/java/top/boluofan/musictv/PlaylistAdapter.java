@@ -72,35 +72,6 @@ public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.ViewHo
         if (from < to) visiblePlaylists.addAll(playlists.subList(from, to));
     }
     
-    public void setSelection(int position) {
-        int oldPos = selectedPosition;
-        selectedPosition = position;
-        if (oldPos >= 0 && oldPos < getItemCount()) notifyItemChanged(oldPos);
-        if (selectedPosition >= 0 && selectedPosition < getItemCount()) {
-            notifyItemChanged(selectedPosition);
-        }
-    }
-
-    public void notifyPlaylistUpdated(String playlistName, List<String> newSongs) {
-        if (data != null) {
-            data.put(playlistName, newSongs);
-            int index = playlists.indexOf(playlistName);
-            if (index != -1) {
-                updateVisiblePlaylists();
-                notifyDataSetChanged();
-            } else {
-                // New playlist (e.g. first favorite), add to top or bottom? 
-                // Let's add to top for visibility or bottom? 
-                // "我的收藏" usually important. Let's add to index 0 or 1?
-                // For simplicity, add to end.
-                playlists.add(playlistName);
-                int oldPage = currentPage;
-                updateVisiblePlaylists();
-                if (oldPage == currentPage) notifyDataSetChanged();
-            }
-        }
-    }
-
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
     }

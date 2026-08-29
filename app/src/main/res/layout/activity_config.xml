@@ -5,7 +5,16 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_app_gradient">
 
-    <!-- Left Panel: Branding -->
+    <top.boluofan.musictv.ui.background.FluidBackgroundView
+        android:id="@+id/fluidBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:importantForAccessibility="no"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
     <LinearLayout
         android:id="@+id/panelLeft"
         android:layout_width="0dp"
@@ -67,7 +76,6 @@
 
     </LinearLayout>
 
-    <!-- Divider -->
     <View
         android:id="@+id/divider"
         android:layout_width="1dp"
@@ -79,22 +87,29 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
 
-    <!-- Right Panel: Form -->
     <ScrollView
         android:id="@+id/panelRight"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:fillViewport="true"
-        android:paddingStart="56dp"
-        android:paddingEnd="56dp"
-        android:paddingTop="48dp"
-        android:paddingBottom="48dp"
+        android:layout_marginStart="@dimen/lx_space_lg"
+        android:layout_marginEnd="@dimen/lx_space_lg"
+        android:layout_marginTop="@dimen/lx_space_lg"
+        android:layout_marginBottom="@dimen/lx_space_lg"
+        android:paddingStart="@dimen/lx_space_xl"
+        android:paddingEnd="@dimen/lx_space_xl"
+        android:paddingTop="@dimen/lx_space_lg"
+        android:paddingBottom="@dimen/lx_space_lg"
+        android:background="@drawable/bg_content_panel"
+        android:elevation="@dimen/lx_elevation_surface"
+        android:clipToPadding="false"
         app:layout_constraintStart_toEndOf="@+id/divider"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
+            android:id="@+id/configForm"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
@@ -102,7 +117,16 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="选择使用方式"
+            android:text="配置音源"
+            android:textColor="@color/lx_text_primary"
+            android:textSize="@dimen/lx_type_title"
+            android:textStyle="bold"
+            android:layout_marginBottom="@dimen/lx_space_xs" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="选择电视上的音乐来源"
             android:textColor="@color/lx_text_secondary"
             android:textSize="@dimen/lx_type_body"
             android:layout_marginBottom="8dp" />
@@ -190,7 +214,7 @@
                 android:stateListAnimator="@null"
                 android:focusable="true"
                 android:nextFocusUp="@id/etSourceUrl"
-                android:nextFocusDown="@id/etSourceUrl"
+                android:nextFocusDown="@id/btnImportSource"
                 android:nextFocusLeft="@id/btnToggleMode"
                 android:nextFocusRight="@id/btnImportSource" />
 
@@ -214,12 +238,11 @@
                 android:visibility="gone"
                 android:focusable="true"
                 android:nextFocusUp="@id/btnImportSource"
-                android:nextFocusDown="@id/etSourceUrl"
+                android:nextFocusDown="@id/btnRollbackSource"
                 android:nextFocusLeft="@id/btnToggleMode"
                 android:nextFocusRight="@id/btnRollbackSource" />
         </LinearLayout>
 
-        <!-- Manual Login Container -->
         <LinearLayout
             android:id="@+id/layoutManual"
             android:layout_width="match_parent"
@@ -227,7 +250,6 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <!-- Server URL -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -258,7 +280,6 @@
                 android:nextFocusRight="@+id/etUrl"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Username -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -289,7 +310,6 @@
                 android:nextFocusRight="@+id/etUsername"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Password -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -320,7 +340,6 @@
                 android:nextFocusRight="@+id/etPassword"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Token -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -351,7 +370,6 @@
                 android:nextFocusRight="@+id/etToken"
                 android:layout_marginBottom="28dp" />
 
-            <!-- Connect Button -->
             <Button
                 android:id="@+id/btnConnect"
                 android:layout_width="match_parent"
@@ -363,12 +381,11 @@
                 android:textStyle="bold"
                 android:stateListAnimator="@null"
                 android:focusable="true"
-                android:nextFocusDown="@+id/etUrl"
+                android:nextFocusDown="@+id/btnConnect"
                 android:nextFocusUp="@+id/etPassword"
                 android:nextFocusLeft="@+id/btnToggleMode"
                 android:nextFocusRight="@+id/btnConnect" />
 
-            <!-- Help Text -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -389,7 +406,6 @@
 
         </LinearLayout>
 
-        <!-- QR Login Container -->
         <LinearLayout
             android:id="@+id/layoutQr"
             android:layout_width="match_parent"

@@ -2,5 +2,13 @@
 <resources>
     <integer name="lx_motion_press">100</integer>
     <integer name="lx_motion_focus">160</integer>
+    <integer name="lx_motion_focus_card">200</integer>
+    <integer name="lx_motion_focus_row">180</integer>
+    <integer name="lx_motion_focus_rail">180</integer>
+    <integer name="lx_motion_focus_icon">160</integer>
+    <integer name="lx_focus_scale_card_milli">1040</integer>
+    <integer name="lx_focus_scale_row_milli">1000</integer>
+    <integer name="lx_focus_scale_rail_milli">1000</integer>
+    <integer name="lx_focus_scale_icon_milli">1000</integer>
     <integer name="lx_motion_panel">260</integer>
 </resources>

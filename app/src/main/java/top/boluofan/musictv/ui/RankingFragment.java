@@ -1,6 +1,5 @@
 package top.boluofan.musictv.ui;
 
-import android.content.ComponentName;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -10,7 +9,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.KeyEvent;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -23,18 +21,15 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.session.MediaController;
-import androidx.media3.session.SessionToken;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.PlayerActivity;
 import top.boluofan.musictv.R;
@@ -46,9 +41,14 @@ import top.boluofan.musictv.backend.MusicApiProvider;
 import top.boluofan.musictv.backend.BackendMode;
 import top.boluofan.musictv.backend.BackendPreferences;
 import top.boluofan.musictv.backend.DirectSourcePlatforms;
+import top.boluofan.musictv.player.session.MediaControllerConnection;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
+import top.boluofan.musictv.ui.adapter.MusicSourceStripAdapter;
 import top.boluofan.musictv.util.FocusAnimationHelper;
+import top.boluofan.musictv.util.PageWindow;
+import top.boluofan.musictv.util.RecyclerFocus;
+import top.boluofan.musictv.util.ViewHierarchy;
 import android.net.Uri;
 
 import java.util.ArrayList;
@@ -83,8 +83,9 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     private List<MusicInfo> songs = new ArrayList<>();
 
     private LxMusicAdapter songAdapter;
+    private MusicSourceStripAdapter sourceAdapter;
     private MediaController player;
-    private ListenableFuture<MediaController> controllerFuture;
+    private MediaControllerConnection controllerConnection;
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private Runnable positionUpdater;
     private static final int SONGS_PER_PAGE = 8;
@@ -106,8 +107,10 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         if (BackendPreferences.getMode(requireContext()) == BackendMode.DIRECT_SOURCE) {
-            SOURCES = DirectSourcePlatforms.codes(requireContext());
-            SOURCE_NAMES = DirectSourcePlatforms.names(requireContext());
+            DirectSourcePlatforms.Snapshot platforms =
+                    DirectSourcePlatforms.snapshot(requireContext());
+            SOURCES = platforms.codes();
+            SOURCE_NAMES = platforms.names();
             currentSource = SOURCES.length == 0 ? "wy" : SOURCES[0];
             currentSourceIndex = 0;
         }
@@ -133,49 +136,28 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         tvPageNumber = rootView.findViewById(R.id.tvRankingPageNumber);
         loadingProgress = rootView.findViewById(R.id.loadingProgress);
         btnBack.setVisibility(View.GONE);
+        FocusAnimationHelper.applyFocusAnimation(btnPlayAll, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnShuffle, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnFavorite, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnPrevPage, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnNextPage, FocusAnimationHelper.Profile.ICON);
     }
 
     private void setupRecyclerViews() {
         rvSourceList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
 
-        rvSourceList.setAdapter(new androidx.recyclerview.widget.RecyclerView.Adapter<SourceViewHolder>() {
-            @NonNull
-            @Override
-            public SourceViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_source, parent, false);
-                return new SourceViewHolder(view);
+        sourceAdapter = new MusicSourceStripAdapter(SOURCE_NAMES, currentSourceIndex,
+                this::selectSource, (position, keyCode) -> {
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && position == 0) {
+                return focusPrimaryRail();
             }
-
-            @Override
-            public void onBindViewHolder(@NonNull SourceViewHolder holder, int position) {
-                holder.tvSourceName.setText(SOURCE_NAMES[position]);
-                holder.ivRadio.setImageResource(position == currentSourceIndex ? R.drawable.radio_checked : R.drawable.radio_unchecked);
-                holder.itemView.setSelected(position == currentSourceIndex);
-
-                holder.itemView.setOnClickListener(v -> selectSource(position));
-                holder.itemView.setOnKeyListener((v, keyCode, event) -> {
-                    if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
-                    int currentPosition = holder.getAdapterPosition();
-                    if (currentPosition == RecyclerView.NO_POSITION) return true;
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && currentPosition == 0) {
-                        return focusPrimaryRail();
-                    }
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && currentPosition > 0) {
-                        return focusRecyclerChild(rvSourceList, currentPosition - 1);
-                    }
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
-                            && currentPosition == SOURCES.length - 1) {
-                        return btnPlayAll != null && btnPlayAll.requestFocus();
-                    }
-                    return false;
-                });
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && position == SOURCES.length - 1) {
+                return btnPlayAll != null && btnPlayAll.requestFocus();
             }
-
-            @Override
-            public int getItemCount() {
-                return SOURCES.length;
-            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) return focusCurrentBoard();
+            return false;
         });
+        rvSourceList.setAdapter(sourceAdapter);
 
         rvBoards.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         rvBoards.setAdapter(new androidx.recyclerview.widget.RecyclerView.Adapter<BoardViewHolder>() {
@@ -208,10 +190,14 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
                     if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
                         return focusFirstSong();
                     }
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
-                            && currentPosition == boards.size() - 1) {
-                        return true;
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                        return focusRecyclerChild(rvSourceList, currentSourceIndex);
                     }
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                            && currentPosition < boards.size() - 1) {
+                        return focusRecyclerChild(rvBoards, currentPosition + 1);
+                    }
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) return true;
                     return false;
                 });
             }
@@ -312,14 +298,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
     private boolean focusRecyclerChild(RecyclerView recyclerView, int position) {
         if (recyclerView == null || position < 0) return false;
-        RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(position);
-        if (holder != null) return holder.itemView.requestFocus();
-        recyclerView.scrollToPosition(position);
-        recyclerView.post(() -> {
-            RecyclerView.ViewHolder target = recyclerView.findViewHolderForAdapterPosition(position);
-            if (target != null) target.itemView.requestFocus();
-        });
-        return true;
+        return RecyclerFocus.requestPosition(recyclerView, position);
     }
 
     private boolean focusFirstSong() {
@@ -624,7 +603,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
         View focusedBeforeUpdate = getActivity() != null
                 ? getActivity().getCurrentFocus() : null;
-        boolean retainSourceFocus = isWithinView(focusedBeforeUpdate, rvSourceList);
+        boolean retainSourceFocus = ViewHierarchy.contains(rvSourceList, focusedBeforeUpdate);
 
         currentSourceIndex = position;
         currentSource = SOURCES[position];
@@ -641,9 +620,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
             songAdapter.notifyDataSetChanged();
         }
 
-        if (rvSourceList.getAdapter() != null) {
-            rvSourceList.getAdapter().notifyDataSetChanged();
-        }
+        sourceAdapter.setSelectedPosition(position);
 
         loadBoards();
 
@@ -837,9 +814,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
         int startIndex = shuffle ? (int) (Math.random() * queue.size()) : 0;
 
-        player.setMediaItems(queue.getMediaItems(), startIndex, 0);
-        player.prepare();
-        player.play();
+        queue.play(player, startIndex);
 
         Toast.makeText(requireContext(), shuffle ? "随机播放" : "播放全部", Toast.LENGTH_SHORT).show();
     }
@@ -849,33 +824,23 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
 
         int globalPosition = currentSongPage * SONGS_PER_PAGE + position;
         PlaybackQueue queue = PlaybackQueue.from(songs);
-        int queueIndex = queue.queueIndexForSourceIndex(globalPosition);
-        if (queueIndex < 0) {
+        if (!queue.playSourceIndex(player, globalPosition)) {
             Toast.makeText(requireContext(), "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
             return false;
         }
-        player.setMediaItems(queue.getMediaItems(), queueIndex, 0);
-        player.prepare();
-        player.play();
         songAdapter.setPlayingIndex(position);
         return true;
     }
 
-    private int getSongPageCount() {
-        return Math.max(1, (songs.size() + SONGS_PER_PAGE - 1) / SONGS_PER_PAGE);
-    }
-
     private void updateSongPage() {
-        int from = Math.min(currentSongPage * SONGS_PER_PAGE, songs.size());
-        int to = Math.min(from + SONGS_PER_PAGE, songs.size());
-        List<MusicInfo> pageSongs = new ArrayList<>();
-        if (from < to) pageSongs.addAll(songs.subList(from, to));
-        songAdapter.setIndexOffset(currentSongPage * SONGS_PER_PAGE);
-        songAdapter.setSongs(pageSongs);
+        PageWindow<MusicInfo> page = PageWindow.of(songs, currentSongPage, SONGS_PER_PAGE);
+        currentSongPage = page.getPageIndex();
+        songAdapter.setIndexOffset(page.getStartIndex());
+        songAdapter.setSongs(page.getItems());
         songAdapter.setPlayingIndex(-1);
         tvPageNumber.setText(String.valueOf(currentSongPage + 1));
-        boolean hasPrevious = currentSongPage > 0;
-        boolean hasNext = currentSongPage + 1 < getSongPageCount();
+        boolean hasPrevious = page.hasPrevious();
+        boolean hasNext = page.hasNext();
         btnPrevPage.setEnabled(hasPrevious);
         btnNextPage.setEnabled(hasNext);
         btnPrevPage.setAlpha(hasPrevious ? 1f : 0.35f);
@@ -883,7 +848,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     }
 
     private void changeSongPage(int delta) {
-        int nextPage = Math.max(0, Math.min(currentSongPage + delta, getSongPageCount() - 1));
+        int nextPage = PageWindow.of(songs, currentSongPage, SONGS_PER_PAGE).pageAfter(delta);
         if (nextPage == currentSongPage) return;
         currentSongPage = nextPage;
         updateSongPage();
@@ -902,31 +867,23 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
     @Override
     public void onStart() {
         super.onStart();
-        SessionToken sessionToken = new SessionToken(requireContext(), new ComponentName(requireContext(), MusicService.class));
-        controllerFuture = new MediaController.Builder(requireContext(), sessionToken).buildAsync();
-        final ListenableFuture<MediaController> pendingController = controllerFuture;
-        controllerFuture.addListener(() -> {
-            try {
-                MediaController resolved = pendingController.get();
-                if (!isAdded() || controllerFuture != pendingController) {
-                    MediaController.releaseFuture(pendingController);
-                    return;
-                }
-                player = resolved;
-                setupPlayerListener();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }, androidx.core.content.ContextCompat.getMainExecutor(requireContext()));
+        if (controllerConnection == null) {
+            controllerConnection = new MediaControllerConnection(
+                    requireContext(),
+                    this::isAdded,
+                    resolved -> {
+                        player = resolved;
+                        setupPlayerListener();
+                    },
+                    Throwable::printStackTrace);
+        }
+        controllerConnection.connect();
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
-            controllerFuture = null;
-        }
+        if (controllerConnection != null) controllerConnection.disconnect();
         player = null;
     }
 
@@ -943,7 +900,7 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         View currentFocus = getActivity() != null ? getActivity().getCurrentFocus() : null;
         if ((keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN)
                 && rvSongs != null && songAdapter != null
-                && (isWithinView(currentFocus, rvSongs) || currentFocus == rvSongs
+                && (ViewHierarchy.contains(rvSongs, currentFocus) || currentFocus == rvSongs
                 || (currentFocus == null && songAdapter.hasFocusHistory()))) {
             return songAdapter.handleVerticalKey(currentFocus != null ? currentFocus : rvSongs, keyCode);
         }
@@ -951,17 +908,6 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
             // Do not let a repeated Down at the song-list boundary fall back
             // to the left primary rail.
             return true;
-        }
-        return false;
-    }
-
-    private boolean isWithinView(View child, View ancestor) {
-        if (child == null || ancestor == null) return false;
-        View current = child;
-        while (current != null) {
-            if (current == ancestor) return true;
-            if (!(current.getParent() instanceof View)) return false;
-            current = (View) current.getParent();
         }
         return false;
     }
@@ -1001,20 +947,12 @@ public class RankingFragment extends Fragment implements MainActivity.PrimaryPag
         String name;
     }
 
-    private static class SourceViewHolder extends RecyclerView.ViewHolder {
-        TextView tvSourceName;
-        ImageView ivRadio;
-        SourceViewHolder(View view) {
-            super(view);
-            tvSourceName = view.findViewById(R.id.tvSourceName);
-            ivRadio = view.findViewById(R.id.ivRadio);
-        }
-    }
-
     private class BoardViewHolder extends RecyclerView.ViewHolder {
         TextView tv;
         BoardViewHolder(View view) {
             super(view);
+            FocusAnimationHelper.applyFocusAnimation(
+                    view, FocusAnimationHelper.Profile.RAIL);
             tv = view.findViewById(R.id.tvBoardName);
             tv.setOnClickListener(v -> {
                 int position = (int) tv.getTag();

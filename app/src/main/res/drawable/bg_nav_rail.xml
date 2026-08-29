@@ -2,11 +2,20 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <!-- A light glass wash, not an opaque white sidebar. The page
-                 gradient remains the only continuous background underneath. -->
-            <solid android:color="@color/lx_glass_regular" />
+            <solid android:color="@color/lx_glass_strong" />
             <corners android:radius="@dimen/lx_rail_radius" />
-            <stroke android:width="@dimen/lx_stroke_hairline" android:color="@color/lx_glass_highlight" />
+            <stroke android:width="@dimen/lx_stroke_hairline" android:color="@color/lx_glass_edge" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="@color/lx_glass_highlight"
+                android:centerY="0.18"
+                android:centerColor="@color/lx_glass_specular_mid"
+                android:endColor="@color/lx_glass_specular_clear" />
+            <corners android:radius="@dimen/lx_rail_radius" />
         </shape>
     </item>
 </layer-list>

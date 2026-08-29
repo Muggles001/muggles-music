@@ -31,8 +31,4 @@ public final class LocalLibraryStore {
         entity.updatedAt = System.currentTimeMillis();
         dao.put(entity);
     }
-
-    public synchronized void clear() {
-        dao.clear();
-    }
 }

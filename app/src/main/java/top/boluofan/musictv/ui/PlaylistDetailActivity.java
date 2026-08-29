@@ -1,6 +1,5 @@
 package top.boluofan.musictv.ui;
 
-import android.content.ComponentName;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -17,18 +16,15 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.session.MediaController;
-import androidx.media3.session.SessionToken;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.PlayerActivity;
 import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.R;
@@ -37,11 +33,14 @@ import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.backend.MusicApiProvider;
 import top.boluofan.musictv.backend.BackendPreferences;
+import top.boluofan.musictv.player.session.MediaControllerConnection;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.api.model.Playlist;
 import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
+import top.boluofan.musictv.ui.background.FluidBackgroundView;
 import top.boluofan.musictv.util.DialogHelper;
 import top.boluofan.musictv.util.FocusAnimationHelper;
+import top.boluofan.musictv.util.PageWindow;
 import android.net.Uri;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -67,8 +66,10 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     private ImageButton btnPrevPage;
     private ImageButton btnNextPage;
     private TextView tvPageNumber;
+    private TextView tvPlaylistState;
     private RecyclerView rvSongs;
     private ProgressBar loadingProgress;
+    private FluidBackgroundView fluidBackground;
     
     private String playlistId;
     private String playlistName;
@@ -78,7 +79,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     
     private LxMusicAdapter songAdapter;
     private MediaController player;
-    private ListenableFuture<MediaController> controllerFuture;
+    private MediaControllerConnection controllerConnection;
     private Player.Listener playerListener;
     private FloatingPlayerWindow floatingPlayerWindow;
     private List<MusicInfo> songs = new ArrayList<>();
@@ -119,8 +120,17 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         btnPrevPage = findViewById(R.id.btnPlaylistDetailPrevPage);
         btnNextPage = findViewById(R.id.btnPlaylistDetailNextPage);
         tvPageNumber = findViewById(R.id.tvPlaylistDetailPageNumber);
+        tvPlaylistState = findViewById(R.id.tvPlaylistState);
         rvSongs = findViewById(R.id.rvSongs);
         loadingProgress = findViewById(R.id.loadingProgress);
+        fluidBackground = findViewById(R.id.fluidBackground);
+
+        FocusAnimationHelper.applyFocusAnimation(btnBack, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnPlayAll, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnShuffle, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnFavorite, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnPrevPage, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnNextPage, FocusAnimationHelper.Profile.ICON);
         
         songAdapter = new LxMusicAdapter();
         songAdapter.setNextFocusDownId(R.id.btnPlaylistDetailNextPage);
@@ -505,6 +515,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
             return;
         }
         if (playlistId == null || playlistSource == null) {
+            showContentError("歌单信息不完整，无法加载");
             return;
         }
         
@@ -520,6 +531,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                     Playlist playlist = response.body();
                     updateUI(playlist);
                 } else {
+                    showContentError("歌单加载失败，请稍后重试");
                     Toast.makeText(PlaylistDetailActivity.this, "加载失败", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -528,6 +540,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
             public void onFailure(Call<Playlist> call, Throwable t) {
                 if (!isActivityUsable()) return;
                 showLoading(false);
+                showContentError("网络连接失败，请稍后重试");
                 Toast.makeText(PlaylistDetailActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
@@ -554,6 +567,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                         showLoading(false);
                         if (!response.isSuccessful() || response.body() == null
                                 || response.body().getUserList() == null) {
+                            showContentError("歌单加载失败，请稍后重试");
                             Toast.makeText(PlaylistDetailActivity.this,
                                     "加载歌单失败", Toast.LENGTH_SHORT).show();
                             return;
@@ -575,6 +589,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                             Call<top.boluofan.musictv.api.model.ListData> call, Throwable t) {
                         if (!isActivityUsable()) return;
                         showLoading(false);
+                        showContentError("网络连接失败，请稍后重试");
                         Toast.makeText(PlaylistDetailActivity.this,
                                 "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                     }
@@ -654,30 +669,25 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         updateSongPage();
     }
 
-    private int getPageCount() {
-        return Math.max(1, (songs.size() + SONGS_PER_PAGE - 1) / SONGS_PER_PAGE);
-    }
-
     private void updateSongPage() {
-        int from = Math.min(currentPage * SONGS_PER_PAGE, songs.size());
-        int to = Math.min(from + SONGS_PER_PAGE, songs.size());
-        List<MusicInfo> pageSongs = new ArrayList<>();
-        if (from < to) pageSongs.addAll(songs.subList(from, to));
-        songAdapter.setIndexOffset(currentPage * SONGS_PER_PAGE);
-        songAdapter.setSongs(pageSongs);
+        PageWindow<MusicInfo> page = PageWindow.of(songs, currentPage, SONGS_PER_PAGE);
+        currentPage = page.getPageIndex();
+        songAdapter.setIndexOffset(page.getStartIndex());
+        songAdapter.setSongs(page.getItems());
         songAdapter.setPlayingIndex(-1);
         tvPageNumber.setText(String.valueOf(currentPage + 1));
-        boolean hasPrevious = currentPage > 0;
-        boolean hasNext = currentPage + 1 < getPageCount();
+        boolean hasPrevious = page.hasPrevious();
+        boolean hasNext = page.hasNext();
         btnPrevPage.setEnabled(hasPrevious);
         btnNextPage.setEnabled(hasNext);
         btnPrevPage.setAlpha(hasPrevious ? 1f : 0.35f);
         btnNextPage.setAlpha(hasNext ? 1f : 0.35f);
+        updateContentState();
         requestFirstSongFocus();
     }
 
     private void changePage(int delta) {
-        int nextPage = Math.max(0, Math.min(currentPage + delta, getPageCount() - 1));
+        int nextPage = PageWindow.of(songs, currentPage, SONGS_PER_PAGE).pageAfter(delta);
         if (nextPage == currentPage) return;
         currentPage = nextPage;
         updateSongPage();
@@ -705,9 +715,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
 
         int startIndex = shuffle ? (int) (Math.random() * queue.size()) : 0;
 
-        player.setMediaItems(queue.getMediaItems(), startIndex, 0);
-        player.prepare();
-        player.play();
+        queue.play(player, startIndex);
         
         Toast.makeText(this, shuffle ? "随机播放" : "播放全部", Toast.LENGTH_SHORT).show();
     }
@@ -716,14 +724,10 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         if (songs.isEmpty() || player == null) return false;
         int globalPosition = currentPage * SONGS_PER_PAGE + position;
         PlaybackQueue queue = PlaybackQueue.from(songs);
-        int queueIndex = queue.queueIndexForSourceIndex(globalPosition);
-        if (queueIndex < 0) {
+        if (!queue.playSourceIndex(player, globalPosition)) {
             Toast.makeText(this, "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
             return false;
         }
-        player.setMediaItems(queue.getMediaItems(), queueIndex, 0);
-        player.prepare();
-        player.play();
         songAdapter.setPlayingIndex(position);
         return true;
     }
@@ -736,41 +740,95 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     
     private void showLoading(boolean show) {
         loadingProgress.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (show) {
+            updateContentControls(false);
+            rvSongs.setVisibility(View.INVISIBLE);
+            tvPlaylistState.setText("正在加载歌单…");
+            tvPlaylistState.setVisibility(View.VISIBLE);
+        } else {
+            updateContentState();
+        }
+    }
+
+    private void updateContentState() {
+        if (songs.isEmpty()) {
+            updateContentControls(false);
+            rvSongs.setVisibility(View.INVISIBLE);
+            tvPlaylistState.setText("这个歌单还没有歌曲");
+            tvPlaylistState.setVisibility(View.VISIBLE);
+            return;
+        }
+        updateContentControls(true);
+        tvPlaylistState.setVisibility(View.GONE);
+        rvSongs.setVisibility(View.VISIBLE);
+    }
+
+    private void showContentError(String message) {
+        loadingProgress.setVisibility(View.GONE);
+        updateContentControls(false);
+        rvSongs.setVisibility(View.INVISIBLE);
+        tvPlaylistState.setText(message);
+        tvPlaylistState.setVisibility(View.VISIBLE);
+    }
+
+    private void updateContentControls(boolean hasContent) {
+        boolean moveFocusToBack = !hasContent && (btnPlayAll.hasFocus() || btnShuffle.hasFocus()
+                || btnFavorite.hasFocus() || btnPrevPage.hasFocus() || btnNextPage.hasFocus());
+        btnPlayAll.setEnabled(hasContent);
+        btnPlayAll.setFocusable(hasContent);
+        btnShuffle.setEnabled(hasContent);
+        btnShuffle.setFocusable(hasContent);
+        btnFavorite.setFocusable(hasContent && btnFavorite.isEnabled());
+        if (!hasContent) {
+            btnPrevPage.setEnabled(false);
+            btnNextPage.setEnabled(false);
+            btnPrevPage.setAlpha(0.35f);
+            btnNextPage.setAlpha(0.35f);
+        }
+        btnPrevPage.setFocusable(hasContent && btnPrevPage.isEnabled());
+        btnNextPage.setFocusable(hasContent && btnNextPage.isEnabled());
+        if (moveFocusToBack) btnBack.requestFocus();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (fluidBackground != null) fluidBackground.resumeRendering();
+    }
+
+    @Override
+    protected void onPause() {
+        if (fluidBackground != null) fluidBackground.pauseRendering();
+        super.onPause();
     }
     
     @Override
     protected void onStart() {
         super.onStart();
-        SessionToken sessionToken = new SessionToken(this, new ComponentName(this, MusicService.class));
-        final ListenableFuture<MediaController> pendingController =
-                new MediaController.Builder(this, sessionToken).buildAsync();
-        controllerFuture = pendingController;
-        pendingController.addListener(() -> {
-            try {
-                MediaController resolvedController = pendingController.get();
-                if (isFinishing() || isDestroyed() || controllerFuture != pendingController) {
-                    MediaController.releaseFuture(pendingController);
-                    return;
-                }
-                player = resolvedController;
-                playerListener = new Player.Listener() {
-                    @Override
-                    public void onIsPlayingChanged(boolean isPlaying) {
-                        songAdapter.setPlayerPlaying(isPlaying);
-                        songAdapter.restorePendingPlaybackFocus();
-                    }
+        if (controllerConnection == null) {
+            controllerConnection = new MediaControllerConnection(
+                    this,
+                    () -> !isFinishing() && !isDestroyed(),
+                    resolvedController -> {
+                        player = resolvedController;
+                        playerListener = new Player.Listener() {
+                            @Override
+                            public void onIsPlayingChanged(boolean isPlaying) {
+                                songAdapter.setPlayerPlaying(isPlaying);
+                                songAdapter.restorePendingPlaybackFocus();
+                            }
 
-                    @Override
-                    public void onMediaItemTransition(MediaItem mediaItem, int reason) {
-                        songAdapter.notifyDataSetChanged();
-                        songAdapter.restorePendingPlaybackFocus();
-                    }
-                };
-                player.addListener(playerListener);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to connect media controller", e);
-            }
-        }, androidx.core.content.ContextCompat.getMainExecutor(this));
+                            @Override
+                            public void onMediaItemTransition(MediaItem mediaItem, int reason) {
+                                songAdapter.notifyDataSetChanged();
+                                songAdapter.restorePendingPlaybackFocus();
+                            }
+                        };
+                        player.addListener(playerListener);
+                    },
+                    error -> Log.e(TAG, "Failed to connect media controller", error));
+        }
+        controllerConnection.connect();
     }
     
     @Override
@@ -781,10 +839,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         }
         playerListener = null;
         player = null;
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
-            controllerFuture = null;
-        }
+        if (controllerConnection != null) controllerConnection.disconnect();
     }
     
     @Override

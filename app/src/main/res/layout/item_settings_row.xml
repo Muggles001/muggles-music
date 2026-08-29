@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<top.boluofan.musictv.ui.settings.SettingsRowView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/lx_settings_row_height"
+    android:layout_marginBottom="@dimen/lx_space_xs"
+    android:background="@drawable/selector_menu_item"
+    android:clickable="true"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/lx_space_md"
+    android:paddingEnd="@dimen/lx_space_md">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvSettingsRowTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:duplicateParentState="true"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/selector_action_content"
+            android:textSize="@dimen/lx_type_control" />
+
+        <TextView
+            android:id="@+id/tvSettingsRowSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/lx_space_xxs"
+            android:duplicateParentState="true"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/selector_action_secondary_content"
+            android:textSize="@dimen/lx_type_caption"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvSettingsRowValue"
+        android:layout_width="@dimen/lx_settings_trailing_width"
+        android:layout_height="wrap_content"
+        android:duplicateParentState="true"
+        android:ellipsize="end"
+        android:gravity="end"
+        android:maxLines="1"
+        android:textColor="@color/selector_action_secondary_content"
+        android:textSize="@dimen/lx_type_body"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/layoutSettingsSegments"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/lx_settings_segment_height"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/ivSettingsRowToggle"
+        android:layout_width="@dimen/lx_settings_toggle_width"
+        android:layout_height="@dimen/lx_settings_toggle_height"
+        android:contentDescription="@null"
+        android:duplicateParentState="true"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/ivSettingsRowChevron"
+        android:layout_width="@dimen/lx_icon_small"
+        android:layout_height="@dimen/lx_icon_small"
+        android:layout_marginStart="@dimen/lx_space_sm"
+        android:contentDescription="@null"
+        android:duplicateParentState="true"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_chevron_right"
+        android:visibility="gone"
+        app:tint="@color/selector_action_content" />
+
+</top.boluofan.musictv.ui.settings.SettingsRowView>

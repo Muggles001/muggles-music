@@ -53,6 +53,18 @@ public class PlayerOptionAdapter extends RecyclerView.Adapter<PlayerOptionAdapte
         holder.itemView.setEnabled(!isDisabled);
         holder.itemView.setAlpha(isDisabled ? 0.3f : 1.0f);
         holder.itemView.setFocusable(!isDisabled);
+        holder.itemView.setNextFocusUpId(
+                position == 0 ? R.id.btnOptionMenuBack : View.NO_ID
+        );
+        holder.itemView.setOnKeyListener((view, keyCode, event) -> {
+            if (position == 0
+                    && keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
+                    && event.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+                View back = view.getRootView().findViewById(R.id.btnOptionMenuBack);
+                return back != null && back.requestFocus();
+            }
+            return false;
+        });
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null && !isDisabled) {

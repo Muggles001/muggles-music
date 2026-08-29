@@ -1,99 +1,105 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="@dimen/lx_space_xxs"
-    android:orientation="vertical"
     android:background="@drawable/selector_item_bg"
     android:clickable="true"
     android:focusable="true"
     android:padding="@dimen/lx_space_xxs">
 
     <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:id="@+id/coverContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:cardBackgroundColor="@android:color/transparent"
         app:cardCornerRadius="@dimen/lx_radius_small"
         app:cardElevation="0dp"
-        app:cardBackgroundColor="@android:color/transparent">
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
             android:id="@+id/ivCover"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:scaleType="centerCrop"
+            android:layout_height="match_parent"
             android:background="@color/lx_bg_focus"
-            tools:src="@drawable/ic_playlist_music"
-            android:contentDescription="cover"/>
+            android:contentDescription="cover"
+            android:scaleType="centerCrop"
+            tools:src="@drawable/ic_playlist_music" />
 
     </androidx.cardview.widget.CardView>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/metadataSlot"
+        android:layout_width="0dp"
+        android:layout_height="54dp"
+        android:duplicateParentState="true"
         android:paddingTop="@dimen/lx_space_xxs"
-        android:duplicateParentState="true">
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/coverContainer"
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <TextView
             android:id="@+id/tvName"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:duplicateParentState="true"
             android:ellipsize="end"
+            android:gravity="center_vertical"
             android:maxLines="2"
             android:textColor="@color/selector_selectable_content"
             android:textSize="13sp"
             android:textStyle="bold"
-            tools:text="歌单名称"
-            android:duplicateParentState="true"/>
-
-        <TextView
-            android:id="@+id/tvInfo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="1dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="@color/selector_action_secondary_content"
-            android:textSize="@dimen/lx_type_caption"
-            tools:text="50首"
-            android:duplicateParentState="true"/>
+            app:layout_constraintBottom_toTopOf="@id/creatorRow"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="这是一个最多显示两行的精选歌单名称" />
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="1dp"
+            android:id="@+id/creatorRow"
+            android:layout_width="0dp"
+            android:layout_height="18dp"
+            android:duplicateParentState="true"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:duplicateParentState="true">
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent">
 
             <TextView
                 android:id="@+id/tvCreator"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
+                android:duplicateParentState="true"
                 android:ellipsize="end"
+                android:gravity="center_vertical"
                 android:maxLines="1"
                 android:textColor="@color/selector_action_secondary_content"
                 android:textSize="11sp"
-                tools:text="创建者"
-                android:duplicateParentState="true"/>
+                tools:text="创建者" />
 
             <TextView
                 android:id="@+id/tvSongCount"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginStart="@dimen/lx_space_sm"
+                android:duplicateParentState="true"
                 android:ellipsize="end"
+                android:gravity="center_vertical"
                 android:maxLines="1"
                 android:textColor="@color/selector_action_secondary_content"
                 android:textSize="11sp"
-                tools:text="50首"
-                android:duplicateParentState="true"/>
+                tools:text="50首" />
 
         </LinearLayout>
 
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

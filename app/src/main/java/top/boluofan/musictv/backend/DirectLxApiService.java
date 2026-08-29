@@ -63,11 +63,6 @@ final class DirectLxApiService implements LxApiService {
     }
 
     @Override
-    public Call<LoginResponse> verifyUser(Map<String, String> body) {
-        return value(() -> guestLogin());
-    }
-
-    @Override
     public Call<LoginResponse> loginUser(Map<String, String> body) {
         return value(() -> guestLogin());
     }
@@ -182,46 +177,6 @@ final class DirectLxApiService implements LxApiService {
     }
 
     @Override
-    public Call<ResponseBody> getPlayerConfig() {
-        return value(() -> jsonBody("{}"));
-    }
-
-    @Override
-    public Call<ResponseBody> cacheLyric(Map<String, Object> body) {
-        return value(() -> jsonBody("{\"success\":true}"));
-    }
-
-    @Override
-    public Call<ResponseBody> getCachedLyric(String source, String songmid, String songId) {
-        return value(() -> jsonBody("{}"));
-    }
-
-    @Override
-    public Call<ResponseBody> deletePlaylist(String auth, Map<String, Object> body) {
-        return value(() -> jsonBody("{\"success\":true}"));
-    }
-
-    @Override
-    public Call<ResponseBody> renamePlaylist(String auth, Map<String, Object> body) {
-        return value(() -> jsonBody("{\"success\":true}"));
-    }
-
-    @Override
-    public Call<ResponseBody> deleteSong(String auth, Map<String, Object> body) {
-        return value(() -> jsonBody("{\"success\":true}"));
-    }
-
-    @Override
-    public Call<ResponseBody> batchDeleteSongs(String auth, Map<String, Object> body) {
-        return value(() -> jsonBody("{\"success\":true}"));
-    }
-
-    @Override
-    public Call<ResponseBody> getComment(String source, String songmid) {
-        return value(() -> jsonBody("{\"list\":[]}"));
-    }
-
-    @Override
     public Call<ResponseBody> getLeaderboardBoards(String source) {
         return value(() -> {
             JsonArray list = new JsonArray();
@@ -260,12 +215,6 @@ final class DirectLxApiService implements LxApiService {
             root.addProperty("total", list.size());
             return jsonBody(GSON.toJson(root));
         });
-    }
-
-    @Override
-    public Call<ResponseBody> removeSongsFromPlaylist(String username, String password, String token,
-                                                       Map<String, Object> body) {
-        return value(() -> jsonBody("{\"success\":true}"));
     }
 
     private JsonObject playlistDetail(String id) throws IOException {

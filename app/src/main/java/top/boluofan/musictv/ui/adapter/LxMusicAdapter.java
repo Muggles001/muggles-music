@@ -16,6 +16,7 @@ import java.util.List;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.util.FocusAnimationHelper;
+import top.boluofan.musictv.util.ViewHierarchy;
 
 public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHolder> {
     private static final int FOCUS_RETRY_ATTEMPTS = 8;
@@ -322,6 +323,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         // The old layout pointed every song row to a synthetic rvPlaylists id.
         // On pages without that view Android fell back to the primary rail.
         holder.itemView.setNextFocusLeftId(nextFocusLeftId);
+        holder.itemView.setNextFocusRightId(R.id.btnItemPlay);
         holder.itemView.setNextFocusDownId(downId);
 
         int rowLeftId = nextFocusLeftId != View.NO_ID ? nextFocusLeftId : R.id.item_song_root;
@@ -535,28 +537,17 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         View currentFocus = recyclerView.getRootView().findFocus();
         return currentFocus == null
                 || currentFocus == recyclerView
-                || isWithinView(currentFocus, targetItem);
+                || ViewHierarchy.contains(targetItem, currentFocus);
     }
 
     private boolean canRestoreListMoveFocus(RecyclerView recyclerView, int targetPosition) {
         View currentFocus = recyclerView.getRootView().findFocus();
         if (currentFocus == null || currentFocus == recyclerView) return true;
-        if (!isWithinView(currentFocus, recyclerView)) return false;
+        if (!ViewHierarchy.contains(recyclerView, currentFocus)) return false;
         RecyclerView.ViewHolder currentHolder = recyclerView.findContainingViewHolder(currentFocus);
         if (currentHolder == null) return true;
         int currentPosition = currentHolder.getAdapterPosition();
         return currentPosition == targetPosition || currentPosition == lastFocusedPosition;
-    }
-
-    private boolean isWithinView(View child, View ancestor) {
-        if (child == null || ancestor == null) return false;
-        View current = child;
-        while (current != null) {
-            if (current == ancestor) return true;
-            if (!(current.getParent() instanceof View)) return false;
-            current = (View) current.getParent();
-        }
-        return false;
     }
 
     private boolean isDirectionalKey(int keyCode) {
@@ -629,6 +620,12 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
         return songs.size();
     }
 
+    @Override
+    public void onViewRecycled(@NonNull ViewHolder holder) {
+        Glide.with(holder.itemView.getContext()).clear(holder.ivCover);
+        super.onViewRecycled(holder);
+    }
+
     static class ViewHolder extends RecyclerView.ViewHolder {
         private static final String[] SOURCES = {"kw", "kg", "tx", "wy", "mg"};
         private static final String[] SOURCE_NAMES = {"酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
@@ -656,7 +653,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
-            FocusAnimationHelper.applyFocusAnimation(itemView);
+            FocusAnimationHelper.applyFocusAnimation(itemView, FocusAnimationHelper.Profile.ROW);
             ivEqualizer = itemView.findViewById(R.id.ivEqualizer);
             tvIndex = itemView.findViewById(R.id.tvIndex);
             ivCover = itemView.findViewById(R.id.ivCover);
@@ -667,6 +664,10 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
             btnFullscreen = itemView.findViewById(R.id.btnItemFullscreen);
             btnDelete = itemView.findViewById(R.id.btnItemDelete);
             btnFav = itemView.findViewById(R.id.btnItemFav);
+            FocusAnimationHelper.applyFocusAnimation(btnPlay, FocusAnimationHelper.Profile.ICON);
+            FocusAnimationHelper.applyFocusAnimation(btnFullscreen, FocusAnimationHelper.Profile.ICON);
+            FocusAnimationHelper.applyFocusAnimation(btnDelete, FocusAnimationHelper.Profile.ICON);
+            FocusAnimationHelper.applyFocusAnimation(btnFav, FocusAnimationHelper.Profile.ICON);
         }
 
         void bind(MusicInfo song, boolean isCurrentSong, boolean isPlayingNow, int indexOffset) {
@@ -701,6 +702,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
                         .transform(new RoundedCorners(8))
                         .into(ivCover);
             } else {
+                Glide.with(itemView.getContext()).clear(ivCover);
                 ivCover.setImageResource(R.drawable.ic_cover_placeholder);
             }
         }

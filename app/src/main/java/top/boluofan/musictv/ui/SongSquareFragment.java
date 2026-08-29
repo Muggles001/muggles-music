@@ -7,7 +7,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.KeyEvent;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -29,7 +28,9 @@ import top.boluofan.musictv.backend.BackendPreferences;
 import top.boluofan.musictv.backend.DirectSourcePlatforms;
 import top.boluofan.musictv.api.model.Playlist;
 import top.boluofan.musictv.ui.adapter.SquarePlaylistAdapter;
+import top.boluofan.musictv.ui.adapter.MusicSourceStripAdapter;
 import top.boluofan.musictv.util.FocusAnimationHelper;
+import top.boluofan.musictv.util.ViewHierarchy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +55,7 @@ public class SongSquareFragment extends Fragment {
     private String[] SOURCE_NAMES = {"咪咕", "酷我", "酷狗", "QQ音乐", "网易云"};
     
     private SquarePlaylistAdapter playlistAdapter;
+    private MusicSourceStripAdapter sourceAdapter;
     private int currentPage = 1;
     private int remotePage = 1;
     private boolean remoteHasMore = true;
@@ -62,9 +64,7 @@ public class SongSquareFragment extends Fragment {
     private Call<okhttp3.ResponseBody> activePageCall;
     
     private GridLayoutManager gridLayoutManager;
-    // Five columns leaves each cover large enough for a TV viewing distance and
-    // keeps the directional grid predictable with the left navigation rail.
-    // Keep the TV grid at two balanced rows for the standard page size.
+    // Six columns keep each 12-item TV page in two predictable D-pad rows.
     private int spanCount = 6;
 
     @Nullable
@@ -78,8 +78,10 @@ public class SongSquareFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         view.setBackgroundResource(0);
         if (BackendPreferences.getMode(requireContext()) == BackendMode.DIRECT_SOURCE) {
-            SOURCES = DirectSourcePlatforms.codes(requireContext());
-            SOURCE_NAMES = DirectSourcePlatforms.names(requireContext());
+            DirectSourcePlatforms.Snapshot platforms =
+                    DirectSourcePlatforms.snapshot(requireContext());
+            SOURCES = platforms.codes();
+            SOURCE_NAMES = platforms.names();
             currentSource = SOURCES.length == 0 ? "wy" : SOURCES[0];
             currentSourceIndex = 0;
         }
@@ -102,45 +104,13 @@ public class SongSquareFragment extends Fragment {
     private void setupRecyclerViews() {
         rvSourceList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         
-        androidx.recyclerview.widget.RecyclerView.Adapter<SourceViewHolder> sourceAdapter = 
-                new androidx.recyclerview.widget.RecyclerView.Adapter<SourceViewHolder>() {
-            @NonNull
-            @Override
-            public SourceViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_source, parent, false);
-                return new SourceViewHolder(view);
+        sourceAdapter = new MusicSourceStripAdapter(SOURCE_NAMES, currentSourceIndex,
+                this::selectSource, (position, keyCode) -> {
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && position == 0) {
+                return focusPrimaryRail();
             }
-            
-            @Override
-            public void onBindViewHolder(@NonNull SourceViewHolder holder, int position) {
-                holder.tvSourceName.setText(SOURCE_NAMES[position]);
-                holder.ivRadio.setImageResource(position == currentSourceIndex ? R.drawable.radio_checked : R.drawable.radio_unchecked);
-                holder.itemView.setSelected(position == currentSourceIndex);
-                
-                holder.itemView.setOnClickListener(v -> selectSource(position));
-                holder.itemView.setOnKeyListener((v, keyCode, event) -> {
-                    if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
-                    int currentPosition = holder.getAdapterPosition();
-                    if (currentPosition == RecyclerView.NO_POSITION) return true;
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && currentPosition == 0) {
-                        return focusPrimaryRail();
-                    }
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && currentPosition > 0) {
-                        return focusSource(currentPosition - 1);
-                    }
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
-                            && currentPosition == SOURCES.length - 1) {
-                        return true;
-                    }
-                    return false;
-                });
-            }
-            
-            @Override
-            public int getItemCount() {
-                return SOURCES.length;
-            }
-        };
+            return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && position == SOURCES.length - 1;
+        });
         
         rvSourceList.setAdapter(sourceAdapter);
         
@@ -176,7 +146,7 @@ public class SongSquareFragment extends Fragment {
 
         View focusedBeforeUpdate = getActivity() != null
                 ? getActivity().getCurrentFocus() : null;
-        boolean retainSourceFocus = isWithinView(focusedBeforeUpdate, rvSourceList);
+        boolean retainSourceFocus = ViewHierarchy.contains(rvSourceList, focusedBeforeUpdate);
 
         navigationReady = false;
 
@@ -200,9 +170,7 @@ public class SongSquareFragment extends Fragment {
             playlistAdapter.notifyDataSetChanged();
         }
         
-        if (rvSourceList.getAdapter() != null) {
-            rvSourceList.getAdapter().notifyDataSetChanged();
-        }
+        sourceAdapter.setSelectedPosition(position);
         
         loadPlaylists(false);
         
@@ -215,18 +183,6 @@ public class SongSquareFragment extends Fragment {
                 }
             }
         });
-    }
-
-    private boolean focusSource(int position) {
-        if (rvSourceList == null || position < 0) return false;
-        RecyclerView.ViewHolder holder = rvSourceList.findViewHolderForAdapterPosition(position);
-        if (holder != null) return holder.itemView.requestFocus();
-        rvSourceList.scrollToPosition(position);
-        rvSourceList.post(() -> {
-            RecyclerView.ViewHolder target = rvSourceList.findViewHolderForAdapterPosition(position);
-            if (target != null) target.itemView.requestFocus();
-        });
-        return true;
     }
 
     private boolean focusPrimaryRail() {
@@ -389,16 +345,6 @@ public class SongSquareFragment extends Fragment {
         }
     }
     
-    private static class SourceViewHolder extends RecyclerView.ViewHolder {
-        TextView tvSourceName;
-        ImageView ivRadio;
-        SourceViewHolder(View view) {
-            super(view);
-            tvSourceName = view.findViewById(R.id.tvSourceName);
-            ivRadio = view.findViewById(R.id.ivRadio);
-        }
-    }
-    
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (isDirectionalKey(keyCode)
                 && (!isAdded() || getView() == null || !navigationReady)) {
@@ -413,10 +359,17 @@ public class SongSquareFragment extends Fragment {
                 // repeated Down key from escaping into the left rail.
                 return true;
             }
+            if (ViewHierarchy.contains(rvSourceList, activityFocus)) {
+                return playlists.isEmpty() || focusPlaylist(0);
+            }
             View focusedView = rvPlaylists != null ? rvPlaylists.findFocus() : null;
             if (focusedView != null && gridLayoutManager != null && playlistAdapter != null) {
                 int position = gridLayoutManager.getPosition(focusedView);
                 int itemCount = playlists.size();
+                int nextRowPosition = position + spanCount;
+                if (position != RecyclerView.NO_POSITION && nextRowPosition < itemCount) {
+                    return focusPlaylist(nextRowPosition);
+                }
                 int lastRowStart = itemCount == 0 ? 0 : ((itemCount - 1) / spanCount) * spanCount;
                 if (position != RecyclerView.NO_POSITION && position >= lastRowStart) {
                     if (btnNextPage != null && btnNextPage.isEnabled()) {
@@ -430,15 +383,25 @@ public class SongSquareFragment extends Fragment {
             }
         }
 
+        if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            View focusedView = rvPlaylists != null ? rvPlaylists.findFocus() : null;
+            if (focusedView != null && gridLayoutManager != null) {
+                int position = gridLayoutManager.getPosition(focusedView);
+                if (position >= spanCount) return focusPlaylist(position - spanCount);
+            }
+        }
+
         if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
             if (rvPlaylists != null && gridLayoutManager != null) {
                 View focusedView = rvPlaylists.findFocus();
                 if (focusedView != null) {
                     int position = gridLayoutManager.getPosition(focusedView);
-                    // The rail is on the left in the new shell. Do not jump from
-                    // the right edge to Settings as the old bottom-nav layout did;
-                    // let RecyclerView keep the focus in the current content grid.
-                    if (position != RecyclerView.NO_POSITION && position % spanCount == spanCount - 1) {
+                    if (position != RecyclerView.NO_POSITION) {
+                        int nextPosition = position + 1;
+                        if (nextPosition < playlists.size()
+                                && nextPosition / spanCount == position / spanCount) {
+                            return focusPlaylist(nextPosition);
+                        }
                         return true;
                     }
                 }
@@ -450,17 +413,13 @@ public class SongSquareFragment extends Fragment {
                 View focusedView = rvPlaylists.findFocus();
                 if (focusedView != null) {
                     int position = gridLayoutManager.getPosition(focusedView);
-                    if (position != RecyclerView.NO_POSITION && position % spanCount == 0) {
-                        View fragmentView = getView();
-                        if (fragmentView != null) {
-                            RecyclerView sourceListRv = fragmentView.findViewById(R.id.rvSourceList);
-                            if (sourceListRv != null) {
-                            android.app.Activity activity = getActivity();
-                            View railItem = activity != null ? activity.findViewById(R.id.tabSongSquare) : null;
-                            if (railItem != null) return railItem.requestFocus();
-                        }
+                    if (position != RecyclerView.NO_POSITION && position % spanCount != 0) {
+                        return focusPlaylist(position - 1);
                     }
-                }
+                    if (position != RecyclerView.NO_POSITION) {
+                        focusPrimaryRail();
+                        return true;
+                    }
                 }
             }
         }
@@ -468,22 +427,24 @@ public class SongSquareFragment extends Fragment {
         return false;
     }
 
+    private boolean focusPlaylist(int position) {
+        if (rvPlaylists == null || position < 0 || position >= playlists.size()) return false;
+        RecyclerView.ViewHolder holder = rvPlaylists.findViewHolderForAdapterPosition(position);
+        if (holder != null) return holder.itemView.requestFocus();
+        rvPlaylists.scrollToPosition(position);
+        rvPlaylists.post(() -> {
+            if (rvPlaylists == null) return;
+            RecyclerView.ViewHolder target = rvPlaylists.findViewHolderForAdapterPosition(position);
+            if (target != null) target.itemView.requestFocus();
+        });
+        return true;
+    }
+
     private static boolean isDirectionalKey(int keyCode) {
         return keyCode == KeyEvent.KEYCODE_DPAD_UP
                 || keyCode == KeyEvent.KEYCODE_DPAD_DOWN
                 || keyCode == KeyEvent.KEYCODE_DPAD_LEFT
                 || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT;
-    }
-
-    private boolean isWithinView(View child, View ancestor) {
-        if (child == null || ancestor == null) return false;
-        View current = child;
-        while (current != null) {
-            if (current == ancestor) return true;
-            if (!(current.getParent() instanceof View)) return false;
-            current = (View) current.getParent();
-        }
-        return false;
     }
 
     @Override

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_app_gradient">
+
+    <top.boluofan.musictv.ui.background.FluidBackgroundView
+        android:id="@+id/fluidBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/lx_title_height"
+        android:gravity="top"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/lx_title_gutter"
+        android:paddingTop="@dimen/lx_title_top"
+        android:paddingEnd="@dimen/lx_title_gutter"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
+            android:background="@drawable/btn_focused_circle"
+            android:contentDescription="@string/settings_back"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusDown="@id/btnBack"
+            android:nextFocusLeft="@id/btnBack"
+            android:nextFocusRight="@id/btnBack"
+            android:nextFocusUp="@id/btnBack"
+            android:padding="@dimen/lx_space_sm"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_back"
+            app:tint="@color/selector_action_content" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/lx_space_md"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/lx_text_primary"
+            android:textSize="@dimen/lx_type_title"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvSettingsDetail"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="@dimen/lx_nav_gutter"
+        android:layout_marginEnd="@dimen/lx_nav_gutter"
+        android:background="@drawable/bg_content_panel"
+        android:clipToOutline="true"
+        android:clipToPadding="false"
+        android:elevation="@dimen/lx_elevation_surface"
+        android:focusable="false"
+        android:outlineProvider="background"
+        android:paddingStart="@dimen/lx_space_md"
+        android:paddingTop="@dimen/lx_space_sm"
+        android:paddingEnd="@dimen/lx_space_md"
+        android:paddingBottom="@dimen/lx_space_lg"
+        android:scrollbars="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topBar" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

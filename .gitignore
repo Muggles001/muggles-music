@@ -103,3 +103,8 @@ app/.DS_Store
 /reference/
 /docs/
 /AGENTS.md
+/PRODUCT.md
+/DESIGN.md
+/.impeccable/
+/gemini-*.zip
+/outputs/

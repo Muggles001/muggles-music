@@ -1,7 +1,6 @@
 package top.boluofan.musictv.ui;
 
 import android.content.Intent;
-import android.content.ComponentName;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -14,29 +13,28 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.media3.session.MediaController;
-import androidx.media3.session.SessionToken;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
 import java.util.List;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.api.LxApiService;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.backend.MusicApiProvider;
 import top.boluofan.musictv.backend.BackendPreferences;
+import top.boluofan.musictv.player.session.MediaControllerConnection;
 import top.boluofan.musictv.api.model.ListData;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.api.model.Playlist;
 import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
 import top.boluofan.musictv.PlaylistAdapter;
 import top.boluofan.musictv.util.FocusAnimationHelper;
+import top.boluofan.musictv.util.PageWindow;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
@@ -48,6 +46,7 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
     private RecyclerView rvSongs;
     private TextView tvSongCount;
     private TextView tvPlaylistTitle;
+    private TextView tvLibraryModeLabel;
     private TextView tabAllSongs;
     private TextView tabLoveList;
     private ImageButton btnBackToPlaylists;
@@ -64,7 +63,7 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
     private LxMusicAdapter songAdapter;
     
     private MediaController player;
-    private ListenableFuture<MediaController> controllerFuture;
+    private MediaControllerConnection controllerConnection;
     
     private ListData listData;
     private Playlist currentPlaylist;
@@ -124,6 +123,7 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
         rvSongs = view.findViewById(R.id.rvSongs);
         tvSongCount = view.findViewById(R.id.tvSongCount);
         tvPlaylistTitle = view.findViewById(R.id.tvPlaylistTitle);
+        tvLibraryModeLabel = view.findViewById(R.id.tvLibraryModeLabel);
         tabAllSongs = view.findViewById(R.id.tabAllSongs);
         tabLoveList = view.findViewById(R.id.tabLoveList);
         btnBackToPlaylists = view.findViewById(R.id.btnBackToPlaylists);
@@ -134,6 +134,13 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
         tvPageNumber = view.findViewById(R.id.tvLibraryPageNumber);
         libraryPagerBar = view.findViewById(R.id.libraryPagerBar);
         libraryActionBar = view.findViewById(R.id.libraryActionBar);
+        FocusAnimationHelper.applyFocusAnimation(
+                btnBackToPlaylists, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnPlayAllSongs, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(
+                btnPlayOrderToggle, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnPrevPage, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnNextPage, FocusAnimationHelper.Profile.ICON);
     }
     
     private void setupRecyclerViews() {
@@ -358,12 +365,10 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
                     rvSongs.setVisibility(View.GONE);
                     rvSongs.setTranslationX(0f);
                 }).start();
-        libraryActionBar.animate().alpha(0f).translationX(distance)
-                .setDuration(getResources().getInteger(R.integer.lx_motion_focus))
-                .withEndAction(() -> {
-                    libraryActionBar.setVisibility(View.GONE);
-                    libraryActionBar.setTranslationX(0f);
-                }).start();
+        libraryActionBar.setVisibility(View.VISIBLE);
+        libraryActionBar.setAlpha(1f);
+        libraryActionBar.setTranslationX(0f);
+        tvLibraryModeLabel.setText("歌单列表");
         libraryPagerBar.setVisibility(View.VISIBLE);
         setSongListConstraints(false);
         configurePagerFocus(false);
@@ -400,8 +405,9 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
         rvSongs.animate().cancel();
         libraryActionBar.animate().cancel();
         libraryActionBar.setVisibility(View.VISIBLE);
-        libraryActionBar.setAlpha(0f);
-        libraryActionBar.setTranslationX(distance);
+        libraryActionBar.setAlpha(1f);
+        libraryActionBar.setTranslationX(0f);
+        tvLibraryModeLabel.setText("播放控制");
         // A playlist row is about to be hidden. Hand focus to a visible
         // detail control first so Android cannot fall back to another rail tab.
         if (focusFirstSong) btnPlayAllSongs.requestFocus();
@@ -410,8 +416,6 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
         rvSongs.setAlpha(0f);
         rvSongs.setTranslationX(distance);
         rvSongs.animate().alpha(1f).translationX(0f)
-                .setDuration(getResources().getInteger(R.integer.lx_motion_panel)).start();
-        libraryActionBar.animate().alpha(1f).translationX(0f)
                 .setDuration(getResources().getInteger(R.integer.lx_motion_panel)).start();
         if (focusFirstSong) {
             rvSongs.postDelayed(this::requestFirstSongFocus,
@@ -477,8 +481,13 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
 
     private void updateLibraryPageUi() {
         if (playlistAdapter == null || tvPageNumber == null) return;
-        int page = showingPlaylistDetail ? currentSongPage : playlistAdapter.getCurrentPage();
-        int pageCount = showingPlaylistDetail ? getSongPageCount() : playlistAdapter.getPageCount();
+        int page = playlistAdapter.getCurrentPage();
+        int pageCount = playlistAdapter.getPageCount();
+        if (showingPlaylistDetail) {
+            PageWindow<MusicInfo> songPage = buildSongPage();
+            page = songPage.getPageIndex();
+            pageCount = songPage.getPageCount();
+        }
         tvPageNumber.setText(String.valueOf(page + 1));
         boolean hasPrevious = page > 0;
         boolean hasNext = page + 1 < pageCount;
@@ -505,28 +514,26 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
         updateSongPage();
     }
 
-    private int getSongPageCount() {
+    private PageWindow<MusicInfo> buildSongPage() {
         List<MusicInfo> songs = currentPlaylist != null ? currentPlaylist.getSongs() : null;
-        int count = songs != null ? songs.size() : 0;
-        return Math.max(1, (count + SONGS_PER_PAGE - 1) / SONGS_PER_PAGE);
+        return PageWindow.of(songs != null ? songs : java.util.Collections.emptyList(),
+                currentSongPage, SONGS_PER_PAGE);
     }
 
     private void updateSongPage() {
         if (currentPlaylist == null || currentPlaylist.getSongs() == null) return;
         List<MusicInfo> songs = currentPlaylist.getSongs();
-        int from = Math.min(currentSongPage * SONGS_PER_PAGE, songs.size());
-        int to = Math.min(from + SONGS_PER_PAGE, songs.size());
-        List<MusicInfo> pageSongs = new ArrayList<>();
-        if (from < to) pageSongs.addAll(songs.subList(from, to));
-        songAdapter.setIndexOffset(currentSongPage * SONGS_PER_PAGE);
-        songAdapter.setSongs(pageSongs);
+        PageWindow<MusicInfo> page = PageWindow.of(songs, currentSongPage, SONGS_PER_PAGE);
+        currentSongPage = page.getPageIndex();
+        songAdapter.setIndexOffset(page.getStartIndex());
+        songAdapter.setSongs(page.getItems());
         songAdapter.setPlayingIndex(-1);
         tvSongCount.setText(songs.size() + " 首");
         updateLibraryPageUi();
     }
 
     private void changeSongPage(int delta) {
-        int nextPage = Math.max(0, Math.min(currentSongPage + delta, getSongPageCount() - 1));
+        int nextPage = buildSongPage().pageAfter(delta);
         if (nextPage == currentSongPage) return;
         currentSongPage = nextPage;
         updateSongPage();
@@ -555,15 +562,10 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
             return false;
         }
         PlaybackQueue queue = PlaybackQueue.from(currentPlaylist.getSongs());
-        int queueIndex = queue.queueIndexForSourceIndex(globalPosition);
-        if (queueIndex < 0) {
+        if (!queue.playSourceIndex(player, globalPosition, shuffleEnabled)) {
             Toast.makeText(requireContext(), "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
             return false;
         }
-        player.setMediaItems(queue.getMediaItems(), queueIndex, 0);
-        player.setShuffleModeEnabled(shuffleEnabled);
-        player.prepare();
-        player.play();
         int pageStart = currentSongPage * SONGS_PER_PAGE;
         int pageEnd = pageStart + songAdapter.getItemCount();
         songAdapter.setPlayingIndex(globalPosition >= pageStart && globalPosition < pageEnd
@@ -574,38 +576,29 @@ public class LibraryFragment extends Fragment implements MainActivity.PrimaryPag
     @Override
     public void onStart() {
         super.onStart();
-        SessionToken sessionToken = new SessionToken(requireContext(), new ComponentName(requireContext(), MusicService.class));
-        final ListenableFuture<MediaController> pendingController =
-                new MediaController.Builder(requireContext(), sessionToken).buildAsync();
-        controllerFuture = pendingController;
-        controllerFuture.addListener(() -> {
-            try {
-                MediaController resolved = pendingController.get();
-                if (!isAdded() || controllerFuture != pendingController) {
-                    MediaController.releaseFuture(pendingController);
-                    return;
-                }
-                player = resolved;
-                player.addListener(new Player.Listener() {
-                    @Override
-                    public void onIsPlayingChanged(boolean isPlaying) {
-                        songAdapter.setPlayerPlaying(isPlaying);
-                        songAdapter.restorePendingPlaybackFocus();
-                    }
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }, androidx.core.content.ContextCompat.getMainExecutor(requireContext()));
+        if (controllerConnection == null) {
+            controllerConnection = new MediaControllerConnection(
+                    requireContext(),
+                    this::isAdded,
+                    resolved -> {
+                        player = resolved;
+                        player.addListener(new Player.Listener() {
+                            @Override
+                            public void onIsPlayingChanged(boolean isPlaying) {
+                                songAdapter.setPlayerPlaying(isPlaying);
+                                songAdapter.restorePendingPlaybackFocus();
+                            }
+                        });
+                    },
+                    Throwable::printStackTrace);
+        }
+        controllerConnection.connect();
     }
     
     @Override
     public void onStop() {
         super.onStop();
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
-            controllerFuture = null;
-        }
+        if (controllerConnection != null) controllerConnection.disconnect();
         player = null;
     }
 

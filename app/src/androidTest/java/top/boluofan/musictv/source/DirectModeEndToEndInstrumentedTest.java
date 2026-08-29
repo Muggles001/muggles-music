@@ -30,7 +30,7 @@ import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.backend.BackendMode;
 import top.boluofan.musictv.backend.BackendPreferences;
 import top.boluofan.musictv.backend.MusicApiProvider;
-import top.boluofan.musictv.local.LocalLibraryStore;
+import top.boluofan.musictv.local.MugglesDatabase;
 import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.PlaybackQueue;
 
@@ -106,7 +106,7 @@ public class DirectModeEndToEndInstrumentedTest {
         assertNotNull(reloaded);
         assertEquals(1, reloaded.getLoveList().size());
 
-        new LocalLibraryStore(context).clear();
+        MugglesDatabase.get(context).clearAllTables();
         new SourceScriptStore(context).clear();
         BackendPreferences.clearMode(context);
         fixture.stop();

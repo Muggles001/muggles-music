@@ -2,7 +2,6 @@ package top.boluofan.musictv.ui;
 
 import android.content.Intent;
 import android.content.DialogInterface;
-import android.content.ComponentName;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Rect;
@@ -31,11 +30,9 @@ import androidx.fragment.app.Fragment;
 import androidx.appcompat.app.AlertDialog;
 import androidx.cardview.widget.CardView;
 import androidx.media3.session.MediaController;
-import androidx.media3.session.SessionToken;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
@@ -45,7 +42,6 @@ import java.util.List;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.PlaybackQueue;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.SearchWebServer;
@@ -57,10 +53,15 @@ import top.boluofan.musictv.backend.MusicApiProvider;
 import top.boluofan.musictv.backend.BackendMode;
 import top.boluofan.musictv.backend.BackendPreferences;
 import top.boluofan.musictv.backend.DirectSourcePlatforms;
+import top.boluofan.musictv.player.session.MediaControllerConnection;
 import top.boluofan.musictv.api.model.MusicInfo;
 import top.boluofan.musictv.ui.adapter.LxMusicAdapter;
+import top.boluofan.musictv.ui.adapter.MusicSourceStripAdapter;
 import top.boluofan.musictv.util.DialogHelper;
 import top.boluofan.musictv.util.FocusAnimationHelper;
+import top.boluofan.musictv.util.PageWindow;
+import top.boluofan.musictv.util.RecyclerFocus;
+import top.boluofan.musictv.util.ViewHierarchy;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
@@ -81,6 +82,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private RecyclerView rvHotSearch;
     private RecyclerView rvSearchResults;
     private LxMusicAdapter songAdapter;
+    private MusicSourceStripAdapter sourceAdapter;
     private ProgressBar loadingProgress;
     private TextView tvTitle;
     private TextView tvSearchSubtitle;
@@ -96,7 +98,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private TextView tvSearchPageNumber;
 
     private MediaController player;
-    private ListenableFuture<MediaController> controllerFuture;
+    private MediaControllerConnection controllerConnection;
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private Runnable positionUpdater;
 
@@ -142,8 +144,10 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         if (BackendPreferences.getMode(requireContext()) == BackendMode.DIRECT_SOURCE) {
-            ALL_SOURCES = DirectSourcePlatforms.codes(requireContext());
-            ALL_SOURCE_NAMES = DirectSourcePlatforms.names(requireContext());
+            DirectSourcePlatforms.Snapshot platforms =
+                    DirectSourcePlatforms.snapshot(requireContext());
+            ALL_SOURCES = platforms.codes();
+            ALL_SOURCE_NAMES = platforms.names();
             SOURCES = new String[ALL_SOURCES.length + 1];
             SOURCE_NAMES = new String[ALL_SOURCE_NAMES.length + 1];
             SOURCES[0] = "all";
@@ -185,6 +189,15 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         btnSearchNextPage = rootView.findViewById(R.id.btnSearchNextPage);
         tvSearchPageNumber = rootView.findViewById(R.id.tvSearchPageNumber);
 
+        FocusAnimationHelper.applyFocusAnimation(btnClear, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnSearch, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnScan, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnSearchPlayAll, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(
+                btnSearchPlayOrderToggle, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnSearchPrevPage, FocusAnimationHelper.Profile.ICON);
+        FocusAnimationHelper.applyFocusAnimation(btnSearchNextPage, FocusAnimationHelper.Profile.ICON);
+
         songAdapter = new LxMusicAdapter();
         songAdapter.setNextFocusDownId(R.id.btnSearchNextPage);
         rvSearchResults.setAdapter(songAdapter);
@@ -200,45 +213,22 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private void setupRecyclerViews() {
         rvSourceList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
 
-        rvSourceList.setAdapter(new androidx.recyclerview.widget.RecyclerView.Adapter<SourceViewHolder>() {
-            @NonNull
-            @Override
-            public SourceViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_source, parent, false);
-                return new SourceViewHolder(view);
+        sourceAdapter = new MusicSourceStripAdapter(SOURCE_NAMES, currentSourceIndex,
+                this::selectSource, (position, keyCode) -> {
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && position == 0) {
+                return focusPrimaryRail();
             }
-
-            @Override
-            public void onBindViewHolder(@NonNull SourceViewHolder holder, int position) {
-                holder.tvSourceName.setText(SOURCE_NAMES[position]);
-                holder.ivRadio.setImageResource(position == currentSourceIndex ? R.drawable.radio_checked : R.drawable.radio_unchecked);
-                holder.itemView.setSelected(position == currentSourceIndex);
-                holder.itemView.setNextFocusDownId(allResults.isEmpty() ? View.NO_ID : R.id.btnSearchPlayAll);
-
-                holder.itemView.setOnClickListener(v -> selectSource(position));
-                holder.itemView.setOnKeyListener((v, keyCode, event) -> {
-                    if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
-                    int currentPosition = holder.getAdapterPosition();
-                    if (currentPosition == RecyclerView.NO_POSITION) return true;
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && currentPosition == 0) {
-                        return focusPrimaryRail();
-                    }
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && currentPosition > 0) {
-                        return focusSource(currentPosition - 1);
-                    }
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
-                            && currentPosition == SOURCES.length - 1) {
-                        return true;
-                    }
-                    return false;
-                });
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && position == SOURCES.length - 1) {
+                return true;
             }
-
-            @Override
-            public int getItemCount() {
-                return SOURCES.length;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && allResults.isEmpty()) {
+                return hotSearchWords.isEmpty() || focusHotSearch(0);
             }
+            return false;
         });
+        sourceAdapter.setOnItemBindListener((itemView, position) -> itemView.setNextFocusDownId(
+                allResults.isEmpty() ? View.NO_ID : R.id.btnSearchPlayAll));
+        rvSourceList.setAdapter(sourceAdapter);
 
         rvHotSearch.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         rvHotSearch.addItemDecoration(new RecyclerView.ItemDecoration() {
@@ -270,6 +260,24 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
                 String hotWord = hotSearchWords.size() > position ? hotSearchWords.get(position) : "";
                 holder.tv.setText(hotWord);
                 holder.tv.setNextFocusDownId(allResults.isEmpty() ? View.NO_ID : R.id.btnSearchPlayAll);
+                holder.tv.setOnKeyListener((v, keyCode, event) -> {
+                    if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                    int currentPosition = holder.getAdapterPosition();
+                    if (currentPosition == RecyclerView.NO_POSITION) return true;
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                        return sourceAdapter.requestFocusAt(currentSourceIndex);
+                    }
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                        return currentPosition == 0
+                                ? focusPrimaryRail() : focusHotSearch(currentPosition - 1);
+                    }
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                            && currentPosition < getItemCount() - 1) {
+                        return focusHotSearch(currentPosition + 1);
+                    }
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) return true;
+                    return false;
+                });
                 holder.tv.setOnClickListener(v -> {
                     hideCustomKeyboard();
                     etSearch.setText(hotWord);
@@ -394,14 +402,12 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
 
         View focusedBeforeUpdate = getActivity() != null
                 ? getActivity().getCurrentFocus() : null;
-        boolean retainSourceFocus = isWithinView(focusedBeforeUpdate, rvSourceList);
+        boolean retainSourceFocus = ViewHierarchy.contains(rvSourceList, focusedBeforeUpdate);
 
         currentSourceIndex = position;
         currentSource = SOURCES[position];
 
-        if (rvSourceList.getAdapter() != null) {
-            rvSourceList.getAdapter().notifyDataSetChanged();
-        }
+        sourceAdapter.setSelectedPosition(position);
 
         if (retainSourceFocus) rvSourceList.post(() -> {
             if (rvSourceList.getChildCount() > position) {
@@ -419,16 +425,12 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         loadHotSearch();
     }
 
-    private boolean focusSource(int position) {
-        if (rvSourceList == null || position < 0) return false;
-        RecyclerView.ViewHolder holder = rvSourceList.findViewHolderForAdapterPosition(position);
-        if (holder != null) return holder.itemView.requestFocus();
-        rvSourceList.scrollToPosition(position);
-        rvSourceList.post(() -> {
-            RecyclerView.ViewHolder target = rvSourceList.findViewHolderForAdapterPosition(position);
-            if (target != null) target.itemView.requestFocus();
-        });
-        return true;
+    private boolean focusHotSearch(int position) {
+        if (rvHotSearch == null || position < 0 || hotSearchAdapter == null
+                || position >= hotSearchAdapter.getItemCount()) {
+            return false;
+        }
+        return RecyclerFocus.requestPosition(rvHotSearch, position);
     }
 
     private boolean focusPrimaryRail() {
@@ -512,7 +514,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
                     return focusPrimaryRail();
                 }
                 if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) return btnClear.requestFocus();
-                if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) return focusSource(0);
+                if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) return sourceAdapter.requestFocusAt(0);
                 if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
                     showCustomKeyboard();
                     return true;
@@ -861,8 +863,8 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         boolean hasSearchResults = !allResults.isEmpty();
         updateSearchFocusPath(hasSearchResults);
 
-        tvTitle.setVisibility(hasSearchResults ? View.GONE : View.VISIBLE);
-        tvSearchSubtitle.setVisibility(hasSearchResults ? View.GONE : View.VISIBLE);
+        tvTitle.setVisibility(View.VISIBLE);
+        tvSearchSubtitle.setVisibility(View.VISIBLE);
         boolean showDiscovery = hasHotSearch && !hasSearchResults;
         tvHotSearchTitle.setVisibility(showDiscovery ? View.VISIBLE : View.GONE);
         rvHotSearch.setVisibility(showDiscovery ? View.VISIBLE : View.GONE);
@@ -894,21 +896,14 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         }
     }
 
-    private int getResultPageCount() {
-        return Math.max(1, (allResults.size() + SEARCH_SONGS_PER_PAGE - 1) / SEARCH_SONGS_PER_PAGE);
-    }
-
     private void updateResultPageUi() {
-        int pageCount = getResultPageCount();
-        currentResultPage = Math.max(0, Math.min(currentResultPage, pageCount - 1));
-        int start = currentResultPage * SEARCH_SONGS_PER_PAGE;
-        int end = Math.min(start + SEARCH_SONGS_PER_PAGE, allResults.size());
-        List<MusicInfo> pageSongs = new ArrayList<>(allResults.subList(start, end));
-        songAdapter.setIndexOffset(start);
-        songAdapter.setSongs(pageSongs);
+        PageWindow<MusicInfo> page = PageWindow.of(allResults, currentResultPage, SEARCH_SONGS_PER_PAGE);
+        currentResultPage = page.getPageIndex();
+        songAdapter.setIndexOffset(page.getStartIndex());
+        songAdapter.setSongs(page.getItems());
         tvSearchPageNumber.setText(String.valueOf(currentResultPage + 1));
-        boolean hasPrevious = currentResultPage > 0;
-        boolean hasNext = currentResultPage + 1 < pageCount;
+        boolean hasPrevious = page.hasPrevious();
+        boolean hasNext = page.hasNext();
         btnSearchPrevPage.setEnabled(hasPrevious);
         btnSearchNextPage.setEnabled(hasNext);
         btnSearchPrevPage.setAlpha(hasPrevious ? 1f : 0.35f);
@@ -917,7 +912,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     }
 
     private void changeResultPage(int delta) {
-        int nextPage = Math.max(0, Math.min(currentResultPage + delta, getResultPageCount() - 1));
+        int nextPage = PageWindow.of(allResults, currentResultPage, SEARCH_SONGS_PER_PAGE).pageAfter(delta);
         if (nextPage == currentResultPage) return;
         currentResultPage = nextPage;
         updateResultPageUi();
@@ -973,15 +968,10 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private boolean playResultAtIndex(int index) {
         if (player == null || index < 0 || index >= allResults.size()) return false;
         PlaybackQueue queue = PlaybackQueue.from(allResults);
-        int queueIndex = queue.queueIndexForSourceIndex(index);
-        if (queueIndex < 0) {
+        if (!queue.playSourceIndex(player, index, shuffleEnabled)) {
             Toast.makeText(requireContext(), "该歌曲缺少播放信息", Toast.LENGTH_SHORT).show();
             return false;
         }
-        player.setMediaItems(queue.getMediaItems(), queueIndex, 0);
-        player.setShuffleModeEnabled(shuffleEnabled);
-        player.prepare();
-        player.play();
         playingGlobalIndex = index;
         int pageStart = currentResultPage * SEARCH_SONGS_PER_PAGE;
         int pageEnd = pageStart + songAdapter.getItemCount();
@@ -1012,32 +1002,24 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     @Override
     public void onStart() {
         super.onStart();
-        SessionToken sessionToken = new SessionToken(requireContext(), new ComponentName(requireContext(), MusicService.class));
-        controllerFuture = new MediaController.Builder(requireContext(), sessionToken).buildAsync();
-        final ListenableFuture<MediaController> pendingController = controllerFuture;
-        controllerFuture.addListener(() -> {
-            try {
-                MediaController resolved = pendingController.get();
-                if (!isAdded() || controllerFuture != pendingController) {
-                    MediaController.releaseFuture(pendingController);
-                    return;
-                }
-                player = resolved;
-                player.setShuffleModeEnabled(shuffleEnabled);
-                setupPlayerListener();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }, androidx.core.content.ContextCompat.getMainExecutor(requireContext()));
+        if (controllerConnection == null) {
+            controllerConnection = new MediaControllerConnection(
+                    requireContext(),
+                    this::isAdded,
+                    resolved -> {
+                        player = resolved;
+                        player.setShuffleModeEnabled(shuffleEnabled);
+                        setupPlayerListener();
+                    },
+                    Throwable::printStackTrace);
+        }
+        controllerConnection.connect();
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
-            controllerFuture = null;
-        }
+        if (controllerConnection != null) controllerConnection.disconnect();
         player = null;
         if (positionUpdater != null) {
             mainHandler.removeCallbacks(positionUpdater);
@@ -1070,20 +1052,13 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         });
     }
 
-    private static class SourceViewHolder extends RecyclerView.ViewHolder {
-        ImageView ivRadio;
-        TextView tvSourceName;
-
-        SourceViewHolder(View itemView) {
-            super(itemView);
-            ivRadio = itemView.findViewById(R.id.ivRadio);
-            tvSourceName = itemView.findViewById(R.id.tvSourceName);
-        }
-    }
-
     private static class HotSearchViewHolder extends RecyclerView.ViewHolder {
         TextView tv;
-        HotSearchViewHolder(TextView tv) { super(tv); this.tv = tv; }
+        HotSearchViewHolder(TextView tv) {
+            super(tv);
+            this.tv = tv;
+            FocusAnimationHelper.applyFocusAnimation(tv, FocusAnimationHelper.Profile.RAIL);
+        }
     }
 
     @Override
@@ -1107,7 +1082,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         View currentFocus = requireActivity().getCurrentFocus();
         if ((keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN)
                 && rvSearchResults != null && songAdapter != null
-                && (isWithinView(currentFocus, rvSearchResults) || currentFocus == rvSearchResults
+                && (ViewHierarchy.contains(rvSearchResults, currentFocus) || currentFocus == rvSearchResults
                 || (currentFocus == null && songAdapter.hasFocusHistory()))) {
             return songAdapter.handleVerticalKey(currentFocus != null ? currentFocus : rvSearchResults, keyCode);
         }
@@ -1130,17 +1105,6 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
             }
         }
 
-        return false;
-    }
-
-    private boolean isWithinView(View child, View ancestor) {
-        if (child == null || ancestor == null) return false;
-        View current = child;
-        while (current != null) {
-            if (current == ancestor) return true;
-            if (!(current.getParent() instanceof View)) return false;
-            current = (View) current.getParent();
-        }
         return false;
     }
 

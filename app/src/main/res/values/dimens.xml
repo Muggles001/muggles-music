@@ -22,22 +22,26 @@
     <dimen name="lx_space_md">16dp</dimen>
     <dimen name="lx_space_lg">26dp</dimen>
     <dimen name="lx_space_xl">42dp</dimen>
-    <dimen name="lx_space_xxl">68dp</dimen>
 
     <dimen name="lx_radius_small">10dp</dimen>
     <dimen name="lx_radius_control">16dp</dimen>
     <dimen name="lx_radius_panel">26dp</dimen>
     <dimen name="lx_stroke_hairline">1dp</dimen>
     <dimen name="lx_stroke_selected">2dp</dimen>
-    <dimen name="lx_stroke_focus">3dp</dimen>
+    <dimen name="lx_stroke_focus">2dp</dimen>
 
     <dimen name="lx_control_compact">44dp</dimen>
     <dimen name="lx_control_standard">56dp</dimen>
-    <dimen name="lx_control_hero">68dp</dimen>
     <dimen name="lx_button_short_width">90dp</dimen>
     <dimen name="lx_button_wide_width">146dp</dimen>
     <dimen name="lx_list_row_height">68dp</dimen>
     <dimen name="lx_list_cover_size">42dp</dimen>
+    <dimen name="lx_settings_row_height">68dp</dimen>
+    <dimen name="lx_settings_trailing_width">180dp</dimen>
+    <dimen name="lx_settings_toggle_width">60dp</dimen>
+    <dimen name="lx_settings_toggle_height">30dp</dimen>
+    <dimen name="lx_settings_segment_height">36dp</dimen>
+    <dimen name="lx_settings_segment_min_width">62dp</dimen>
     <dimen name="lx_pager_button_width">72dp</dimen>
     <dimen name="lx_pager_button_height">44dp</dimen>
     <dimen name="lx_pager_number_width">56dp</dimen>
@@ -51,15 +55,15 @@
     <dimen name="lx_type_control">16sp</dimen>
     <dimen name="lx_type_section">20sp</dimen>
     <dimen name="lx_type_title">24sp</dimen>
-    <dimen name="lx_type_hero">30sp</dimen>
 
     <dimen name="lx_elevation_surface">8dp</dimen>
     <dimen name="lx_elevation_control">4dp</dimen>
+    <dimen name="lx_elevation_focus_card">10dp</dimen>
+    <dimen name="lx_elevation_focus_row">3dp</dimen>
+    <dimen name="lx_elevation_focus_rail">2dp</dimen>
+    <dimen name="lx_elevation_focus_icon">5dp</dimen>
     <dimen name="lx_floating_player_collapsed_width">56dp</dimen>
     <dimen name="lx_floating_player_expanded_width">220dp</dimen>
     <dimen name="lx_floating_player_title_width">146dp</dimen>
     <dimen name="lx_floating_player_margin">24dp</dimen>
-    <dimen name="lx_floating_entry_bottom">144dp</dimen>
-    <dimen name="player_cover_corner_radius">54dp</dimen>
-    <dimen name="player_lyric_horizontal_padding">24dp</dimen>
 </resources>

@@ -4,7 +4,18 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/bg_keyboard_popup"
+    android:elevation="@dimen/lx_elevation_surface"
     android:padding="@dimen/lx_space_md">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/lx_space_xs"
+        android:layout_marginBottom="@dimen/lx_space_sm"
+        android:text="输入方式"
+        android:textColor="@color/lx_text_secondary"
+        android:textSize="@dimen/lx_type_body"
+        android:textStyle="bold" />
 
     <LinearLayout
         android:id="@+id/layoutTipSuggestions"

@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_app_gradient"
+    android:background="@android:color/transparent"
     android:nextFocusLeft="@id/tabSearch">
 
     <ImageButton
@@ -79,14 +79,15 @@
             android:focusable="true"
             android:focusableInTouchMode="true"
             android:nextFocusLeft="@id/tabSearch"
-            android:nextFocusRight="@id/btnClear" />
+            android:nextFocusRight="@id/btnClear"
+            android:nextFocusDown="@id/rvSourceList" />
 
         <ImageButton
             android:id="@+id/btnClear"
             android:layout_width="@dimen/lx_control_standard"
             android:layout_height="@dimen/lx_control_standard"
             android:layout_marginStart="@dimen/lx_space_xxs"
-            android:background="@drawable/bg_btn_primary"
+            android:background="@drawable/bg_btn_secondary"
             android:src="@drawable/ic_delete"
             android:scaleType="centerInside"
             android:padding="@dimen/lx_space_md"
@@ -94,7 +95,8 @@
             android:focusable="true"
             android:nextFocusLeft="@id/etSearch"
             android:nextFocusRight="@id/btnSearch"
-            app:tint="@color/selector_primary_action_content" />
+            android:nextFocusDown="@id/rvSourceList"
+            app:tint="@color/selector_action_content" />
 
         <Button
             android:id="@+id/btnSearch"
@@ -107,21 +109,24 @@
             android:textSize="@dimen/lx_type_body"
             android:focusable="true"
             android:nextFocusLeft="@id/btnClear"
-            android:nextFocusRight="@id/btnScan" />
+            android:nextFocusRight="@id/btnScan"
+            android:nextFocusDown="@id/rvSourceList" />
 
         <ImageButton
             android:id="@+id/btnScan"
             android:layout_width="@dimen/lx_control_standard"
             android:layout_height="@dimen/lx_control_standard"
             android:layout_marginStart="@dimen/lx_space_sm"
-            android:background="@drawable/bg_btn_primary"
+            android:background="@drawable/bg_btn_secondary"
             android:src="@drawable/ic_qr_code"
             android:scaleType="centerInside"
             android:padding="@dimen/lx_space_md"
             android:contentDescription="扫码搜索"
             android:focusable="true"
             android:nextFocusLeft="@id/btnSearch"
-            app:tint="@color/selector_primary_action_content" />
+            android:nextFocusRight="@id/btnScan"
+            android:nextFocusDown="@id/rvSourceList"
+            app:tint="@color/selector_action_content" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -133,6 +138,7 @@
         android:layout_marginEnd="@dimen/lx_nav_gutter"
         android:layout_marginBottom="@dimen/lx_space_xxs"
         android:nextFocusLeft="@id/tabSearch"
+        android:nextFocusUp="@id/etSearch"
         android:paddingStart="@dimen/lx_nav_gutter"
         android:paddingEnd="@dimen/lx_nav_gutter"
         android:paddingTop="@dimen/lx_space_xs"
@@ -167,6 +173,8 @@
         android:layout_marginTop="@dimen/lx_space_xs"
         android:layout_marginStart="@dimen/lx_space_lg"
         android:layout_marginEnd="@dimen/lx_space_lg"
+        android:focusable="true"
+        android:nextFocusUp="@id/rvSourceList"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvHotSearchTitle" />
@@ -208,6 +216,7 @@
             android:focusable="true"
             android:nextFocusLeft="@id/tabSearch"
             android:nextFocusRight="@id/btnSearchPlayOrderToggle"
+            android:nextFocusUp="@id/rvSourceList"
             android:nextFocusDown="@id/rvSearchResults"
             android:padding="@dimen/lx_space_sm"
             android:scaleType="centerInside"
@@ -223,6 +232,8 @@
             android:contentDescription="切换为随机播放"
             android:focusable="true"
             android:nextFocusLeft="@id/btnSearchPlayAll"
+            android:nextFocusRight="@id/btnSearchPlayOrderToggle"
+            android:nextFocusUp="@id/rvSourceList"
             android:nextFocusDown="@id/rvSearchResults"
             android:padding="@dimen/lx_space_sm"
             android:scaleType="centerInside"

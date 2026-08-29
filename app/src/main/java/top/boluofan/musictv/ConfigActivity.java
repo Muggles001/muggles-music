@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.KeyEvent;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
@@ -43,9 +44,11 @@ import top.boluofan.musictv.source.SourceRuntimeEngine;
 import top.boluofan.musictv.source.SourceRuntimeManager;
 import top.boluofan.musictv.source.SourceScriptImporter;
 import top.boluofan.musictv.source.SourceScriptStore;
+import top.boluofan.musictv.ui.background.FluidBackgroundView;
 import top.boluofan.musictv.util.DialogHelper;
 
 public class ConfigActivity extends AppCompatActivity {
+    public static final String EXTRA_INITIAL_MODE = "initial_backend_mode";
     private static final String TAG = "ConfigActivity";
     private LoginWebServer webServer;
     private SourceImportWebServer sourceWebServer;
@@ -70,6 +73,7 @@ public class ConfigActivity extends AppCompatActivity {
     private Button btnRollbackSource;
     private EditText etSourceUrl;
     private TextView tvSourceStatus;
+    private FluidBackgroundView fluidBackground;
     private BackendMode initialBackendMode = BackendMode.DIRECT_SOURCE;
     private retrofit2.Call<?> activeConnectCall;
 
@@ -95,6 +99,8 @@ public class ConfigActivity extends AppCompatActivity {
         btnRollbackSource = findViewById(R.id.btnRollbackSource);
         etSourceUrl = findViewById(R.id.etSourceUrl);
         tvSourceStatus = findViewById(R.id.tvSourceStatus);
+        fluidBackground = findViewById(R.id.fluidBackground);
+        installFocusBoundaryHandlers();
 
         etUrl.setText("");
         
@@ -134,11 +140,11 @@ public class ConfigActivity extends AppCompatActivity {
             selectBackendMode(BackendMode.DIRECT_SOURCE);
         });
         btnModeServer.setOnClickListener(v -> selectBackendMode(BackendMode.LXSERVER));
-        BackendMode savedMode = BackendPreferences.getMode(this);
-        initialBackendMode = savedMode;
-        if (savedMode == BackendMode.LXSERVER) selectBackendMode(BackendMode.LXSERVER);
+        BackendMode requestedMode = requestedInitialMode();
+        initialBackendMode = requestedMode;
+        if (requestedMode == BackendMode.LXSERVER) selectBackendMode(BackendMode.LXSERVER);
         else selectBackendMode(BackendMode.DIRECT_SOURCE);
-        View initialFocus = savedMode == BackendMode.LXSERVER ? btnModeServer : btnModeDirect;
+        View initialFocus = requestedMode == BackendMode.LXSERVER ? btnModeServer : btnModeDirect;
         initialFocus.post(initialFocus::requestFocus);
 
         btnToggleMode.setOnClickListener(v -> {
@@ -151,29 +157,10 @@ public class ConfigActivity extends AppCompatActivity {
                 btnToggleMode.setText("返回手动输入");
                 layoutManual.setVisibility(View.GONE);
                 layoutQr.setVisibility(View.VISIBLE);
-
-                etUrl.setFocusable(false);
-                etUsername.setFocusable(false);
-                etPassword.setFocusable(false);
-                etToken.setFocusable(false);
-                btnConnect.setFocusable(false);
-
+                setServerFormFocusable(false);
                 showQrCodeDialog();
             } else {
-                btnToggleMode.setText("扫码配置");
-                layoutManual.setVisibility(View.VISIBLE);
-                layoutQr.setVisibility(View.GONE);
-
-                etUrl.setFocusable(true);
-                etUrl.setFocusableInTouchMode(true);
-                etUsername.setFocusable(true);
-                etUsername.setFocusableInTouchMode(true);
-                etPassword.setFocusable(true);
-                etPassword.setFocusableInTouchMode(true);
-                etToken.setFocusable(true);
-                etToken.setFocusableInTouchMode(true);
-                btnConnect.setFocusable(true);
-
+                leaveQrMode();
                 if (webServer != null) {
                     webServer.stop();
                     webServer = null;
@@ -219,6 +206,19 @@ public class ConfigActivity extends AppCompatActivity {
 
             connectToServer(finalUrl, username, password, token);
         });
+    }
+
+    private BackendMode requestedInitialMode() {
+        String requested = getIntent().getStringExtra(EXTRA_INITIAL_MODE);
+        if (requested != null) {
+            try {
+                BackendMode mode = BackendMode.valueOf(requested);
+                if (mode != BackendMode.NONE) return mode;
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        BackendMode saved = BackendPreferences.getMode(this);
+        return saved == BackendMode.LXSERVER ? BackendMode.LXSERVER : BackendMode.DIRECT_SOURCE;
     }
 
     private void connectToServer(String url, String username, String password, String token) {
@@ -350,18 +350,95 @@ public class ConfigActivity extends AppCompatActivity {
     private void selectBackendMode(BackendMode mode) {
         selectedMode = mode;
         initialBackendMode = mode;
+        isQrMode = false;
         boolean direct = mode == BackendMode.DIRECT_SOURCE;
         layoutDirect.setVisibility(direct ? View.VISIBLE : View.GONE);
         layoutManual.setVisibility(direct ? View.GONE : View.VISIBLE);
         layoutQr.setVisibility(View.GONE);
+        setServerFormFocusable(!direct);
         btnToggleMode.setVisibility(View.VISIBLE);
         btnToggleMode.setText(direct ? "扫码导入音源" : "扫码配置");
         btnModeDirect.setSelected(direct);
         btnModeServer.setSelected(!direct);
-        if (direct) {
-            etSourceUrl.setNextFocusLeftId(R.id.btnToggleMode);
-            btnImportSource.setNextFocusLeftId(R.id.btnToggleMode);
+        updateVisibleFocusGraph();
+    }
+
+    private void setServerFormFocusable(boolean focusable) {
+        View[] views = {etUrl, etUsername, etPassword, etToken, btnConnect};
+        for (View view : views) {
+            view.setFocusable(focusable);
+            if (view instanceof EditText) view.setFocusableInTouchMode(focusable);
         }
+    }
+
+    private void leaveQrMode() {
+        isQrMode = false;
+        btnToggleMode.setText("扫码配置");
+        layoutManual.setVisibility(View.VISIBLE);
+        layoutQr.setVisibility(View.GONE);
+        setServerFormFocusable(true);
+        updateVisibleFocusGraph();
+    }
+
+    private void updateVisibleFocusGraph() {
+        boolean direct = selectedMode == BackendMode.DIRECT_SOURCE;
+        int selectedModeId = direct ? R.id.btnModeDirect : R.id.btnModeServer;
+        int firstFieldId = direct ? R.id.etSourceUrl : R.id.etUrl;
+        btnToggleMode.setNextFocusRightId(selectedModeId);
+        btnModeDirect.setNextFocusDownId(firstFieldId);
+        btnModeServer.setNextFocusDownId(firstFieldId);
+
+        if (direct) {
+            etSourceUrl.setNextFocusUpId(R.id.btnModeDirect);
+            etSourceUrl.setNextFocusDownId(R.id.btnImportSource);
+            btnImportSource.setNextFocusUpId(R.id.etSourceUrl);
+            btnImportSource.setNextFocusDownId(btnRollbackSource.getVisibility() == View.VISIBLE
+                    ? R.id.btnRollbackSource : R.id.btnImportSource);
+            btnRollbackSource.setNextFocusUpId(R.id.btnImportSource);
+            btnRollbackSource.setNextFocusDownId(R.id.btnRollbackSource);
+        } else if (!isQrMode) {
+            etUrl.setNextFocusUpId(R.id.btnModeServer);
+            etUrl.setNextFocusDownId(R.id.etUsername);
+            etUsername.setNextFocusUpId(R.id.etUrl);
+            etUsername.setNextFocusDownId(R.id.etPassword);
+            etPassword.setNextFocusUpId(R.id.etUsername);
+            etPassword.setNextFocusDownId(R.id.etToken);
+            etToken.setNextFocusUpId(R.id.etPassword);
+            etToken.setNextFocusDownId(R.id.btnConnect);
+            btnConnect.setNextFocusUpId(R.id.etToken);
+            btnConnect.setNextFocusDownId(R.id.btnConnect);
+        }
+    }
+
+    private void installFocusBoundaryHandlers() {
+        bindVerticalFocus(etSourceUrl, R.id.btnModeDirect, R.id.btnImportSource);
+        bindVerticalFocus(etUrl, R.id.btnModeServer, R.id.etUsername);
+        bindVerticalFocus(etUsername, R.id.etUrl, R.id.etPassword);
+        bindVerticalFocus(etPassword, R.id.etUsername, R.id.etToken);
+        bindVerticalFocus(etToken, R.id.etPassword, R.id.btnConnect);
+        btnImportSource.setOnKeyListener((view, keyCode, event) ->
+                keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                        && event.getAction() == KeyEvent.ACTION_DOWN
+                        && btnRollbackSource.getVisibility() != View.VISIBLE);
+        btnRollbackSource.setOnKeyListener((view, keyCode, event) ->
+                keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                        && event.getAction() == KeyEvent.ACTION_DOWN);
+        btnConnect.setOnKeyListener((view, keyCode, event) ->
+                keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                        && event.getAction() == KeyEvent.ACTION_DOWN);
+    }
+
+    private void bindVerticalFocus(EditText field, int upId, int downId) {
+        field.setOnKeyListener((view, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            int targetId;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) targetId = upId;
+            else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) targetId = downId;
+            else return false;
+            View target = findViewById(targetId);
+            return target != null && target.isShown() && target.isEnabled()
+                    && target.requestFocus();
+        });
     }
 
     private void showSourceQrCodeDialog() {
@@ -445,15 +522,9 @@ public class ConfigActivity extends AppCompatActivity {
     }
 
     private void rollbackSource() {
-        SourceScriptStore store = new SourceScriptStore(this);
-        if (!store.rollback()) {
-            Toast.makeText(this, "没有可回滚的音源版本", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        SourceRuntimeManager.get(this).invalidate();
-        ImportedSource restored = store.getActive();
+        ImportedSource restored = SourceRuntimeManager.get(this).rollbackActive();
         if (restored == null) {
-            showSourceImportError("上一版音源文件不存在");
+            Toast.makeText(this, "没有可用的音源版本可回滚", Toast.LENGTH_SHORT).show();
             return;
         }
         BackendPreferences.setMode(this, BackendMode.DIRECT_SOURCE);
@@ -468,6 +539,7 @@ public class ConfigActivity extends AppCompatActivity {
     private void updateRollbackVisibility() {
         btnRollbackSource.setVisibility(new SourceScriptStore(this).hasPrevious()
                 ? View.VISIBLE : View.GONE);
+        updateVisibleFocusGraph();
     }
 
     private void clearPlaybackQueue() {
@@ -498,6 +570,7 @@ public class ConfigActivity extends AppCompatActivity {
         String ipAddress = getIPAddress();
         if (ipAddress == null) {
             Toast.makeText(this, "无法获取局域网地址，请检查网络", Toast.LENGTH_SHORT).show();
+            leaveQrMode();
             return;
         }
 
@@ -516,15 +589,7 @@ public class ConfigActivity extends AppCompatActivity {
                 webServer.stop();
                 webServer = null;
             }
-            isQrMode = false;
-            btnToggleMode.setText("扫码配置");
-            layoutManual.setVisibility(View.VISIBLE);
-            layoutQr.setVisibility(View.GONE);
-            
-            etUrl.setFocusable(true);
-            etUsername.setFocusable(true);
-            etPassword.setFocusable(true);
-            btnConnect.setFocusable(true);
+            leaveQrMode();
         });
         
         String savedUrl = LxRetrofitClient.getServerUrl(this);
@@ -536,7 +601,6 @@ public class ConfigActivity extends AppCompatActivity {
             mainHandler.post(() -> {
                 if (!isActivityUsable()) return;
                 qrDialog.dismiss();
-                // 合并：如果推送的值为空，保留原有值
                 String mergedUrl = (url != null && !url.isEmpty()) ? url : savedUrl;
                 String mergedUsername = (username != null && !username.isEmpty()) ? username : savedUsername;
                 String mergedPassword = (password != null && !password.isEmpty()) ? password : savedPassword;
@@ -556,6 +620,7 @@ public class ConfigActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
             Toast.makeText(this, "服务启动失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            leaveQrMode();
         }
         
         qrDialog.setOnDismissListener(d -> {
@@ -563,6 +628,7 @@ public class ConfigActivity extends AppCompatActivity {
                 webServer.stop();
                 webServer = null;
             }
+            if (selectedMode == BackendMode.LXSERVER) leaveQrMode();
         });
         
         qrDialog.show();
@@ -639,6 +705,18 @@ public class ConfigActivity extends AppCompatActivity {
 
     private boolean isActivityUsable() {
         return !isFinishing() && !isDestroyed();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (fluidBackground != null) fluidBackground.resumeRendering();
+    }
+
+    @Override
+    protected void onPause() {
+        if (fluidBackground != null) fluidBackground.pauseRendering();
+        super.onPause();
     }
 
     @Override

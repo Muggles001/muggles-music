@@ -15,9 +15,9 @@
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/lx_glass_floating" />
+            <solid android:color="@color/lx_glass_clear" />
             <corners android:radius="@dimen/lx_radius_small" />
-            <stroke android:width="@dimen/lx_stroke_hairline" android:color="@color/lx_border" />
+            <stroke android:width="@dimen/lx_stroke_hairline" android:color="@color/lx_glass_edge" />
         </shape>
     </item>
 </selector>

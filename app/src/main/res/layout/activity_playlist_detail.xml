@@ -5,6 +5,17 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_app_gradient">
 
+    <top.boluofan.musictv.ui.background.FluidBackgroundView
+        android:id="@+id/fluidBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
     <!-- Top Bar -->
     <LinearLayout
         android:id="@+id/topBar"
@@ -30,6 +41,8 @@
             android:padding="@dimen/lx_space_sm"
             app:tint="@color/selector_action_content"
             android:focusable="true"
+            android:nextFocusLeft="@id/btnBack"
+            android:nextFocusUp="@id/btnBack"
             android:nextFocusRight="@id/btnPlayAll"
             android:nextFocusDown="@id/btnPlayAll"
             android:contentDescription="返回" />
@@ -70,8 +83,8 @@
 
         <!-- Left: Cover -->
         <androidx.cardview.widget.CardView
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="116dp"
+            android:layout_height="116dp"
             app:cardCornerRadius="@dimen/lx_radius_small"
             app:cardElevation="@dimen/lx_elevation_control"
             android:layout_marginStart="@dimen/lx_nav_gutter">
@@ -100,7 +113,7 @@
                 android:layout_height="wrap_content"
                 android:text="歌单名称"
                 android:textColor="@color/lx_text_primary"
-                android:textSize="@dimen/lx_type_control"
+                android:textSize="@dimen/lx_type_section"
                 android:textStyle="bold"
                 android:maxLines="2"
                 android:ellipsize="end" />
@@ -183,6 +196,7 @@
                 android:focusable="true"
                 android:nextFocusLeft="@id/btnBack"
                 android:nextFocusRight="@id/btnShuffle"
+                android:nextFocusDown="@id/rvSongs"
                 android:contentDescription="播放全部"
                 app:tint="@color/selector_action_content" />
 
@@ -198,6 +212,7 @@
                 android:focusable="true"
                 android:nextFocusLeft="@id/btnPlayAll"
                 android:nextFocusRight="@id/btnFavorite"
+                android:nextFocusDown="@id/rvSongs"
                 android:contentDescription="随机播放"
                 app:tint="@color/selector_action_content" />
 
@@ -212,6 +227,8 @@
                 android:padding="@dimen/lx_space_sm"
                 android:focusable="true"
                 android:nextFocusLeft="@id/btnShuffle"
+                android:nextFocusRight="@id/btnFavorite"
+                android:nextFocusDown="@id/rvSongs"
                 android:contentDescription="收藏"
                 app:tint="@color/selector_action_content" />
 
@@ -225,7 +242,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:orientation="vertical"
-        android:paddingTop="@dimen/lx_nav_gutter"
+        android:paddingTop="@dimen/lx_space_sm"
         android:layout_marginTop="@dimen/lx_space_sm"
         android:paddingStart="@dimen/lx_nav_gutter"
         android:paddingEnd="@dimen/lx_nav_gutter"
@@ -234,19 +251,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/layoutHeader"
         app:layout_constraintBottom_toTopOf="@+id/playlistDetailPagerBar">
-
-        <!-- Song List Header -->
-        <TextView
-            android:id="@+id/tvSongListHeader"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="歌曲列表"
-            android:textColor="@color/lx_text_primary"
-            android:textSize="@dimen/lx_type_control"
-            android:textStyle="bold"
-            android:paddingStart="@dimen/lx_space_md"
-            android:paddingEnd="@dimen/lx_space_md"
-            android:paddingBottom="@dimen/lx_space_sm" />
 
         <!-- Song List -->
         <androidx.recyclerview.widget.RecyclerView
@@ -260,6 +264,37 @@
             android:focusable="false"
             android:descendantFocusability="afterDescendants"
             android:nextFocusDown="@id/btnPlaylistDetailNextPage" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/playlistStateContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layoutHeader"
+        app:layout_constraintBottom_toTopOf="@id/playlistDetailPagerBar">
+
+        <ProgressBar
+            android:id="@+id/loadingProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvPlaylistState"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/lx_space_sm"
+            android:maxWidth="520dp"
+            android:gravity="center"
+            android:text="正在加载歌单…"
+            android:textColor="@color/lx_text_secondary"
+            android:textSize="@dimen/lx_type_control"
+            android:visibility="gone" />
 
     </LinearLayout>
 
@@ -286,6 +321,7 @@
             android:padding="@dimen/lx_space_sm"
             android:focusable="true"
             android:nextFocusUp="@id/rvSongs"
+            android:nextFocusLeft="@id/btnPlaylistDetailPrevPage"
             android:nextFocusRight="@id/btnPlaylistDetailNextPage"
             android:nextFocusDown="@id/btnBack"
             app:tint="@color/selector_action_content" />
@@ -311,20 +347,10 @@
             android:focusable="true"
             android:nextFocusUp="@id/rvSongs"
             android:nextFocusLeft="@id/btnPlaylistDetailPrevPage"
+            android:nextFocusRight="@id/btnPlaylistDetailNextPage"
             android:nextFocusDown="@id/btnBack"
             app:tint="@color/selector_action_content" />
 
     </LinearLayout>
-
-    <!-- Loading -->
-    <ProgressBar
-        android:id="@+id/loadingProgress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

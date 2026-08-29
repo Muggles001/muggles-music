@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<top.boluofan.musictv.ui.settings.SettingsRowView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/lx_space_xs"
+    android:background="@drawable/selector_menu_item"
+    android:clickable="false"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:minHeight="@dimen/lx_settings_row_height"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/lx_space_md"
+    android:paddingTop="@dimen/lx_space_sm"
+    android:paddingEnd="@dimen/lx_space_md"
+    android:paddingBottom="@dimen/lx_space_sm">
+
+    <TextView
+        android:id="@+id/tvSettingsInfoTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:duplicateParentState="true"
+        android:importantForAccessibility="no"
+        android:maxLines="2"
+        android:textColor="@color/selector_action_content"
+        android:textSize="@dimen/lx_type_control" />
+
+    <TextView
+        android:id="@+id/tvSettingsInfoBody"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/lx_space_xxs"
+        android:duplicateParentState="true"
+        android:importantForAccessibility="no"
+        android:lineSpacingExtra="@dimen/lx_space_xxs"
+        android:textColor="@color/selector_action_secondary_content"
+        android:textSize="@dimen/lx_type_body" />
+
+</top.boluofan.musictv.ui.settings.SettingsRowView>

@@ -3,19 +3,20 @@
     <!-- LX Server inspired light / mint design tokens. Surfaces use alpha so the
          light gradient underneath can show through as a restrained glass effect. -->
     <color name="lx_bg_canvas">#F3F8F5</color>
-    <color name="lx_bg_panel">#D9FFFFFF</color>
     <color name="lx_bg_focus">#DFF8ED</color>
-    <color name="lx_bg_header">#B3FFFFFF</color>
-    <color name="lx_bg_overlay">#B3FFFFFF</color>
 
-    <color name="lx_glass_regular">#D9FFFFFF</color>
-    <color name="lx_glass_floating">#B8FFFFFF</color>
-    <color name="lx_glass_clear">#80FFFFFF</color>
-    <color name="lx_glass_highlight">#CCFFFFFF</color>
+    <color name="lx_glass_clear">#42FFFFFF</color>
+    <color name="lx_glass_regular">#52FFFFFF</color>
+    <color name="lx_glass_strong">#66EFFFF7</color>
+    <color name="lx_glass_floating">@color/lx_glass_clear</color>
+    <color name="lx_glass_highlight">#24FFFFFF</color>
+    <color name="lx_glass_specular_mid">#08FFFFFF</color>
+    <color name="lx_glass_specular_clear">#00FFFFFF</color>
+    <color name="lx_glass_edge">#CCFFFFFF</color>
 
     <color name="lx_text_primary">#10231B</color>
-    <color name="lx_text_secondary">#4B685A</color>
-    <color name="lx_text_muted">#789187</color>
+    <color name="lx_text_secondary">#19382C</color>
+    <color name="lx_text_muted">@color/lx_text_secondary</color>
 
     <color name="lx_border">#6694B2A2</color>
     <color name="lx_border_strong">#9990A99A</color>
@@ -23,11 +24,12 @@
     <color name="lx_brand_pressed">#00A965</color>
     <color name="lx_brand_soft">#3320C878</color>
     <color name="lx_brand_pale">#E9FFF4</color>
-    <color name="lx_focus_ring">#00A965</color>
-    <color name="lx_focus_ring_strong">#008C55</color>
-    <color name="lx_selected_focused_fill">#F2FFFFFF</color>
+    <color name="lx_focus_ring_strong">#D9008C55</color>
+    <color name="lx_selected_focused_fill">@color/lx_bg_focus</color>
     <color name="lx_disabled_fill">#4DFFFFFF</color>
     <color name="lx_shadow_tint">#28005032</color>
+    <color name="lx_settings_danger">#B3261E</color>
+    <color name="lx_settings_danger_focused">#8C1D18</color>
 
     <color name="player_bg">#FF000000</color>
     <color name="player_text_primary">#FFFFFFFF</color>
@@ -41,9 +43,8 @@
     <color name="colorPrimaryDark">@color/lx_brand_pressed</color>
     <color name="colorAccent">@color/lx_brand</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="black">#FF000000</color>
     <item name="selector_nav_tint" type="color">@color/selector_nav_content</item>
-    <item name="selector_source_item_text" type="color">@color/selector_selectable_content</item>
+    <item name="selector_source_item_text" type="color">@color/selector_source_item_content</item>
     <item name="selector_ranking_board_text" type="color">@color/selector_selectable_content</item>
     <item name="selector_primary_button_text" type="color">@color/selector_primary_action_content</item>
 </resources>

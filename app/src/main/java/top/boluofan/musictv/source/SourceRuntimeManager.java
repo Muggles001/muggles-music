@@ -25,6 +25,7 @@ public final class SourceRuntimeManager {
     private final Context context;
     private final SourceScriptStore store;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Object candidateFileLock = new Object();
     private RemoteSourceRuntimeClient client;
     private ImportedSource loadedSource;
 
@@ -32,14 +33,21 @@ public final class SourceRuntimeManager {
         this.context = context;
         store = new SourceScriptStore(context);
         client = new RemoteSourceRuntimeClient(context);
+        clearTemporaryFiles();
     }
 
     public void activate(ImportedSource source, SourceRuntimeEngine.LoadCallback callback) {
         executor.execute(() -> {
-            File candidate = null;
             try {
-                candidate = writeCandidate(source);
-                JsonObject capabilities = runtime().load(candidate, source.importUrl);
+                JsonObject capabilities;
+                synchronized (candidateFileLock) {
+                    File candidate = writeCandidate(source);
+                    try {
+                        capabilities = runtime().load(candidate, source.importUrl);
+                    } finally {
+                        if (candidate.isFile()) candidate.delete();
+                    }
+                }
                 boolean supportsCatalog = false;
                 for (String code : new String[]{"mg", "kw", "kg", "tx", "wy"}) {
                     if (capabilities.has(code)) {
@@ -59,8 +67,6 @@ public final class SourceRuntimeManager {
                 callback.onLoaded(capabilities);
             } catch (Exception error) {
                 callback.onError(error.getMessage() == null ? "音源启用失败" : error.getMessage());
-            } finally {
-                if (candidate != null && candidate.isFile()) candidate.delete();
             }
         });
     }
@@ -73,6 +79,12 @@ public final class SourceRuntimeManager {
     public synchronized void invalidate() {
         loadedSource = null;
         resetClient();
+    }
+
+    public ImportedSource rollbackActive() {
+        ImportedSource restored = store.rollbackToValidPrevious();
+        if (restored != null) invalidate();
+        return restored;
     }
 
     public String resolveMusicUrlBlocking(String source, JsonObject musicInfo, String quality)
@@ -105,26 +117,46 @@ public final class SourceRuntimeManager {
             if (loadedSource != null
                     && loadedSource.metadata.sha256.equals(active.metadata.sha256)) return;
         }
-        File candidate = null;
-        try {
-            candidate = writeCandidate(active);
-            JsonObject capabilities = runtime().load(candidate, active.importUrl);
-            synchronized (this) {
-                loadedSource = new ImportedSource(active.metadata, active.importUrl,
-                        active.script, capabilities);
+        synchronized (candidateFileLock) {
+            File candidate = writeCandidate(active);
+            try {
+                JsonObject capabilities = runtime().load(candidate, active.importUrl);
+                synchronized (this) {
+                    loadedSource = new ImportedSource(active.metadata, active.importUrl,
+                            active.script, capabilities);
+                }
+            } finally {
+                if (candidate.isFile()) candidate.delete();
             }
-        } finally {
-            if (candidate != null && candidate.isFile()) candidate.delete();
         }
     }
 
     private File writeCandidate(ImportedSource source) throws IOException {
-        File file = File.createTempFile("lx-source-", ".js", context.getCacheDir());
+        File directory = temporaryDirectory(context);
+        if (!directory.exists() && !directory.mkdirs()) {
+            throw new IOException("无法创建音源临时目录");
+        }
+        File file = File.createTempFile("source-", ".js", directory);
         try (FileOutputStream output = new FileOutputStream(file)) {
             output.write(source.script.getBytes(StandardCharsets.UTF_8));
             output.getFD().sync();
         }
         return file;
+    }
+
+    public static File temporaryDirectory(Context context) {
+        return new File(context.getCacheDir(), "source-runtime");
+    }
+
+    public void clearTemporaryFiles() {
+        synchronized (candidateFileLock) {
+            File directory = temporaryDirectory(context);
+            File[] children = directory.listFiles();
+            if (children == null) return;
+            for (File child : children) {
+                if (child.isFile()) child.delete();
+            }
+        }
     }
 
     private synchronized RemoteSourceRuntimeClient runtime() {

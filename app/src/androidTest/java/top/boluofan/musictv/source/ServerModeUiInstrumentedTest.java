@@ -27,7 +27,7 @@ public class ServerModeUiInstrumentedTest {
     public void remoteServerIsVerifiedBeforeOpeningTvHome() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         BackendPreferences.clearMode(context);
-        LxRetrofitClient.clearConfig(context);
+        clearServerConfig(context);
         NanoHTTPD fixture = new NanoHTTPD(19002) {
             @Override public Response serve(IHTTPSession session) {
                 if ("/api/user/login".equals(session.getUri())) {
@@ -55,7 +55,7 @@ public class ServerModeUiInstrumentedTest {
             }
         } finally {
             fixture.stop();
-            LxRetrofitClient.clearConfig(context);
+            clearServerConfig(context);
             BackendPreferences.clearMode(context);
         }
     }
@@ -64,7 +64,7 @@ public class ServerModeUiInstrumentedTest {
     public void failedServerProbeStaysOnConfigAndDoesNotPersistAddress() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         BackendPreferences.clearMode(context);
-        LxRetrofitClient.clearConfig(context);
+        clearServerConfig(context);
         NanoHTTPD fixture = new NanoHTTPD(19004) {
             @Override public Response serve(IHTTPSession session) {
                 return newFixedLengthResponse(Response.Status.NOT_FOUND, "application/json", "{}");
@@ -89,8 +89,12 @@ public class ServerModeUiInstrumentedTest {
             }
         } finally {
             fixture.stop();
-            LxRetrofitClient.clearConfig(context);
+            clearServerConfig(context);
             BackendPreferences.clearMode(context);
         }
+    }
+
+    private static void clearServerConfig(Context context) {
+        context.getSharedPreferences("LxMusicPrefs", Context.MODE_PRIVATE).edit().clear().commit();
     }
 }

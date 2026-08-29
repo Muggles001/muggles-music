@@ -3,214 +3,61 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_app_gradient"
+    android:background="@android:color/transparent"
     android:nextFocusLeft="@id/tabSettings">
 
-    <!-- Top Bar -->
     <LinearLayout
         android:id="@+id/topBar"
         android:layout_width="0dp"
         android:layout_height="@dimen/lx_title_height"
-        android:orientation="horizontal"
         android:gravity="top"
+        android:orientation="horizontal"
         android:paddingStart="@dimen/lx_title_gutter"
-        android:paddingEnd="@dimen/lx_title_gutter"
         android:paddingTop="@dimen/lx_title_top"
-        android:background="@android:color/transparent"
-        app:layout_constraintStart_toStartOf="parent"
+        android:paddingEnd="@dimen/lx_title_gutter"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="@dimen/lx_control_compact"
             android:layout_height="@dimen/lx_control_compact"
-            android:src="@drawable/ic_back"
             android:background="@drawable/btn_focused_circle"
-            android:scaleType="centerInside"
-            android:padding="@dimen/lx_space_sm"
-            app:tint="@color/selector_action_content"
+            android:contentDescription="@string/settings_back"
             android:focusable="true"
-            android:contentDescription="返回" />
+            android:padding="@dimen/lx_space_sm"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_back"
+            android:visibility="gone"
+            app:tint="@color/selector_action_content" />
 
         <TextView
+            android:id="@+id/tvTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="设置"
+            android:text="@string/settings_title"
+            android:textColor="@color/lx_text_primary"
             android:textSize="@dimen/lx_type_title"
-            android:textStyle="bold"
-            android:textColor="@color/lx_text_primary" />
-
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Settings Content -->
-    <ScrollView
+    <!-- MainActivity keeps this legacy ID as the rail-to-content focus anchor. -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/layoutServerConfig"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:fillViewport="true"
-        app:layout_constraintStart_toStartOf="parent"
+        android:clipToPadding="false"
+        android:focusable="false"
+        android:paddingStart="@dimen/lx_title_gutter"
+        android:paddingTop="@dimen/lx_space_sm"
+        android:paddingEnd="@dimen/lx_title_gutter"
+        android:paddingBottom="@dimen/lx_space_lg"
+        android:scrollbars="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/topBar"
-        app:layout_constraintBottom_toBottomOf="parent">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:paddingStart="@dimen/lx_title_gutter"
-            android:paddingEnd="@dimen/lx_title_gutter"
-            android:paddingTop="@dimen/lx_nav_gutter"
-            android:paddingBottom="@dimen/lx_nav_gutter">
-
-            <!-- 服务器配置 -->
-            <LinearLayout
-                android:id="@+id/layoutServerConfig"
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/lx_control_standard"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/selector_menu_item"
-                android:paddingStart="@dimen/lx_space_md"
-                android:paddingEnd="@dimen/lx_space_md"
-                android:focusable="true"
-                android:clickable="true"
-                android:nextFocusLeft="@id/tabSettings">
-
-                <TextView
-                    android:id="@+id/tvConnectionLabel"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="服务器配置"
-                    android:textSize="@dimen/lx_type_control"
-                    android:textColor="@color/selector_action_content"
-                    android:duplicateParentState="true" />
-
-                <TextView
-                    android:id="@+id/tvServerUrl"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="未配置"
-                    android:textSize="@dimen/lx_type_body"
-                    android:textColor="@color/selector_action_secondary_content"
-                    android:duplicateParentState="true" />
-
-                <ImageView
-                    android:layout_width="@dimen/lx_icon_small"
-                    android:layout_height="@dimen/lx_icon_small"
-                    android:src="@drawable/ic_chevron_right"
-                    android:layout_marginStart="@dimen/lx_space_sm"
-                    android:duplicateParentState="true"
-                    app:tint="@color/selector_action_content" />
-
-            </LinearLayout>
-
-            <!-- 用户信息 -->
-            <LinearLayout
-                android:id="@+id/layoutUserInfo"
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/lx_control_standard"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/selector_menu_item"
-                android:paddingStart="@dimen/lx_space_md"
-                android:paddingEnd="@dimen/lx_space_md"
-                android:layout_marginTop="@dimen/lx_space_sm"
-                android:focusable="true"
-                android:clickable="true"
-                android:nextFocusLeft="@id/tabSettings">
-
-                <TextView
-                    android:id="@+id/tvLibraryLabel"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="当前用户"
-                    android:textSize="@dimen/lx_type_control"
-                    android:textColor="@color/selector_action_content"
-                    android:duplicateParentState="true" />
-
-                <TextView
-                    android:id="@+id/tvUsername"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="未登录"
-                    android:textSize="@dimen/lx_type_body"
-                    android:textColor="@color/selector_action_secondary_content"
-                    android:duplicateParentState="true" />
-
-                <ImageView
-                    android:layout_width="@dimen/lx_icon_small"
-                    android:layout_height="@dimen/lx_icon_small"
-                    android:src="@drawable/ic_chevron_right"
-                    android:layout_marginStart="@dimen/lx_space_sm"
-                    android:duplicateParentState="true"
-                    app:tint="@color/selector_action_content" />
-
-            </LinearLayout>
-
-            <!-- 允许后台播放 -->
-            <LinearLayout
-                android:id="@+id/layoutBackgroundPlay"
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/lx_control_standard"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/selector_menu_item"
-                android:paddingStart="@dimen/lx_space_md"
-                android:paddingEnd="@dimen/lx_space_md"
-                android:layout_marginTop="@dimen/lx_space_sm"
-                android:focusable="true"
-                android:clickable="true"
-                android:nextFocusLeft="@id/tabSettings">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="允许后台播放"
-                    android:textSize="@dimen/lx_type_control"
-                    android:textColor="@color/selector_action_content"
-                    android:duplicateParentState="true" />
-
-                <ImageButton
-                    android:id="@+id/btnBackgroundPlay"
-                    android:layout_width="60dp"
-                    android:layout_height="30dp"
-                    android:background="@drawable/toggle_on_new"
-                    android:scaleType="centerInside"
-                    android:clickable="false"
-                    android:focusable="false"
-                    android:contentDescription="允许后台播放" />
-
-            </LinearLayout>
-
-            <!-- 清除配置 -->
-            <LinearLayout
-                android:id="@+id/layoutLogout"
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/lx_control_standard"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:background="@drawable/bg_btn_primary"
-                android:layout_marginTop="@dimen/lx_space_lg"
-                android:focusable="true"
-                android:clickable="true">
-
-                <TextView
-                    android:id="@+id/tvClearLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="清除配置"
-                    android:textSize="@dimen/lx_type_control"
-                    android:textColor="@color/selector_primary_action_content"
-                    android:duplicateParentState="true" />
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-    </ScrollView>
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topBar" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -16,19 +16,19 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.Lifecycle;
 import androidx.media3.common.Player;
 import androidx.media3.session.MediaController;
-import androidx.media3.session.SessionToken;
-import com.google.common.util.concurrent.ListenableFuture;
-import android.content.ComponentName;
 import android.util.Log;
 import androidx.recyclerview.widget.RecyclerView;
-import top.boluofan.musictv.MusicService;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.FloatingPlayerWindow;
 import top.boluofan.musictv.api.LxRetrofitClient;
 import top.boluofan.musictv.backend.BackendMode;
 import top.boluofan.musictv.backend.BackendPreferences;
+import top.boluofan.musictv.settings.AppSettingsPreferences;
+import top.boluofan.musictv.player.session.MediaControllerConnection;
 import top.boluofan.musictv.util.FocusAnimationHelper;
+import top.boluofan.musictv.util.ViewHierarchy;
 import top.boluofan.musictv.ui.SongSquareFragment;
+import top.boluofan.musictv.ui.background.FluidBackgroundView;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -58,9 +58,10 @@ public class MainActivity extends AppCompatActivity {
     private View lastContentFocus;
     private int lastContentFocusPage = -1;
     private ViewTreeObserver.OnGlobalFocusChangeListener contentFocusTracker;
+    private FluidBackgroundView fluidBackground;
     
     private MediaController player;
-    private ListenableFuture<MediaController> controllerFuture;
+    private MediaControllerConnection controllerConnection;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,38 +94,44 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        SessionToken sessionToken = new SessionToken(this, new ComponentName(this, MusicService.class));
-        final ListenableFuture<MediaController> pendingController =
-                new MediaController.Builder(this, sessionToken).buildAsync();
-        controllerFuture = pendingController;
-        pendingController.addListener(() -> {
-            try {
-                MediaController resolvedController = pendingController.get();
-                if (isFinishing() || isDestroyed() || controllerFuture != pendingController) {
-                    MediaController.releaseFuture(pendingController);
-                    return;
-                }
-                player = resolvedController;
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to connect media controller", e);
-            }
-        }, androidx.core.content.ContextCompat.getMainExecutor(this));
+        if (controllerConnection == null) {
+            controllerConnection = new MediaControllerConnection(
+                    this,
+                    () -> !isFinishing() && !isDestroyed(),
+                    resolvedController -> player = resolvedController,
+                    error -> Log.e(TAG, "Failed to connect media controller", error));
+        }
+        controllerConnection.connect();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (fluidBackground != null) {
+            fluidBackground.resumeRendering();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        if (fluidBackground != null) {
+            fluidBackground.pauseRendering();
+        }
+        super.onPause();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
-            controllerFuture = null;
-        }
+        if (controllerConnection != null) controllerConnection.disconnect();
         player = null;
     }
 
     private void initViews() {
+        fluidBackground = findViewById(R.id.fluidBackground);
         fragmentContainer = findViewById(R.id.fragmentContainer);
         contentFocusTracker = (oldFocus, newFocus) -> {
-            if (newFocus != null && isWithinView(newFocus, fragmentContainer)) {
+            if (ViewHierarchy.contains(fragmentContainer, newFocus)) {
                 lastContentFocus = newFocus;
                 lastContentFocusPage = currentSelectedTab;
             }
@@ -292,7 +299,7 @@ public class MainActivity extends AppCompatActivity {
                 break;
             case PAGE_RANKING:
                 target = root.findViewById(R.id.rvBoards);
-                return requestPageTargetFocus(target)
+                return requestPageTargetFocus(target, false)
                         || requestPageTargetFocus(root.findViewById(R.id.rvSourceList));
             case PAGE_LIBRARY:
                 target = root.findViewById(R.id.tabAllSongs);
@@ -307,24 +314,39 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean requestPageTargetFocus(View target) {
+        return requestPageTargetFocus(target, true);
+    }
+
+    private boolean requestPageTargetFocus(View target, boolean waitForChildren) {
         if (target == null || !target.isShown() || !target.isEnabled()) return false;
         if (target instanceof RecyclerView) {
             RecyclerView list = (RecyclerView) target;
             if (list.getChildCount() > 0) {
-                return list.getChildAt(0).requestFocus();
+                if (requestFirstFocusableRecyclerChild(list)) return true;
+                if (!waitForChildren) return false;
             }
+            if (!waitForChildren) return false;
             // A source or ranking strip can finish binding one frame after the
             // page transition. Consume this key and deliver the focus as soon
             // as its first actual item exists.
             list.post(() -> {
                 if (list.isShown() && list.getChildCount() > 0) {
-                    list.getChildAt(0).requestFocus();
+                    requestFirstFocusableRecyclerChild(list);
                 }
             });
             return true;
         }
         if (target.isFocusable()) return target.requestFocus();
         return requestFirstFocusableDescendant(target);
+    }
+
+    private boolean requestFirstFocusableRecyclerChild(RecyclerView list) {
+        for (int i = 0; i < list.getChildCount(); i++) {
+            View child = list.getChildAt(i);
+            if (child.isShown() && child.isEnabled() && child.isFocusable()
+                    && child.requestFocus()) return true;
+        }
+        return false;
     }
 
     private boolean requestFirstFocusableDescendant(View view) {
@@ -349,17 +371,6 @@ public class MainActivity extends AppCompatActivity {
                 || view == tabLibrary || view == tabSettings;
     }
 
-    private boolean isWithinView(View child, View ancestor) {
-        if (child == null || ancestor == null) return false;
-        View current = child;
-        while (current != null) {
-            if (current == ancestor) return true;
-            if (!(current.getParent() instanceof View)) return false;
-            current = (View) current.getParent();
-        }
-        return false;
-    }
-
     /**
      * Android's geometric focus search can choose the first item in the left
      * rail when content is loading or a list is being rebound. A vertical key
@@ -368,7 +379,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private boolean wouldLeakVerticalFocusToRail(int keyCode, View currentFocus) {
         if ((keyCode != KeyEvent.KEYCODE_DPAD_UP && keyCode != KeyEvent.KEYCODE_DPAD_DOWN)
-                || !isWithinView(currentFocus, fragmentContainer)) {
+                || !ViewHierarchy.contains(fragmentContainer, currentFocus)) {
             return false;
         }
         View contentRoot = findViewById(android.R.id.content);
@@ -418,7 +429,7 @@ public class MainActivity extends AppCompatActivity {
                 && target.isShown()
                 && target.isEnabled()
                 && target.isFocusable()
-                && isWithinView(target, fragmentContainer);
+                && ViewHierarchy.contains(fragmentContainer, target);
     }
 
     private void moveFocusFromRailWhenReady() {
@@ -479,14 +490,6 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
-        // Give the floating player the first chance at edge navigation. Page
-        // fragments may intentionally consume down/left at their own edges;
-        // the player should still be reachable from the bottom-right edge.
-        if (directionalKey && floatingPlayerWindow != null
-                && floatingPlayerWindow.handleDirectionalKey(keyCode, getCurrentFocus())) {
-            return true;
-        }
-
         if (currentFragment instanceof PrimaryPageKeyHandler
                 && ((PrimaryPageKeyHandler) currentFragment).onKeyDown(keyCode, event)) {
             return true;
@@ -498,6 +501,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        if (directionalKey && floatingPlayerWindow != null
+                && floatingPlayerWindow.handleDirectionalKey(keyCode, getCurrentFocus())) {
+            return true;
+        }
+
         if (wouldLeakVerticalFocusToRail(keyCode, currentFocus)) {
             return true;
         }
@@ -505,7 +513,8 @@ public class MainActivity extends AppCompatActivity {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastBackPressTime < 2000) {
-                boolean backgroundPlay = LxRetrofitClient.getBackgroundPlay(this);
+                boolean backgroundPlay = new AppSettingsPreferences(this)
+                        .isBackgroundPlaybackEnabled();
                 if (!backgroundPlay && player != null) {
                     player.stop();
                     player.clearMediaItems();

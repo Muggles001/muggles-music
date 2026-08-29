@@ -5,7 +5,8 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="@dimen/lx_space_lg"
-    android:background="@drawable/bg_dialog">
+    android:background="@drawable/bg_dialog"
+    android:elevation="@dimen/lx_elevation_surface">
 
     <TextView
         android:id="@+id/tvDialogTitle"
@@ -47,6 +48,7 @@
         android:text="http://192.168.x.x:8089"
         android:textColor="@color/lx_brand"
         android:textSize="@dimen/lx_type_body"
+        android:fontFamily="monospace"
         android:layout_marginTop="@dimen/lx_space_md" />
 
 </LinearLayout>

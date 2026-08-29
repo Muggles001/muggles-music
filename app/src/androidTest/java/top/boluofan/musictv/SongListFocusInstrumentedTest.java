@@ -7,9 +7,11 @@ import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 import android.content.Intent;
+import android.app.Instrumentation;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -91,6 +93,10 @@ public class SongListFocusInstrumentedTest {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         BackendPreferences.clearMode(context);
         AtomicReference<FloatingPlayerWindow> floatingRef = new AtomicReference<>();
+        AtomicReference<View> ordinaryControlRef = new AtomicReference<>();
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Instrumentation.ActivityMonitor playerMonitor = instrumentation.addMonitor(
+                PlayerActivity.class.getName(), null, true);
 
         try (ActivityScenario<ConfigActivity> scenario = ActivityScenario.launch(
                 new Intent(context, ConfigActivity.class))) {
@@ -107,7 +113,16 @@ public class SongListFocusInstrumentedTest {
                         ViewGroup.LayoutParams.MATCH_PARENT, dp(activity, 72));
                 listParams.gravity = android.view.Gravity.BOTTOM;
                 host.addView(list, listParams);
+                Button ordinaryControl = new Button(activity);
+                ordinaryControl.setId(View.generateViewId());
+                ordinaryControl.setFocusable(true);
+                ordinaryControl.setNextFocusRightId(ordinaryControl.getId());
+                FrameLayout.LayoutParams ordinaryParams = new FrameLayout.LayoutParams(
+                        dp(activity, 48), dp(activity, 48));
+                ordinaryParams.gravity = android.view.Gravity.BOTTOM | android.view.Gravity.END;
+                host.addView(ordinaryControl, ordinaryParams);
                 activity.setContentView(host);
+                ordinaryControlRef.set(ordinaryControl);
 
                 FloatingPlayerWindow floating = new FloatingPlayerWindow(activity);
                 floating.getContainer().setVisibility(View.VISIBLE);
@@ -129,16 +144,39 @@ public class SongListFocusInstrumentedTest {
                 View fullscreen = holder.itemView.findViewById(R.id.btnItemFullscreen);
                 View favorite = holder.itemView.findViewById(R.id.btnItemFav);
                 FloatingPlayerWindow floating = floatingRef.get();
+                View ordinaryControl = ordinaryControlRef.get();
 
+                assertFalse(floating.getContainer().isFocusable());
+                assertFalse(floating.handleDirectionalKey(
+                        KeyEvent.KEYCODE_DPAD_RIGHT, ordinaryControl));
+                assertFalse(floating.getContainer().isFocusable());
                 assertEquals(R.id.btnItemFullscreen, play.getNextFocusRightId());
                 assertEquals(R.id.btnItemFav, fullscreen.getNextFocusRightId());
                 assertEquals(R.id.floatingPlayerContainer, favorite.getNextFocusRightId());
                 assertFalse(floating.handleDirectionalKey(KeyEvent.KEYCODE_DPAD_RIGHT, play));
                 assertFalse(floating.handleDirectionalKey(KeyEvent.KEYCODE_DPAD_RIGHT, fullscreen));
+                assertFalse(floating.getContainer().isFocusable());
+                assertTrue(favorite.requestFocusFromTouch());
                 assertTrue(floating.handleDirectionalKey(KeyEvent.KEYCODE_DPAD_RIGHT, favorite));
                 assertEquals(floating.getContainer(), activity.getCurrentFocus());
+                assertTrue(floating.getContainer().isFocusable());
+                assertTrue(floating.handleDirectionalKey(
+                        KeyEvent.KEYCODE_DPAD_RIGHT, floating.getContainer()));
+                assertEquals(floating.getContainer(), activity.getCurrentFocus());
+                assertTrue(floating.handleDirectionalKey(
+                        KeyEvent.KEYCODE_DPAD_DOWN, floating.getContainer()));
+                assertEquals(floating.getContainer(), activity.getCurrentFocus());
+                assertTrue(floating.handleDirectionalKey(
+                        KeyEvent.KEYCODE_DPAD_LEFT, floating.getContainer()));
+                assertEquals(favorite, activity.getCurrentFocus());
+                assertFalse(floating.getContainer().isFocusable());
+                assertTrue(floating.getContainer().hasOnClickListeners());
+                assertTrue(floating.getContainer().performClick());
             });
+            instrumentation.waitForIdleSync();
+            assertTrue(instrumentation.checkMonitorHit(playerMonitor, 1));
         } finally {
+            instrumentation.removeMonitor(playerMonitor);
             if (floatingRef.get() != null) {
                 InstrumentationRegistry.getInstrumentation().runOnMainSync(
                         () -> floatingRef.get().release());

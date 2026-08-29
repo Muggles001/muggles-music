@@ -6,8 +6,11 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
+    android:minHeight="@dimen/lx_control_standard"
     android:padding="@dimen/lx_space_xs"
     android:background="@drawable/bg_floating_player"
+    android:elevation="@dimen/lx_elevation_surface"
+    android:contentDescription="打开正在播放"
     android:visibility="gone">
 
     <androidx.cardview.widget.CardView
@@ -45,6 +48,6 @@
         android:marqueeRepeatLimit="marquee_forever"
         android:singleLine="true"
         android:textColor="@color/lx_text_primary"
-        android:textSize="@dimen/lx_type_caption" />
+        android:textSize="@dimen/lx_type_body" />
 
 </LinearLayout>

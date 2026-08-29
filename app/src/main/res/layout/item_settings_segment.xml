@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="@dimen/lx_settings_segment_height"
+    android:layout_marginStart="@dimen/lx_space_xs"
+    android:background="@drawable/selector_settings_segment"
+    android:gravity="center"
+    android:minWidth="@dimen/lx_settings_segment_min_width"
+    android:paddingStart="@dimen/lx_space_sm"
+    android:paddingEnd="@dimen/lx_space_sm"
+    android:textColor="@color/selector_settings_segment_content"
+    android:textSize="@dimen/lx_type_caption"
+    android:textStyle="bold" />

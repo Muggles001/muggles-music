@@ -3,5 +3,5 @@
     <item android:state_enabled="false"><shape><solid android:color="@color/lx_disabled_fill" /><corners android:radius="@dimen/lx_radius_small" /></shape></item>
     <item android:state_pressed="true"><shape><solid android:color="@color/lx_brand_pressed" /><corners android:radius="@dimen/lx_radius_small" /></shape></item>
     <item android:state_focused="true"><shape><solid android:color="@color/lx_bg_focus" /><stroke android:width="@dimen/lx_stroke_focus" android:color="@color/lx_focus_ring_strong" /><corners android:radius="@dimen/lx_radius_small" /></shape></item>
-    <item><shape><solid android:color="@color/lx_glass_floating" /><stroke android:width="@dimen/lx_stroke_hairline" android:color="@color/lx_border" /><corners android:radius="@dimen/lx_radius_small" /></shape></item>
+    <item><shape><solid android:color="@color/lx_glass_clear" /><stroke android:width="@dimen/lx_stroke_hairline" android:color="@color/lx_glass_edge" /><corners android:radius="@dimen/lx_radius_small" /></shape></item>
 </selector>

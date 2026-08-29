@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
+    android:layout_height="@dimen/lx_secondary_item_height"
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:paddingStart="@dimen/lx_space_md"
     android:paddingEnd="@dimen/lx_space_md"
-    android:paddingTop="@dimen/lx_space_sm"
-    android:paddingBottom="@dimen/lx_space_sm"
+    android:paddingTop="@dimen/lx_space_xs"
+    android:paddingBottom="@dimen/lx_space_xs"
     android:layout_marginStart="@dimen/lx_space_xxs"
     android:layout_marginEnd="@dimen/lx_space_xxs"
     android:background="@drawable/selector_source_item"
@@ -15,8 +15,9 @@
 
     <ImageView
         android:id="@+id/ivRadio"
-        android:layout_width="@dimen/lx_icon_default"
-        android:layout_height="@dimen/lx_icon_default"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
         android:duplicateParentState="true"
         android:src="@drawable/radio_unchecked" />
 
@@ -26,7 +27,6 @@
         android:layout_height="wrap_content"
         android:textColor="@color/selector_source_item_text"
         android:textSize="@dimen/lx_type_body"
-        android:layout_marginStart="@dimen/lx_space_xs"
         android:duplicateParentState="true" />
 
 </LinearLayout>

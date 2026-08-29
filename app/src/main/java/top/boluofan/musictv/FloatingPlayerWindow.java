@@ -2,7 +2,6 @@ package top.boluofan.musictv;
 
 import android.animation.ObjectAnimator;
 import android.app.Activity;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -22,11 +21,9 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.session.MediaController;
-import androidx.media3.session.SessionToken;
 
 import com.bumptech.glide.Glide;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
+import top.boluofan.musictv.player.session.MediaControllerConnection;
 
 public class FloatingPlayerWindow {
     private static final String TAG = "FloatingPlayerWindow";
@@ -40,7 +37,7 @@ public class FloatingPlayerWindow {
     private final View container;
 
     private MediaController player;
-    private ListenableFuture<MediaController> controllerFuture;
+    private MediaControllerConnection controllerConnection;
     private Player.Listener playerListener;
     private ObjectAnimator fadeAnim;
     private Handler fadeHandler;
@@ -49,8 +46,6 @@ public class FloatingPlayerWindow {
     private boolean isReleased = false;
     private boolean isFadedOut = false;
     private boolean isFocused = false;
-    /** The view that handed focus to the floating player, used for a clean
-     *  return path when the user presses up/left. */
     private View focusReturnView;
     private final int collapsedWidth;
     private final int expandedWidth;
@@ -95,11 +90,7 @@ public class FloatingPlayerWindow {
             rootView.addView(container);
         }
         
-        // This view is added to the decor window after the page content. It
-        // must still participate in the TV focus tree, but it should never
-        // steal focus merely because playback starts.
-        container.setFocusable(true);
-        container.setFocusableInTouchMode(true);
+        setPassiveFocusEnabled(false);
         container.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         
         fadeHandler = new Handler(Looper.getMainLooper());
@@ -117,6 +108,8 @@ public class FloatingPlayerWindow {
             } else {
                 tvTitle.setSelected(false);
                 collapsePlayer();
+                setPassiveFocusEnabled(false);
+                focusReturnView = null;
             }
         });
 
@@ -127,9 +120,31 @@ public class FloatingPlayerWindow {
                     openPlayer();
                     return true;
                 }
+                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+                        || keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
+                    return true;
+                }
+                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT
+                        || keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP) {
+                    returnFocusToSource();
+                    return true;
+                }
             }
             return false;
         });
+    }
+
+    private void setPassiveFocusEnabled(boolean enabled) {
+        container.setFocusable(enabled);
+        container.setFocusableInTouchMode(enabled);
+    }
+
+    private void returnFocusToSource() {
+        View target = focusReturnView;
+        if (target != null && target.isAttachedToWindow() && target.isShown()
+                && target.isEnabled() && target.isFocusable()) {
+            target.requestFocus();
+        }
     }
 
     private void openPlayer() {
@@ -203,7 +218,10 @@ public class FloatingPlayerWindow {
             @Override
             public void onAnimationEnd(android.animation.Animator animation) {
                 if (isFadedOut) {
+                    if (container.hasFocus()) returnFocusToSource();
                     container.setVisibility(View.GONE);
+                    setPassiveFocusEnabled(false);
+                    focusReturnView = null;
                 }
             }
         });
@@ -212,41 +230,32 @@ public class FloatingPlayerWindow {
 
     public void connectToService() {
         if (isConnected || isReleased) return;
-        
-        SessionToken sessionToken = new SessionToken(context, 
-                new ComponentName(context, MusicService.class));
-        
-        final ListenableFuture<MediaController> pendingController =
-                new MediaController.Builder(context, sessionToken).buildAsync();
-        controllerFuture = pendingController;
-        pendingController.addListener(() -> {
-            try {
-                MediaController resolvedController = pendingController.get();
-                if (isReleased || activity.isFinishing() || activity.isDestroyed()) {
-                    MediaController.releaseFuture(pendingController);
-                    return;
-                }
-                player = resolvedController;
-                isConnected = true;
-                playerListener = new Player.Listener() {
-                    @Override
-                    public void onMediaItemTransition(MediaItem mediaItem, int reason) {
-                        updateUI();
-                    }
+        if (controllerConnection == null) {
+            controllerConnection = new MediaControllerConnection(
+                    context,
+                    () -> !isReleased && !activity.isFinishing() && !activity.isDestroyed(),
+                    resolvedController -> {
+                        player = resolvedController;
+                        isConnected = true;
+                        playerListener = new Player.Listener() {
+                            @Override
+                            public void onMediaItemTransition(MediaItem mediaItem, int reason) {
+                                updateUI();
+                            }
 
-                    @Override
-                    public void onPlaybackStateChanged(int state) {
-                        if (state == Player.STATE_READY) {
-                            updateUI();
-                        }
-                    }
-                };
-                player.addListener(playerListener);
-                updateUI();
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get MediaController: " + e.getMessage());
-            }
-        }, androidx.core.content.ContextCompat.getMainExecutor(activity));
+                            @Override
+                            public void onPlaybackStateChanged(int state) {
+                                if (state == Player.STATE_READY) {
+                                    updateUI();
+                                }
+                            }
+                        };
+                        player.addListener(playerListener);
+                        updateUI();
+                    },
+                    error -> Log.e(TAG, "Failed to get MediaController: " + error.getMessage()));
+        }
+        controllerConnection.connect();
     }
 
     public void showIfPlaying() {
@@ -307,9 +316,12 @@ public class FloatingPlayerWindow {
                 if (fadeAnim != null) {
                     fadeAnim.cancel();
                 }
+                if (container.hasFocus()) returnFocusToSource();
                 container.setVisibility(View.GONE);
                 container.setAlpha(1.0f);
                 isFadedOut = false;
+                setPassiveFocusEnabled(false);
+                focusReturnView = null;
             });
         }
     }
@@ -318,6 +330,8 @@ public class FloatingPlayerWindow {
         if (isReleased) return;
         isReleased = true;
         isFocused = false;
+        setPassiveFocusEnabled(false);
+        focusReturnView = null;
         tvTitle.animate().cancel();
         if (fadeAnim != null) {
             fadeAnim.cancel();
@@ -330,10 +344,7 @@ public class FloatingPlayerWindow {
         if (player != null && playerListener != null) {
             player.removeListener(playerListener);
         }
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
-            controllerFuture = null;
-        }
+        if (controllerConnection != null) controllerConnection.disconnect();
         
         if (container != null) {
             container.setOnFocusChangeListener(null);
@@ -359,28 +370,33 @@ public class FloatingPlayerWindow {
         return container;
     }
     
-    public boolean requestFocus() {
+    private boolean requestOverlayFocus() {
         if (container != null && container.getVisibility() == View.VISIBLE) {
-            return container.requestFocus();
+            setPassiveFocusEnabled(true);
+            boolean focused = container.requestFocus();
+            if (!focused) setPassiveFocusEnabled(false);
+            return focused;
         }
         return false;
     }
 
-    /** Enter the overlay from an explicitly configured row edge. */
     public boolean requestFocusFrom(View source) {
         if (source == null || container == null || container.getVisibility() != View.VISIBLE
-                || container.getAlpha() < 0.1f) {
+                || container.getAlpha() < 0.1f
+                || source.getNextFocusRightId() != R.id.floatingPlayerContainer) {
             return false;
         }
         focusReturnView = source;
-        return container.requestFocus();
+        if (requestOverlayFocus()) return true;
+        focusReturnView = null;
+        return false;
     }
 
     /**
      * The floating player is an overlay, not another row in the content list.
-     * Only an explicit right press from a small lower-right control enters it;
-     * down presses always remain available for ordinary song-list navigation.
-     * Up/left returns to the view that started the jump.
+     * Only an explicit right-focus edge enters this decor overlay. Keeping it
+     * out of passive FocusFinder results prevents unrelated page controls from
+     * jumping into a view that was attached after the page hierarchy.
      */
     public boolean handleDirectionalKey(int keyCode, View currentFocus) {
         if (container == null || container.getVisibility() != View.VISIBLE
@@ -391,65 +407,22 @@ public class FloatingPlayerWindow {
         if (currentFocus == container) {
             if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
                     || keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
-                if (focusReturnView != null && focusReturnView.isShown()
-                        && focusReturnView.isFocusable()) {
-                    focusReturnView.requestFocus();
-                    return true;
-                }
+                returnFocusToSource();
+                return true;
+            }
+            if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+                    || keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
+                return true;
             }
             return false;
         }
 
         if (currentFocus == null) return false;
 
-        // Song rows explicitly mark their rightmost action with the overlay
-        // id. This gives the remote a deterministic edge transition even when
-        // the row is not close enough to the visual overlay for geometry-based
-        // detection.
         if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
                 && currentFocus.getNextFocusRightId() == R.id.floatingPlayerContainer) {
-            return requestFocusFrom(currentFocus);
-        }
-
-        // Song controls already define an exact left-to-right graph. Applying
-        // the lower-right geometry shortcut inside a row can skip its remaining
-        // actions when larger TV focus targets happen to overlap that zone.
-        if (isInsideSongRow(currentFocus)) return false;
-
-        int[] decorLocation = new int[2];
-        int[] focusLocation = new int[2];
-        View decor = activity.getWindow().getDecorView();
-        decor.getLocationOnScreen(decorLocation);
-        currentFocus.getLocationOnScreen(focusLocation);
-        int focusBottom = focusLocation[1] - decorLocation[1] + currentFocus.getHeight();
-        int focusRight = focusLocation[0] - decorLocation[0] + currentFocus.getWidth();
-        int decorHeight = decor.getHeight();
-        int decorWidth = decor.getWidth();
-        boolean nearBottom = focusBottom >= decorHeight
-                - dimension(R.dimen.lx_floating_entry_bottom);
-        boolean nearRight = focusRight >= decorWidth
-                - dimension(R.dimen.lx_floating_player_expanded_width);
-
-        boolean rightPressFromBroadRow = keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
-                && currentFocus instanceof ViewGroup
-                && currentFocus.getWidth() >= Math.round(decorWidth * 0.65f);
-        boolean shouldEnter = !rightPressFromBroadRow
-                && keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
-                && nearBottom && nearRight;
-
-        if (shouldEnter) {
-            focusReturnView = currentFocus;
-            return requestFocus();
-        }
-        return false;
-    }
-
-    private boolean isInsideSongRow(View view) {
-        View current = view;
-        while (current != null) {
-            if (current.getId() == R.id.item_song_root) return true;
-            if (!(current.getParent() instanceof View)) return false;
-            current = (View) current.getParent();
+            requestFocusFrom(currentFocus);
+            return true;
         }
         return false;
     }

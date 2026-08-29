@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_app_gradient"
+    android:background="@android:color/transparent"
     android:nextFocusLeft="@id/tabLibrary">
 
     <!-- The primary rail already owns branding and settings. This header only
@@ -134,15 +134,16 @@
         android:elevation="@dimen/lx_elevation_surface"
         android:outlineProvider="background"
         android:clipToOutline="true"
-        android:visibility="gone"
+        android:visibility="visible"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/layoutHeaderLeft">
 
         <TextView
+            android:id="@+id/tvLibraryModeLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="播放控制"
+            android:text="歌单列表"
             android:textSize="@dimen/lx_type_body"
             android:textStyle="bold"
             android:textColor="@color/lx_text_secondary" />
@@ -161,6 +162,7 @@
             android:scaleType="centerInside"
             android:padding="@dimen/lx_space_sm"
             android:focusable="true"
+            android:visibility="gone"
             android:nextFocusLeft="@id/tabLibrary"
             android:nextFocusRight="@id/btnPlayOrderToggle"
             android:nextFocusDown="@id/rvSongs"
@@ -177,6 +179,7 @@
             android:scaleType="centerInside"
             android:padding="@dimen/lx_space_sm"
             android:focusable="true"
+            android:visibility="gone"
             android:nextFocusLeft="@id/btnPlayAllSongs"
             android:nextFocusDown="@id/rvSongs"
             android:contentDescription="切换为随机播放"
@@ -204,7 +207,7 @@
         android:nextFocusDown="@id/btnLibraryNextPage"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/layoutHeaderLeft"
+        app:layout_constraintTop_toBottomOf="@+id/libraryActionBar"
         app:layout_constraintBottom_toTopOf="@+id/libraryPagerBar" />
 
     <LinearLayout
