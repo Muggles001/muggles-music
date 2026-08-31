@@ -14,27 +14,17 @@
 
 ## 最新版本
 
-当前版本为 [`v2.0.1`]（目前推荐v2.0.0新版本性能优化问题未解决）。
-(https://github.com/Muggles001/muggles-music/releases/tag/v2.0.1)
-本版完善沉浸式播放页、白绿流体玻璃浏览界面、完整设置体系和全局 TV 遥控器焦点导航。
+当前版本为 [`v2.0.2`](https://github.com/Muggles001/muggles-music/releases/tag/v2.0.2)。本版降低主界面流体背景和隐藏页面的持续开销，并加固搜索、目录浏览、播放与配置流程。
 
 发布页提供 Android 5.0（API 21）及以上可安装的通用 APK。`v1.0.2` 已启用新的发布证书；已安装 `v1.0.2` 及之后版本的用户可以直接覆盖更新。
 
 ## 主要功能
 
 - 适配 Android TV 与 D-Pad 遥控器操作。
-- 可直接导入 HTTP/HTTPS 的 LX 兼容自定义音源脚本，无需部署 LXserver。
-- 连接 [XCQ0607/lxserver](https://github.com/XCQ0607/lxserver)，支持登录、歌单、搜索、排行榜与播放。
-- 直连模式按音源能力提供咪咕、酷我、酷狗、QQ 音乐和网易云的搜索、歌单广场、排行榜与歌词，并提供仅保存在电视本机的收藏和歌单。
-- 音源脚本在独立进程运行，支持初始化检测、响应限制、超时重启、版本摘要和回滚。
-- 沉浸式播放页包含专辑环境光、音频响应 ASCII 丝带、共享平面透视歌词、拟物黑胶、波形进度、播放队列和歌曲操作面板。
-- 同步歌词支持原文与翻译分别换行、逐歌曲时间提前或延后、重新抓取、保存和重置。
-- 统一的一级页面导航，搭配白绿薄荷流体背景、透明玻璃层级和遥控器友好的焦点动画。
-- 歌单广场和歌单详情使用翻页歌曲列表；“我的歌单”与歌单广场复用同一详情页。
-- 搜索结果支持分页、全部播放和顺序/随机播放切换。
-- 歌曲列表在快速上下移动、列表重绘和浮窗切换时保持遥控器焦点稳定。
-- 播放链路支持 LXserver Token、直连媒体地址、网络唤醒及较完整的错误诊断。
-- 设置支持音质、后台播放、失败歌曲跳过、播放页常亮、双语歌词、睡眠定时、浏览动效、缓存和连接管理。
+- 支持直接导入 LX 兼容自定义音源，或连接 LXserver 使用。
+- 提供搜索、排行榜、歌单、收藏、播放队列和同步歌词。
+- 直连模式的收藏与歌单仅保存在电视本机。
+- 提供沉浸式播放界面和面向电视的浏览、焦点与设置体验。
 
 ## 与原版的关系
 
@@ -70,10 +60,20 @@
 ```bash
 git clone https://github.com/Muggles001/muggles-music.git
 cd muggles-music
-./gradlew assembleDebug
+bash gradlew :app:assembleDebug
 ```
 
 建议使用 JDK 17 或更高版本，并安装项目所需的 Android SDK。构建生成的通用 APK 位于 `app/build/outputs/apk/debug/app-universal-debug.apk`。
+
+构建前可运行基础验证：
+
+```bash
+bash gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+```
+
+## 项目结构
+
+生产代码按 `ui`、`player`、`catalog`、`library`、`source`、`remote`、`settings` 和 `local` 划分职责，应用根包仅保留启动入口。界面资源位于 `app/src/main/res/`，JVM 与设备测试分别位于 `app/src/test/` 和 `app/src/androidTest/`。
 
 ## AI 创作声明
 
@@ -81,4 +81,4 @@ cd muggles-music
 
 ## 开源协议
 
-本项目沿用原项目的 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)。再发布或修改时请保留许可证、版权与来源说明。
+本项目沿用原项目的 [Apache License 2.0](LICENSE)。再发布或修改时请保留许可证、版权与来源说明。

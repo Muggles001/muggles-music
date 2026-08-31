@@ -15,11 +15,11 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import fi.iki.elonen.NanoHTTPD;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import top.boluofan.musictv.ConfigActivity;
+import top.boluofan.musictv.ui.settings.connection.ConfigActivity;
 import top.boluofan.musictv.R;
-import top.boluofan.musictv.api.LxRetrofitClient;
-import top.boluofan.musictv.backend.BackendMode;
-import top.boluofan.musictv.backend.BackendPreferences;
+import top.boluofan.musictv.catalog.lxserver.LxRetrofitClient;
+import top.boluofan.musictv.settings.BackendMode;
+import top.boluofan.musictv.settings.BackendPreferences;
 
 @RunWith(AndroidJUnit4.class)
 public class ServerModeUiInstrumentedTest {

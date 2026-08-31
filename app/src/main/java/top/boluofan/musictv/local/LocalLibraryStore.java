@@ -3,7 +3,7 @@ package top.boluofan.musictv.local;
 import android.content.Context;
 import com.google.gson.Gson;
 import java.util.ArrayList;
-import top.boluofan.musictv.api.model.ListData;
+import top.boluofan.musictv.catalog.model.ListData;
 
 public final class LocalLibraryStore {
     private static final Gson GSON = new Gson();

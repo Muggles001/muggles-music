@@ -1,0 +1,17 @@
+[
+  {
+    "Audioid": "7654321",
+    "SongName": "夜曲",
+    "SingerName": "周杰伦",
+    "AlbumName": "十一月的萧邦",
+    "AlbumID": "2002",
+    "FileHash": "hash-128",
+    "Image": "https://img.example/{size}/cover.jpg",
+    "Duration": 269000,
+    "FileSize": 1048576,
+    "HQFileSize": 2097152,
+    "HQFileHash": "hash-320",
+    "SQFileSize": 3145728,
+    "SQFileHash": "hash-flac"
+  }
+]

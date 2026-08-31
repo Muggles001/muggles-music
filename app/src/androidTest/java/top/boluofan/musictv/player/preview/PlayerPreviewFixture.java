@@ -7,7 +7,7 @@ import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Shader;
 import java.util.List;
-import top.boluofan.musictv.LyricParser;
+import top.boluofan.musictv.player.lyrics.LyricParser;
 import top.boluofan.musictv.player.visual.VinylTurntableView;
 
 public final class PlayerPreviewFixture {

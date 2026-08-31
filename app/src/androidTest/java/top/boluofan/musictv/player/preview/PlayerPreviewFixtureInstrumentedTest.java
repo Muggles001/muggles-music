@@ -13,7 +13,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import java.util.List;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import top.boluofan.musictv.LyricParser;
+import top.boluofan.musictv.player.lyrics.LyricParser;
 import top.boluofan.musictv.player.visual.VinylTurntableView;
 
 @RunWith(AndroidJUnit4.class)

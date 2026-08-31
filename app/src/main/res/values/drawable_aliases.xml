@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="bg_dialog" type="drawable">@drawable/bg_content_panel</item>
+    <item name="bg_keyboard_popup" type="drawable">@drawable/bg_content_panel</item>
+</resources>

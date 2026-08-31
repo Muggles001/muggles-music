@@ -38,11 +38,20 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
     private static final String[] PARTICLE_VARYINGS = {
             "v_position_velocity", "v_material", "v_identity"
     };
+    private static final TargetFormat RGBA_HALF = new TargetFormat(
+            GLES30.GL_RGBA16F, GLES30.GL_RGBA, GLES30.GL_HALF_FLOAT);
+    private static final TargetFormat RG_HALF = new TargetFormat(
+            GLES30.GL_RG16F, GLES30.GL_RG, GLES30.GL_HALF_FLOAT);
+    private static final TargetFormat RED_HALF = new TargetFormat(
+            GLES30.GL_R16F, GLES30.GL_RED, GLES30.GL_HALF_FLOAT);
+    private static final TargetFormat RGBA_BYTE = new TargetFormat(
+            GLES30.GL_RGBA8, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE);
 
     private final Context context;
-    private final FluidBackgroundPolicy.Profile profile;
     private final Runnable unavailableCallback;
-    private final FluidSimulationClock simulationClock;
+    private FluidBackgroundPolicy.Profile profile;
+    private FluidSimulationClock simulationClock;
+    private FluidRendererPlan.FlowCadence flowCadence;
     private final FluidPingPongState velocityState = new FluidPingPongState();
     private final FluidPingPongState pressureState = new FluidPingPongState();
     private final FluidPingPongState carrierState = new FluidPingPongState();
@@ -55,10 +64,6 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
     private final RenderTarget[] carrierTargets = RenderTarget.createPair();
     private final RenderTarget transientDepositTarget = new RenderTarget();
     private final RenderTarget[] depositTargets = RenderTarget.createPair();
-    private final RenderTarget sceneTarget = new RenderTarget();
-    private final RenderTarget emissiveTarget = new RenderTarget();
-    private final RenderTarget[] bloomNearTargets = RenderTarget.createPair();
-    private final RenderTarget[] bloomFarTargets = RenderTarget.createPair();
 
     private final int[] particleBuffers = new int[2];
     private final int[] particleVaos = new int[2];
@@ -73,17 +78,15 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
     private ShaderProgram particleSplatProgram;
     private ShaderProgram depositProgram;
     private ShaderProgram sceneProgram;
-    private ShaderProgram particleEmissiveProgram;
-    private ShaderProgram downsampleProgram;
-    private ShaderProgram blurProgram;
-    private ShaderProgram finalProgram;
 
     private int fullscreenVao;
     private int fullscreenBuffer;
     private int surfaceWidth;
     private int surfaceHeight;
+    private TargetFormat velocityTargetFormat = RGBA_HALF;
+    private TargetFormat scalarTargetFormat = RGBA_HALF;
     private boolean resourcesReady;
-    private boolean surfaceTargetsReady;
+    private boolean surfaceReady;
     private boolean unavailableSignaled;
     private boolean initializationPending;
     private boolean fallbackFramePresented;
@@ -97,6 +100,7 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
         this.unavailableCallback = unavailableCallback;
         simulationClock = new FluidSimulationClock(
                 profile.simulationStepNanos, profile.maxSimulationStepsPerFrame);
+        flowCadence = new FluidRendererPlan.FlowCadence(profile.flowStepDivisor);
     }
 
     @Override
@@ -112,19 +116,8 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
     public void onSurfaceChanged(GL10 gl, int width, int height) {
         surfaceWidth = width;
         surfaceHeight = height;
+        surfaceReady = width > 0 && height > 0;
         GLES30.glViewport(0, 0, width, height);
-        if (!resourcesReady || unavailableSignaled) return;
-        if (surfaceTargetsReady && sceneTarget.width == width && sceneTarget.height == height) {
-            return;
-        }
-        try {
-            deleteSurfaceTargets();
-            createSurfaceTargets(width, height);
-            surfaceTargetsReady = true;
-            checkGlError("surface target initialization");
-        } catch (RuntimeException error) {
-            fail("Unable to allocate fluid surface targets", error);
-        }
     }
 
     @Override
@@ -148,7 +141,7 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
                 return;
             }
         }
-        if (!resourcesReady || !surfaceTargetsReady) return;
+        if (!resourcesReady || !surfaceReady) return;
 
         try {
             long nowNanos = SystemClock.elapsedRealtimeNanos();
@@ -159,7 +152,7 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
                 double stepTime = finalTime - (stepCount - step - 1) * stepSeconds;
                 runSimulationStep(stepTime);
             }
-            renderSurface(finalTime);
+            renderSurface();
             checkGlError("frame rendering");
         } catch (RuntimeException error) {
             fail("Fluid rendering failed", error);
@@ -168,10 +161,38 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
 
     void resetWallClock() {
         simulationClock.resetWallTime(SystemClock.elapsedRealtimeNanos());
+        flowCadence.reset();
+    }
+
+    void applyProfile(FluidBackgroundPolicy.Profile requestedProfile) {
+        if (requestedProfile == null) throw new IllegalArgumentException("Profile is required");
+        if (profile == requestedProfile) {
+            resetWallClock();
+            return;
+        }
+
+        profile = requestedProfile;
+        simulationClock = new FluidSimulationClock(
+                profile.simulationStepNanos, profile.maxSimulationStepsPerFrame);
+        flowCadence = new FluidRendererPlan.FlowCadence(profile.flowStepDivisor);
+        if (!resourcesReady || unavailableSignaled) return;
+
+        try {
+            deleteProfileResources();
+            createSimulationTargets();
+            createParticleResources();
+            clearSimulationState();
+            seedCarrierTargets();
+            resetWallClock();
+            checkGlError("profile reconfiguration");
+        } catch (RuntimeException error) {
+            fail("Unable to reconfigure fluid renderer", error);
+        }
     }
 
     private void initializeContextResources() throws IOException {
         verifyCapabilities();
+        selectSimulationTargetFormats();
         createPrograms();
         createFullscreenGeometry();
         createSimulationTargets();
@@ -179,10 +200,6 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
         clearSimulationState();
         seedCarrierTargets();
         resourcesReady = true;
-        if (surfaceWidth > 0 && surfaceHeight > 0) {
-            createSurfaceTargets(surfaceWidth, surfaceHeight);
-            surfaceTargetsReady = true;
-        }
         checkGlError("resource initialization");
     }
 
@@ -214,7 +231,7 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
             throw new IllegalStateException("Transform-feedback particle ABI is unsupported");
         }
         GLES30.glGetIntegerv(GLES30.GL_MAX_TEXTURE_IMAGE_UNITS, value, 0);
-        if (value[0] < 4) throw new IllegalStateException("Four texture units are required");
+        if (value[0] < 3) throw new IllegalStateException("Three texture units are required");
     }
 
     private static boolean hasExtension(String extensions, String required) {
@@ -223,6 +240,30 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
             if (required.equals(extension)) return true;
         }
         return false;
+    }
+
+    private void selectSimulationTargetFormats() {
+        FluidRendererPlan.SimulationFormatPlan plan = FluidRendererPlan.simulationFormatPlan(
+                probeTargetFormat(RG_HALF), probeTargetFormat(RED_HALF));
+        velocityTargetFormat = plan.narrowVelocity ? RG_HALF : RGBA_HALF;
+        scalarTargetFormat = plan.narrowScalar ? RED_HALF : RGBA_HALF;
+    }
+
+    private static boolean probeTargetFormat(TargetFormat format) {
+        RenderTarget target = new RenderTarget();
+        try {
+            createTarget(target, 4, 4, format);
+            clearTarget(target);
+            checkGlError("render-target format probe");
+            return true;
+        } catch (RuntimeException unsupported) {
+            return false;
+        } finally {
+            deleteTarget(target);
+            GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0);
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0);
+            drainGlErrors();
+        }
     }
 
     private void createPrograms() throws IOException {
@@ -257,19 +298,6 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
                 R.raw.fluid_scene_fragment,
                 "u_carrier", "u_deposit", "u_surface_resolution",
                 "u_carrier_texel", "u_deposit_texel");
-        particleEmissiveProgram = createParticleProgram(
-                readRawResource(R.raw.fluid_particle_emissive_vertex),
-                readRawResource(R.raw.fluid_particle_emissive_fragment), null, 3,
-                "u_surface_resolution", "u_deposit", "u_carrier",
-                "u_carrier_texel", "u_time");
-        downsampleProgram = createFullscreenProgram(fullscreenVertex,
-                R.raw.fluid_downsample_fragment,
-                "u_source", "u_source_texel", "u_source_scale");
-        blurProgram = createFullscreenProgram(fullscreenVertex,
-                R.raw.fluid_blur_fragment, "u_source", "u_source_texel", "u_direction");
-        finalProgram = createFullscreenProgram(fullscreenVertex,
-                R.raw.fluid_background_fragment,
-                "u_scene", "u_emissive", "u_bloom_near", "u_bloom_far");
     }
 
     private ShaderProgram createFullscreenProgram(
@@ -377,49 +405,27 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
     }
 
     private void createSimulationTargets() {
-        createHalfFloatPair(velocityTargets, profile.carrierWidth, profile.carrierHeight);
-        createHalfFloatPair(pressureTargets, profile.carrierWidth, profile.carrierHeight);
+        createTargetPair(
+                velocityTargets, profile.carrierWidth, profile.carrierHeight, velocityTargetFormat);
+        createTargetPair(
+                pressureTargets, profile.carrierWidth, profile.carrierHeight, scalarTargetFormat);
         createTarget(divergenceTarget,
-                profile.carrierWidth, profile.carrierHeight, GLES30.GL_RGBA16F, GLES30.GL_HALF_FLOAT);
-        createHalfFloatPair(carrierTargets, profile.carrierWidth, profile.carrierHeight);
+                profile.carrierWidth, profile.carrierHeight, scalarTargetFormat);
+        createTargetPair(carrierTargets, profile.carrierWidth, profile.carrierHeight, RGBA_HALF);
         createTarget(transientDepositTarget,
-                profile.depositWidth, profile.depositHeight, GLES30.GL_RGBA8, GLES30.GL_UNSIGNED_BYTE);
-        createHalfFloatPair(depositTargets, profile.depositWidth, profile.depositHeight);
+                profile.depositWidth, profile.depositHeight, RGBA_BYTE);
+        createTargetPair(depositTargets, profile.depositWidth, profile.depositHeight, RGBA_HALF);
     }
 
-    private void createSurfaceTargets(int width, int height) {
-        if (width <= 0 || height <= 0) {
-            throw new IllegalArgumentException("Surface dimensions must be positive");
-        }
-        createTarget(sceneTarget, width, height, GLES30.GL_RGBA8, GLES30.GL_UNSIGNED_BYTE);
-        createTarget(emissiveTarget, width, height, GLES30.GL_RGBA8, GLES30.GL_UNSIGNED_BYTE);
-        int nearWidth = FluidRendererPlan.bloomDimension(width, 4);
-        int nearHeight = FluidRendererPlan.bloomDimension(height, 4);
-        createBytePair(bloomNearTargets, nearWidth, nearHeight);
-        int farWidth = FluidRendererPlan.bloomDimension(width, 8);
-        int farHeight = FluidRendererPlan.bloomDimension(height, 8);
-        createBytePair(bloomFarTargets, farWidth, farHeight);
-        clearTarget(sceneTarget);
-        clearTarget(emissiveTarget);
-        clearTargets(bloomNearTargets);
-        clearTargets(bloomFarTargets);
-        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0);
-    }
-
-    private void createHalfFloatPair(RenderTarget[] targets, int width, int height) {
+    private void createTargetPair(
+            RenderTarget[] targets, int width, int height, TargetFormat format) {
         for (RenderTarget target : targets) {
-            createTarget(target, width, height, GLES30.GL_RGBA16F, GLES30.GL_HALF_FLOAT);
-        }
-    }
-
-    private void createBytePair(RenderTarget[] targets, int width, int height) {
-        for (RenderTarget target : targets) {
-            createTarget(target, width, height, GLES30.GL_RGBA8, GLES30.GL_UNSIGNED_BYTE);
+            createTarget(target, width, height, format);
         }
     }
 
     private static void createTarget(
-            RenderTarget target, int width, int height, int internalFormat, int type) {
+            RenderTarget target, int width, int height, TargetFormat format) {
         int[] names = new int[1];
         GLES30.glGenTextures(1, names, 0);
         target.texture = names[0];
@@ -440,8 +446,8 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
                 GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE);
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D,
                 GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE);
-        GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, internalFormat,
-                width, height, 0, GLES30.GL_RGBA, type, null);
+        GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, format.internalFormat,
+                width, height, 0, format.baseFormat, format.type, null);
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, target.framebuffer);
         GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0,
                 GLES30.GL_TEXTURE_2D, target.texture, 0);
@@ -504,6 +510,7 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
         carrierState.reset();
         depositState.reset();
         particleState.reset();
+        flowCadence.reset();
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0);
         setFallbackClearColor();
     }
@@ -539,16 +546,20 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
     }
 
     private void runSimulationStep(double simulationTimeSeconds) {
+        if (flowCadence.shouldRunFlowStep()) runFlowStep(simulationTimeSeconds);
+        runCarrierPass(simulationTimeSeconds);
+        runParticleUpdatePass(simulationTimeSeconds);
+        runParticleSplatPass();
+        runDepositPass();
+    }
+
+    private void runFlowStep(double simulationTimeSeconds) {
         runVelocityPass(simulationTimeSeconds);
         runDivergencePass();
         for (int iteration = 0; iteration < profile.pressureIterations; iteration++) {
             runPressurePass();
         }
         runProjectionPass();
-        runCarrierPass(simulationTimeSeconds);
-        runParticleUpdatePass(simulationTimeSeconds);
-        runParticleSplatPass();
-        runDepositPass();
     }
 
     private void runVelocityPass(double simulationTimeSeconds) {
@@ -560,7 +571,7 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
                 velocityProgram.uniform("u_carrier"));
         setCarrierTexel(velocityProgram.uniform("u_texel"));
         GLES30.glUniform1f(velocityProgram.uniform("u_delta_time"),
-                profile.simulationStepSeconds());
+                profile.flowStepSeconds());
         setMotion(velocityProgram.uniform("u_motion"), simulationTimeSeconds);
         drawFullscreen();
         velocityState.swap();
@@ -669,20 +680,14 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
         depositState.swap();
     }
 
-    private void renderSurface(double simulationTimeSeconds) {
+    private void renderSurface() {
         runScenePass();
-        runParticleEmissivePass(simulationTimeSeconds);
-        runDownsamplePass(emissiveTarget, bloomNearTargets[0]);
-        runDownsamplePass(emissiveTarget, bloomFarTargets[0]);
-        runBlurPass(bloomNearTargets[0], bloomNearTargets[1], 1f, 0f);
-        runBlurPass(bloomNearTargets[1], bloomNearTargets[0], 0f, 1f);
-        runBlurPass(bloomFarTargets[0], bloomFarTargets[1], 1f, 0f);
-        runBlurPass(bloomFarTargets[1], bloomFarTargets[0], 0f, 1f);
-        runFinalPass();
     }
 
     private void runScenePass() {
-        beginFullscreenPass(sceneProgram, sceneTarget);
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0);
+        GLES30.glViewport(0, 0, surfaceWidth, surfaceHeight);
+        GLES30.glUseProgram(sceneProgram.id);
         bindTexture(0, carrierTargets[carrierState.readIndex()].texture,
                 sceneProgram.uniform("u_carrier"));
         bindTexture(1, depositTargets[depositState.readIndex()].texture,
@@ -693,64 +698,6 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
         GLES30.glUniform2f(sceneProgram.uniform("u_deposit_texel"),
                 1f / profile.depositWidth, 1f / profile.depositHeight);
         drawFullscreen();
-    }
-
-    private void runParticleEmissivePass(double simulationTimeSeconds) {
-        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, emissiveTarget.framebuffer);
-        GLES30.glViewport(0, 0, emissiveTarget.width, emissiveTarget.height);
-        GLES30.glClearColor(0f, 0f, 0f, 0f);
-        GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT);
-        GLES30.glUseProgram(particleEmissiveProgram.id);
-        GLES30.glUniform2f(particleEmissiveProgram.uniform("u_surface_resolution"),
-                surfaceWidth, surfaceHeight);
-        bindTexture(0, depositTargets[depositState.readIndex()].texture,
-                particleEmissiveProgram.uniform("u_deposit"));
-        bindTexture(1, carrierTargets[carrierState.readIndex()].texture,
-                particleEmissiveProgram.uniform("u_carrier"));
-        setCarrierTexel(particleEmissiveProgram.uniform("u_carrier_texel"));
-        GLES30.glUniform1f(particleEmissiveProgram.uniform("u_time"),
-                (float) simulationTimeSeconds);
-        GLES30.glBindVertexArray(particleVaos[particleState.readIndex()]);
-        GLES30.glEnable(GLES30.GL_BLEND);
-        GLES30.glBlendEquation(GLES30.GL_FUNC_ADD);
-        GLES30.glBlendFunc(GLES30.GL_ONE, GLES30.GL_ONE);
-        GLES30.glDrawArrays(GLES30.GL_POINTS, 0, profile.particleCount);
-        GLES30.glDisable(GLES30.GL_BLEND);
-        GLES30.glBindVertexArray(0);
-    }
-
-    private void runDownsamplePass(RenderTarget source, RenderTarget target) {
-        beginFullscreenPass(downsampleProgram, target);
-        bindTexture(0, source.texture, downsampleProgram.uniform("u_source"));
-        GLES30.glUniform2f(downsampleProgram.uniform("u_source_texel"),
-                1f / source.width, 1f / source.height);
-        GLES30.glUniform2f(downsampleProgram.uniform("u_source_scale"),
-                (float) source.width / target.width, (float) source.height / target.height);
-        drawFullscreen();
-    }
-
-    private void runBlurPass(
-            RenderTarget source, RenderTarget target, float directionX, float directionY) {
-        beginFullscreenPass(blurProgram, target);
-        bindTexture(0, source.texture, blurProgram.uniform("u_source"));
-        GLES30.glUniform2f(blurProgram.uniform("u_source_texel"),
-                1f / source.width, 1f / source.height);
-        GLES30.glUniform2f(blurProgram.uniform("u_direction"), directionX, directionY);
-        drawFullscreen();
-    }
-
-    private void runFinalPass() {
-        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0);
-        GLES30.glViewport(0, 0, surfaceWidth, surfaceHeight);
-        GLES30.glUseProgram(finalProgram.id);
-        bindTexture(0, sceneTarget.texture, finalProgram.uniform("u_scene"));
-        bindTexture(1, emissiveTarget.texture, finalProgram.uniform("u_emissive"));
-        bindTexture(2, bloomNearTargets[0].texture, finalProgram.uniform("u_bloom_near"));
-        bindTexture(3, bloomFarTargets[0].texture, finalProgram.uniform("u_bloom_far"));
-        drawFullscreen();
-        GLES30.glBindVertexArray(0);
-        GLES30.glActiveTexture(GLES30.GL_TEXTURE0);
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0);
     }
 
     private void beginFullscreenPass(ShaderProgram program, RenderTarget target) {
@@ -803,10 +750,6 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
         particleSplatProgram = null;
         depositProgram = null;
         sceneProgram = null;
-        particleEmissiveProgram = null;
-        downsampleProgram = null;
-        blurProgram = null;
-        finalProgram = null;
         fullscreenVao = 0;
         fullscreenBuffer = 0;
         particleBuffers[0] = 0;
@@ -821,12 +764,10 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
         invalidateTargets(carrierTargets);
         transientDepositTarget.invalidate();
         invalidateTargets(depositTargets);
-        sceneTarget.invalidate();
-        emissiveTarget.invalidate();
-        invalidateTargets(bloomNearTargets);
-        invalidateTargets(bloomFarTargets);
         resourcesReady = false;
-        surfaceTargetsReady = false;
+        surfaceReady = false;
+        velocityTargetFormat = RGBA_HALF;
+        scalarTargetFormat = RGBA_HALF;
         resetLogicalState();
     }
 
@@ -840,20 +781,13 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
         deleteProgram(particleSplatProgram);
         deleteProgram(depositProgram);
         deleteProgram(sceneProgram);
-        deleteProgram(particleEmissiveProgram);
-        deleteProgram(downsampleProgram);
-        deleteProgram(blurProgram);
-        deleteProgram(finalProgram);
         deleteTargets(velocityTargets);
         deleteTargets(pressureTargets);
         deleteTarget(divergenceTarget);
         deleteTargets(carrierTargets);
         deleteTarget(transientDepositTarget);
         deleteTargets(depositTargets);
-        deleteSurfaceTargets();
-        GLES30.glDeleteBuffers(2, particleBuffers, 0);
-        GLES30.glDeleteVertexArrays(2, particleVaos, 0);
-        GLES30.glDeleteTransformFeedbacks(2, particleTransformFeedbacks, 0);
+        deleteParticleResources();
         if (fullscreenBuffer != 0) {
             GLES30.glDeleteBuffers(1, new int[]{fullscreenBuffer}, 0);
         }
@@ -863,12 +797,27 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
         invalidateContextResources();
     }
 
-    private void deleteSurfaceTargets() {
-        deleteTarget(sceneTarget);
-        deleteTarget(emissiveTarget);
-        deleteTargets(bloomNearTargets);
-        deleteTargets(bloomFarTargets);
-        surfaceTargetsReady = false;
+    private void deleteProfileResources() {
+        deleteTargets(velocityTargets);
+        deleteTargets(pressureTargets);
+        deleteTarget(divergenceTarget);
+        deleteTargets(carrierTargets);
+        deleteTarget(transientDepositTarget);
+        deleteTargets(depositTargets);
+        deleteParticleResources();
+        resetLogicalState();
+    }
+
+    private void deleteParticleResources() {
+        GLES30.glDeleteBuffers(2, particleBuffers, 0);
+        GLES30.glDeleteVertexArrays(2, particleVaos, 0);
+        GLES30.glDeleteTransformFeedbacks(2, particleTransformFeedbacks, 0);
+        particleBuffers[0] = 0;
+        particleBuffers[1] = 0;
+        particleVaos[0] = 0;
+        particleVaos[1] = 0;
+        particleTransformFeedbacks[0] = 0;
+        particleTransformFeedbacks[1] = 0;
     }
 
     private static void deleteProgram(ShaderProgram program) {
@@ -899,6 +848,7 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
         carrierState.reset();
         depositState.reset();
         particleState.reset();
+        if (flowCadence != null) flowCadence.reset();
     }
 
     private static void setFallbackClearColor() {
@@ -969,6 +919,18 @@ final class FluidBackgroundRenderer implements GLSurfaceView.Renderer {
             framebuffer = 0;
             width = 0;
             height = 0;
+        }
+    }
+
+    private static final class TargetFormat {
+        final int internalFormat;
+        final int baseFormat;
+        final int type;
+
+        TargetFormat(int internalFormat, int baseFormat, int type) {
+            this.internalFormat = internalFormat;
+            this.baseFormat = baseFormat;
+            this.type = type;
         }
     }
 }

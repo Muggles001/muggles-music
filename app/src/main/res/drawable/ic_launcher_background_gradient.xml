@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <!-- Light mint surface matching the current Muggles Music branding. -->
-    <solid android:color="#9FE4C2" />
-</shape>

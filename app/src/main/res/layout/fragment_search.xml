@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:nextFocusLeft="@id/tabSearch">
+
+    <ImageButton
+        android:id="@+id/btnBack"
+        android:layout_width="@dimen/lx_control_compact"
+        android:layout_height="@dimen/lx_control_compact"
+        android:src="@drawable/ic_back"
+        android:background="@drawable/btn_focused_circle"
+        android:scaleType="centerInside"
+        android:padding="@dimen/lx_space_sm"
+        android:contentDescription="返回"
+        android:layout_margin="24dp"
+        android:focusable="true"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/selector_action_content" />
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/search_title"
+        android:textColor="@color/lx_text_primary"
+        android:textSize="@dimen/lx_type_title"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginStart="@dimen/lx_title_gutter"
+        android:layout_marginTop="@dimen/lx_title_top" />
+
+    <TextView
+        android:id="@+id/tvSearchSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/search_subtitle"
+        android:textColor="@color/lx_text_secondary"
+        android:textSize="@dimen/lx_type_body"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle"
+        android:layout_marginStart="@dimen/lx_title_gutter"
+        android:layout_marginTop="@dimen/lx_space_xxs" />
+
+    <LinearLayout
+        android:id="@+id/layoutSearch"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="@dimen/lx_space_md"
+        android:layout_marginStart="@dimen/lx_title_gutter"
+        android:layout_marginEnd="@dimen/lx_title_gutter"
+        android:nextFocusLeft="@id/tabSearch"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvSearchSubtitle">
+
+        <EditText
+            android:id="@+id/etSearch"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/lx_control_standard"
+            android:layout_weight="1"
+            android:background="@drawable/bg_input_field"
+            android:elevation="@dimen/lx_elevation_control"
+            android:outlineProvider="background"
+            android:hint="@string/search_hint"
+            android:textColor="@color/lx_text_primary"
+            android:textColorHint="@color/lx_text_muted"
+            android:textSize="@dimen/lx_type_control"
+            android:paddingStart="@dimen/lx_space_md"
+            android:paddingEnd="@dimen/lx_space_md"
+            android:imeOptions="actionSearch"
+            android:singleLine="true"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusLeft="@id/tabSearch"
+            android:nextFocusRight="@id/btnClear"
+            android:nextFocusDown="@id/rvSourceList" />
+
+        <ImageButton
+            android:id="@+id/btnClear"
+            android:layout_width="@dimen/lx_control_standard"
+            android:layout_height="@dimen/lx_control_standard"
+            android:layout_marginStart="@dimen/lx_space_xxs"
+            android:background="@drawable/bg_btn_secondary"
+            android:src="@drawable/ic_delete"
+            android:scaleType="centerInside"
+            android:padding="@dimen/lx_space_md"
+            android:contentDescription="清空"
+            android:focusable="true"
+            android:nextFocusLeft="@id/etSearch"
+            android:nextFocusRight="@id/btnSearch"
+            android:nextFocusDown="@id/rvSourceList"
+            app:tint="@color/selector_action_content" />
+
+        <Button
+            android:id="@+id/btnSearch"
+            android:layout_width="@dimen/lx_button_short_width"
+            android:layout_height="@dimen/lx_control_standard"
+            android:layout_marginStart="@dimen/lx_space_sm"
+            android:background="@drawable/bg_btn_primary"
+            android:text="@string/search_action"
+            android:textColor="@color/selector_primary_action_content"
+            android:textSize="@dimen/lx_type_body"
+            android:focusable="true"
+            android:nextFocusLeft="@id/btnClear"
+            android:nextFocusRight="@id/btnScan"
+            android:nextFocusDown="@id/rvSourceList" />
+
+        <ImageButton
+            android:id="@+id/btnScan"
+            android:layout_width="@dimen/lx_control_standard"
+            android:layout_height="@dimen/lx_control_standard"
+            android:layout_marginStart="@dimen/lx_space_sm"
+            android:background="@drawable/bg_btn_secondary"
+            android:src="@drawable/ic_qr_code"
+            android:scaleType="centerInside"
+            android:padding="@dimen/lx_space_md"
+            android:contentDescription="扫码搜索"
+            android:focusable="true"
+            android:nextFocusLeft="@id/btnSearch"
+            android:nextFocusRight="@id/btnScan"
+            android:nextFocusDown="@id/rvSourceList"
+            app:tint="@color/selector_action_content" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvSourceList"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/lx_secondary_nav_height"
+        android:layout_marginTop="@dimen/lx_space_md"
+        android:layout_marginStart="@dimen/lx_nav_gutter"
+        android:layout_marginEnd="@dimen/lx_nav_gutter"
+        android:layout_marginBottom="@dimen/lx_space_xxs"
+        android:nextFocusLeft="@id/tabSearch"
+        android:nextFocusUp="@id/etSearch"
+        android:paddingStart="@dimen/lx_nav_gutter"
+        android:paddingEnd="@dimen/lx_nav_gutter"
+        android:paddingTop="@dimen/lx_space_xs"
+        android:paddingBottom="@dimen/lx_space_xs"
+        android:background="@drawable/bg_floating_glass"
+        android:elevation="@dimen/lx_elevation_surface"
+        android:outlineProvider="background"
+        android:clipToOutline="true"
+        android:clipToPadding="false"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layoutSearch" />
+
+
+
+    <TextView
+        android:id="@+id/tvHotSearchTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/search_hot"
+        android:textColor="@color/lx_text_secondary"
+        android:textSize="@dimen/lx_type_caption"
+        android:layout_marginTop="@dimen/lx_space_md"
+        android:layout_marginStart="@dimen/lx_space_lg"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rvSourceList" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvHotSearch"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/lx_control_compact"
+        android:layout_marginTop="@dimen/lx_space_xs"
+        android:layout_marginStart="@dimen/lx_space_lg"
+        android:layout_marginEnd="@dimen/lx_space_lg"
+        android:focusable="true"
+        android:nextFocusUp="@id/rvSourceList"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvHotSearchTitle" />
+
+    <LinearLayout
+        android:id="@+id/layoutSearchActions"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/lx_control_standard"
+        android:layout_marginStart="@dimen/lx_space_lg"
+        android:layout_marginTop="@dimen/lx_space_xs"
+        android:layout_marginEnd="@dimen/lx_space_lg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rvHotSearch">
+
+        <TextView
+            android:id="@+id/tvResultCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_result_count_initial"
+            android:textColor="@color/lx_text_secondary"
+            android:textSize="@dimen/lx_type_body"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btnSearchPlayAll"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
+            android:background="@drawable/btn_focused_circle"
+            android:contentDescription="播放全部搜索结果"
+            android:focusable="true"
+            android:nextFocusLeft="@id/tabSearch"
+            android:nextFocusRight="@id/btnSearchPlayOrderToggle"
+            android:nextFocusUp="@id/rvSourceList"
+            android:nextFocusDown="@id/rvSearchResults"
+            android:padding="@dimen/lx_space_sm"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_play"
+            app:tint="@color/selector_action_content" />
+
+        <ImageButton
+            android:id="@+id/btnSearchPlayOrderToggle"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
+            android:layout_marginStart="@dimen/lx_space_sm"
+            android:background="@drawable/btn_selectable_circle"
+            android:contentDescription="切换为随机播放"
+            android:focusable="true"
+            android:nextFocusLeft="@id/btnSearchPlayAll"
+            android:nextFocusRight="@id/btnSearchPlayOrderToggle"
+            android:nextFocusUp="@id/rvSourceList"
+            android:nextFocusDown="@id/rvSearchResults"
+            android:padding="@dimen/lx_space_sm"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_repeat"
+            app:tint="@color/selector_selectable_content" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layoutSearchPager"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/lx_pager_height"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="@android:color/transparent"
+        android:paddingStart="@dimen/lx_nav_gutter"
+        android:paddingEnd="@dimen/lx_nav_gutter"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnSearchPrevPage"
+            android:layout_width="@dimen/lx_pager_button_width"
+            android:layout_height="@dimen/lx_pager_button_height"
+            android:src="@drawable/ic_chevron_left"
+            android:background="@drawable/bg_btn_secondary"
+            android:scaleType="centerInside"
+            android:padding="@dimen/lx_space_sm"
+            android:focusable="true"
+            android:nextFocusUp="@id/rvSearchResults"
+            android:nextFocusRight="@id/btnSearchNextPage"
+            android:nextFocusDown="@id/tabSearch"
+            android:contentDescription="上一页"
+            app:tint="@color/selector_action_content" />
+
+        <TextView
+            android:id="@+id/tvSearchPageNumber"
+            android:layout_width="@dimen/lx_pager_number_width"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="@string/pagination_initial_page"
+            android:textSize="@dimen/lx_type_section"
+            android:textStyle="bold"
+            android:textColor="@color/lx_text_secondary" />
+
+        <ImageButton
+            android:id="@+id/btnSearchNextPage"
+            android:layout_width="@dimen/lx_pager_button_width"
+            android:layout_height="@dimen/lx_pager_button_height"
+            android:src="@drawable/ic_chevron_right"
+            android:background="@drawable/bg_btn_secondary"
+            android:scaleType="centerInside"
+            android:padding="@dimen/lx_space_sm"
+            android:focusable="true"
+            android:nextFocusUp="@id/rvSearchResults"
+            android:nextFocusLeft="@id/btnSearchPrevPage"
+            android:nextFocusDown="@id/tabSearch"
+            android:contentDescription="下一页"
+            app:tint="@color/selector_action_content" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvNoResults"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/search_empty"
+        android:textColor="@color/lx_text_secondary"
+        android:textSize="@dimen/lx_type_control"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rvHotSearch"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <ProgressBar
+        android:id="@+id/loadingProgress"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rvHotSearch"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvSearchResults"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/lx_space_sm"
+        android:paddingStart="@dimen/lx_nav_gutter"
+        android:paddingEnd="@dimen/lx_nav_gutter"
+        android:paddingTop="@dimen/lx_space_sm"
+        android:paddingBottom="@dimen/lx_space_md"
+        android:clipToPadding="false"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:descendantFocusability="afterDescendants"
+        android:background="@android:color/transparent"
+        android:nextFocusLeft="@id/tabSearch"
+        android:nextFocusUp="@id/btnSearchPlayAll"
+        android:nextFocusDown="@id/btnSearchNextPage"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layoutSearchActions"
+        app:layout_constraintBottom_toTopOf="@id/layoutSearchPager" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

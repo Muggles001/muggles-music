@@ -1,0 +1,27 @@
+[
+  {
+    "songId": "5005",
+    "songName": "七里香",
+    "singerList": [
+      {"name": "周杰伦"},
+      {"name": "钟兴民"}
+    ],
+    "albums": [
+      {"id": "6006", "name": "七里香"}
+    ],
+    "copyrightId": "copyright-5005",
+    "lrcUrl": "https://lyrics.example/main.lrc",
+    "mrcUrl": "https://lyrics.example/romanized.lrc",
+    "trcUrl": "https://lyrics.example/translated.lrc",
+    "imgItems": [
+      {"img": "/cover/5005.jpg"}
+    ],
+    "length": "01:02",
+    "audioFormats": [
+      {"formatType": "PQ", "asize": 1048576},
+      {"formatType": "HQ", "asize": 2097152},
+      {"formatType": "SQ", "asize": 3145728},
+      {"formatType": "ZQ24", "asize": 4194304}
+    ]
+  }
+]

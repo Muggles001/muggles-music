@@ -13,5 +13,6 @@ void main() {
     vec2 aligned = vec2(dot(local, direction), dot(local, tangent));
     float mobile_distance = length(vec2(aligned.x * 0.72, aligned.y * 1.25));
     float coverage = 1.0 - smoothstep(0.62, 1.0, mobile_distance);
+    if (coverage <= 0.0) discard;
     o_color = clamp(v_splat_data * coverage * 0.075, 0.0, 1.0);
 }

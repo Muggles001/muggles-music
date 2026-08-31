@@ -17,12 +17,16 @@ public class FluidBackgroundPolicyTest {
         assertEquals(216, profile.carrierHeight);
         assertEquals(960, profile.depositWidth);
         assertEquals(540, profile.depositHeight);
+        assertEquals(960, profile.surfaceTargetMaxWidth);
+        assertEquals(540, profile.surfaceTargetMaxHeight);
         assertEquals(65_536, profile.particleCount);
         assertEquals(60, profile.framesPerSecond);
         assertEquals(16_666_667L, profile.simulationStepNanos);
         assertEquals(1f / 60f, profile.simulationStepSeconds(), 0.000_001f);
-        assertEquals(2, profile.maxSimulationStepsPerFrame);
-        assertEquals(16, profile.pressureIterations);
+        assertEquals(2, profile.flowStepDivisor);
+        assertEquals(1f / 30f, profile.flowStepSeconds(), 0.000_001f);
+        assertEquals(1, profile.maxSimulationStepsPerFrame);
+        assertEquals(10, profile.pressureIterations);
     }
 
     @Test
@@ -41,7 +45,12 @@ public class FluidBackgroundPolicyTest {
         assertEquals(30, reduced.framesPerSecond);
         assertEquals(256, reduced.carrierWidth);
         assertEquals(640, reduced.depositWidth);
+        assertEquals(640, reduced.surfaceTargetMaxWidth);
+        assertEquals(360, reduced.surfaceTargetMaxHeight);
         assertEquals(32_768, reduced.particleCount);
+        assertEquals(1, reduced.flowStepDivisor);
+        assertEquals(1f / 30f, reduced.flowStepSeconds(), 0.000_001f);
+        assertEquals(10, reduced.pressureIterations);
         assertEquals(FluidBackgroundPolicy.QUALITY,
                 FluidBackgroundPolicy.profileFor(AppSettingsPreferences.BrowseMotion.STILL));
     }

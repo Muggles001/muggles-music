@@ -17,6 +17,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import top.boluofan.musictv.R;
+import top.boluofan.musictv.ui.library.PlaylistDetailActivity;
 
 @RunWith(AndroidJUnit4.class)
 public class BrowsePagesInstrumentedTest {
@@ -24,7 +25,7 @@ public class BrowsePagesInstrumentedTest {
     public void searchStateChangeKeepsHeaderAndInputAnchorsStable() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
-            View root = LayoutInflater.from(context).inflate(R.layout.activity_search, null, false);
+            View root = LayoutInflater.from(context).inflate(R.layout.fragment_search, null, false);
             View title = root.findViewById(R.id.tvTitle);
             View search = root.findViewById(R.id.layoutSearch);
             View hotTitle = root.findViewById(R.id.tvHotSearchTitle);
@@ -60,7 +61,7 @@ public class BrowsePagesInstrumentedTest {
     public void searchPlaybackActionsHaveAnExplicitHorizontalChain() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
-            View root = LayoutInflater.from(context).inflate(R.layout.activity_search, null, false);
+            View root = LayoutInflater.from(context).inflate(R.layout.fragment_search, null, false);
             View playAll = root.findViewById(R.id.btnSearchPlayAll);
             View playOrder = root.findViewById(R.id.btnSearchPlayOrderToggle);
 
@@ -110,15 +111,15 @@ public class BrowsePagesInstrumentedTest {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             assertTransparentRoot(LayoutInflater.from(context)
-                    .inflate(R.layout.activity_search, null, false));
+                    .inflate(R.layout.fragment_search, null, false));
             assertTransparentRoot(LayoutInflater.from(context)
-                    .inflate(R.layout.activity_ranking, null, false));
+                    .inflate(R.layout.fragment_ranking, null, false));
             assertTransparentRoot(LayoutInflater.from(context)
                     .inflate(R.layout.fragment_library, null, false));
             assertTransparentRoot(LayoutInflater.from(context)
                     .inflate(R.layout.fragment_song_square, null, false));
             assertTransparentRoot(LayoutInflater.from(context)
-                    .inflate(R.layout.activity_settings, null, false));
+                    .inflate(R.layout.fragment_settings, null, false));
         });
     }
 

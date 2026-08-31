@@ -101,7 +101,8 @@ app/release/baselineProfiles/1/app-release.dm
 app/.DS_Store
 .DS_Store
 /reference/
-/docs/
+/docs/internal/
+/docs/superpowers/
 /AGENTS.md
 /PRODUCT.md
 /DESIGN.md

@@ -13,6 +13,8 @@
         android:name=".MusicTvApp"
         android:allowBackup="true"
         android:banner="@drawable/splash"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -22,7 +24,7 @@
         android:theme="@style/AppTheme.NoActionBar">
 
         <activity
-            android:name="top.boluofan.musictv.ui.MainActivity"
+            android:name="top.boluofan.musictv.ui.main.MainActivity"
             android:label="@string/app_name"
             android:exported="true">
             <intent-filter>
@@ -33,20 +35,20 @@
         </activity>
 
         <activity
-            android:name="top.boluofan.musictv.ConfigActivity"
+            android:name="top.boluofan.musictv.ui.settings.connection.ConfigActivity"
             android:label="服务器配置"
             android:exported="false" />
 
         <activity
-            android:name="top.boluofan.musictv.PlayerActivity"
+            android:name="top.boluofan.musictv.ui.player.PlayerActivity"
             android:label="Now Playing" />
 
         <activity
-            android:name="top.boluofan.musictv.ui.PlaylistDetailActivity"
+            android:name="top.boluofan.musictv.ui.library.PlaylistDetailActivity"
             android:label="歌单详情" />
 
         <activity
-            android:name="top.boluofan.musictv.ui.SettingsDetailActivity"
+            android:name="top.boluofan.musictv.ui.settings.SettingsDetailActivity"
             android:label="@string/settings_title"
             android:exported="false" />
 
@@ -61,7 +63,7 @@
         </provider>
         
         <service
-            android:name="top.boluofan.musictv.MusicService"
+            android:name="top.boluofan.musictv.player.service.MusicService"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback">

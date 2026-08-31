@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="LxMusicPrefs.xml" />
+        <exclude domain="sharedpref" path="MugglesBackendPrefs.xml" />
+        <exclude domain="sharedpref" path="MugglesSourcePrefs.xml" />
+        <exclude domain="file" path="sources/" />
+    </cloud-backup>
+
+    <device-transfer>
+        <exclude domain="sharedpref" path="LxMusicPrefs.xml" />
+        <exclude domain="sharedpref" path="MugglesBackendPrefs.xml" />
+        <exclude domain="sharedpref" path="MugglesSourcePrefs.xml" />
+        <exclude domain="file" path="sources/" />
+    </device-transfer>
+</data-extraction-rules>

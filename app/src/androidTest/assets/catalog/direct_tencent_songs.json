@@ -1,0 +1,24 @@
+[
+  {
+    "id": 3003,
+    "mid": "0039MnYb0qxYhV",
+    "name": "稻香",
+    "singer": [
+      {"name": "周杰伦"},
+      {"name": "杨瑞代"}
+    ],
+    "album": {
+      "id": 4004,
+      "mid": "000bviBl4FjTpO",
+      "name": "魔杰座"
+    },
+    "file": {
+      "media_mid": "media-mid",
+      "size_128mp3": 1048576,
+      "size_320mp3": 2097152,
+      "size_flac": 3145728,
+      "size_hires": 4194304
+    },
+    "interval": 223
+  }
+]

@@ -4,9 +4,11 @@ import top.boluofan.musictv.settings.AppSettingsPreferences;
 
 public final class FluidBackgroundPolicy {
     public static final Profile QUALITY = new Profile(
-            384, 216, 960, 540, 65_536, 60, 16_666_667L, 2, 16);
+            384, 216, 960, 540, 960, 540,
+            65_536, 60, 16_666_667L, 1, 2, 10);
     public static final Profile REDUCED = new Profile(
-            256, 144, 640, 360, 32_768, 30, 33_333_333L, 1, 10);
+            256, 144, 640, 360, 640, 360,
+            32_768, 30, 33_333_333L, 1, 1, 10);
 
     private FluidBackgroundPolicy() {
     }
@@ -24,10 +26,13 @@ public final class FluidBackgroundPolicy {
         public final int carrierHeight;
         public final int depositWidth;
         public final int depositHeight;
+        public final int surfaceTargetMaxWidth;
+        public final int surfaceTargetMaxHeight;
         public final int particleCount;
         public final int framesPerSecond;
         public final long simulationStepNanos;
         public final int maxSimulationStepsPerFrame;
+        public final int flowStepDivisor;
         public final int pressureIterations;
 
         Profile(
@@ -35,24 +40,34 @@ public final class FluidBackgroundPolicy {
                 int carrierHeight,
                 int depositWidth,
                 int depositHeight,
+                int surfaceTargetMaxWidth,
+                int surfaceTargetMaxHeight,
                 int particleCount,
                 int framesPerSecond,
                 long simulationStepNanos,
                 int maxSimulationStepsPerFrame,
+                int flowStepDivisor,
                 int pressureIterations) {
             this.carrierWidth = carrierWidth;
             this.carrierHeight = carrierHeight;
             this.depositWidth = depositWidth;
             this.depositHeight = depositHeight;
+            this.surfaceTargetMaxWidth = surfaceTargetMaxWidth;
+            this.surfaceTargetMaxHeight = surfaceTargetMaxHeight;
             this.particleCount = particleCount;
             this.framesPerSecond = framesPerSecond;
             this.simulationStepNanos = simulationStepNanos;
             this.maxSimulationStepsPerFrame = maxSimulationStepsPerFrame;
+            this.flowStepDivisor = flowStepDivisor;
             this.pressureIterations = pressureIterations;
         }
 
         public float simulationStepSeconds() {
             return simulationStepNanos / 1_000_000_000f;
+        }
+
+        public float flowStepSeconds() {
+            return simulationStepSeconds() * flowStepDivisor;
         }
     }
 }

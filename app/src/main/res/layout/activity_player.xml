@@ -116,7 +116,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintVertical_chainStyle="packed" />
 
-        <top.boluofan.musictv.MarqueeTextView
+        <top.boluofan.musictv.ui.player.MarqueeTextView
             android:id="@+id/tvBigTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -138,7 +138,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.35" />
 
-        <top.boluofan.musictv.MarqueeTextView
+        <top.boluofan.musictv.ui.player.MarqueeTextView
             android:id="@+id/tvBigArtist"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

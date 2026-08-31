@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:nextFocusLeft="@id/tabRanking">
+
+    <!-- Top Bar -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/lx_title_height"
+        android:orientation="horizontal"
+        android:gravity="top"
+        android:paddingStart="@dimen/lx_title_gutter"
+        android:paddingEnd="@dimen/lx_title_gutter"
+        android:paddingTop="@dimen/lx_title_top"
+        android:background="@android:color/transparent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
+            android:src="@drawable/ic_back"
+            android:background="@drawable/btn_focused_circle"
+            android:scaleType="centerInside"
+            android:padding="@dimen/lx_space_sm"
+            app:tint="@color/selector_action_content"
+            android:focusable="true"
+            android:nextFocusRight="@id/rvSourceList"
+            android:contentDescription="返回" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/ranking_title"
+            android:textSize="@dimen/lx_type_title"
+            android:textStyle="bold"
+            android:textColor="@color/lx_text_primary" />
+
+    </LinearLayout>
+
+    <!-- Source List + Action Buttons -->
+    <LinearLayout
+        android:id="@+id/layoutSourceActions"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/lx_secondary_nav_height"
+        android:layout_marginStart="@dimen/lx_nav_gutter"
+        android:layout_marginTop="@dimen/lx_space_sm"
+        android:layout_marginEnd="@dimen/lx_nav_gutter"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_content_panel"
+        android:elevation="@dimen/lx_elevation_surface"
+        android:outlineProvider="background"
+        android:clipToOutline="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/topBar">
+
+        <!-- Source List (Platform) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvSourceList"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:paddingStart="@dimen/lx_nav_gutter"
+            android:paddingEnd="@dimen/lx_nav_gutter"
+            android:paddingTop="@dimen/lx_space_xs"
+            android:paddingBottom="@dimen/lx_space_xs"
+            android:clipToPadding="false"
+            android:nextFocusLeft="@id/tabRanking"
+            android:nextFocusDown="@id/rvBoards" />
+
+        <!-- Action Buttons -->
+        <LinearLayout
+            android:id="@+id/layoutActions"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="@dimen/lx_space_sm"
+            android:paddingEnd="@dimen/lx_space_md">
+
+            <ImageButton
+                android:id="@+id/btnPlayAll"
+                android:layout_width="@dimen/lx_control_compact"
+                android:layout_height="@dimen/lx_control_compact"
+                android:src="@drawable/ic_play"
+                android:background="@drawable/btn_focused_circle"
+                android:scaleType="centerInside"
+                android:padding="@dimen/lx_space_sm"
+                android:focusable="true"
+                android:nextFocusLeft="@id/rvSourceList"
+                android:nextFocusRight="@id/btnShuffle"
+                android:nextFocusDown="@id/rvSongs"
+                android:contentDescription="播放全部"
+                app:tint="@color/selector_action_content" />
+
+            <ImageButton
+                android:id="@+id/btnShuffle"
+                android:layout_width="@dimen/lx_control_compact"
+                android:layout_height="@dimen/lx_control_compact"
+                android:layout_marginStart="@dimen/lx_space_sm"
+                android:src="@drawable/ic_shuffle"
+                android:background="@drawable/btn_focused_circle"
+                android:scaleType="centerInside"
+                android:padding="@dimen/lx_space_sm"
+                android:focusable="true"
+                android:nextFocusLeft="@id/btnPlayAll"
+                android:nextFocusRight="@id/btnFavorite"
+                android:nextFocusDown="@id/rvSongs"
+                android:contentDescription="随机播放"
+                app:tint="@color/selector_action_content" />
+
+            <ImageButton
+                android:id="@+id/btnFavorite"
+                android:layout_width="@dimen/lx_control_compact"
+                android:layout_height="@dimen/lx_control_compact"
+                android:layout_marginStart="@dimen/lx_space_sm"
+                android:src="@drawable/ic_favorite_border"
+                android:background="@drawable/btn_focused_circle"
+                android:scaleType="centerInside"
+                android:padding="@dimen/lx_space_sm"
+                android:focusable="true"
+                android:nextFocusLeft="@id/btnShuffle"
+                android:nextFocusDown="@id/rvSongs"
+                android:contentDescription="收藏"
+                app:tint="@color/selector_action_content" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Board selector + songs. Boards are a compact secondary strip rather
+         than a second sidebar, matching the library hierarchy. -->
+    <LinearLayout
+        android:id="@+id/layoutContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/lx_nav_gutter"
+        android:paddingEnd="@dimen/lx_nav_gutter"
+        android:paddingTop="@dimen/lx_nav_gutter"
+        android:layout_marginTop="@dimen/lx_space_sm"
+        android:descendantFocusability="afterDescendants"
+        android:splitMotionEvents="false"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/layoutSourceActions"
+        app:layout_constraintBottom_toTopOf="@+id/rankingPagerBar">
+
+        <!-- Secondary board selector -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvBoards"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/lx_secondary_nav_height"
+            android:paddingStart="@dimen/lx_nav_gutter"
+            android:paddingEnd="@dimen/lx_nav_gutter"
+            android:paddingTop="@dimen/lx_space_xs"
+            android:paddingBottom="@dimen/lx_space_xs"
+            android:background="@drawable/bg_floating_glass"
+            android:elevation="@dimen/lx_elevation_surface"
+            android:outlineProvider="background"
+            android:clipToOutline="true"
+            android:clipToPadding="false"
+            android:focusable="false"
+            android:nextFocusLeft="@id/tabRanking"
+            android:nextFocusUp="@id/rvSourceList"
+            android:nextFocusDown="@id/rvSongs" />
+
+        <!-- Right: Song List -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvSongs"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="@dimen/lx_space_md"
+            android:paddingStart="@dimen/lx_space_md"
+            android:paddingEnd="@dimen/lx_nav_gutter"
+            android:paddingTop="@dimen/lx_space_sm"
+            android:paddingBottom="@dimen/lx_space_md"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:clipToPadding="false"
+            android:descendantFocusability="afterDescendants"
+            android:nextFocusLeft="@id/tabRanking"
+            android:nextFocusUp="@id/rvBoards"
+            android:nextFocusDown="@id/btnRankingNextPage" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rankingPagerBar"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/lx_pager_height"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="@android:color/transparent"
+        android:paddingStart="@dimen/lx_nav_gutter"
+        android:paddingEnd="@dimen/lx_nav_gutter"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnRankingPrevPage"
+            android:layout_width="@dimen/lx_pager_button_width"
+            android:layout_height="@dimen/lx_pager_button_height"
+            android:src="@drawable/ic_chevron_left"
+            android:background="@drawable/bg_btn_secondary"
+            android:scaleType="centerInside"
+            android:padding="@dimen/lx_space_sm"
+            android:focusable="true"
+            android:nextFocusUp="@id/rvSongs"
+            android:nextFocusRight="@id/btnRankingNextPage"
+            android:nextFocusDown="@id/tabRanking"
+            app:tint="@color/selector_action_content" />
+
+        <TextView
+            android:id="@+id/tvRankingPageNumber"
+            android:layout_width="@dimen/lx_pager_number_width"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="@string/pagination_initial_page"
+            android:textSize="@dimen/lx_type_section"
+            android:textStyle="bold"
+            android:textColor="@color/lx_text_secondary" />
+
+        <ImageButton
+            android:id="@+id/btnRankingNextPage"
+            android:layout_width="@dimen/lx_pager_button_width"
+            android:layout_height="@dimen/lx_pager_button_height"
+            android:src="@drawable/ic_chevron_right"
+            android:background="@drawable/bg_btn_secondary"
+            android:scaleType="centerInside"
+            android:padding="@dimen/lx_space_sm"
+            android:focusable="true"
+            android:nextFocusUp="@id/rvSongs"
+            android:nextFocusLeft="@id/btnRankingPrevPage"
+            android:nextFocusDown="@id/tabRanking"
+            app:tint="@color/selector_action_content" />
+
+    </LinearLayout>
+
+    <!-- Loading -->
+    <ProgressBar
+        android:id="@+id/loadingProgress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

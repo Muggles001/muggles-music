@@ -1,6 +1,16 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">麻瓜音乐</string>
+    <string name="search_title">搜索音乐</string>
+    <string name="search_subtitle">从多个音乐平台查找歌曲、歌手和专辑</string>
+    <string name="search_hint">输入歌曲名、歌手名…</string>
+    <string name="search_action">搜索</string>
+    <string name="search_hot">热搜</string>
+    <string name="search_result_count_initial">共 0 首 · 播放控制</string>
+    <string name="search_result_count">共 %1$d 首 · 播放控制</string>
+    <string name="search_empty">暂无搜索结果</string>
+    <string name="ranking_title">排行榜</string>
+    <string name="pagination_initial_page">1</string>
     <string name="settings_title">设置</string>
     <string name="settings_back">返回</string>
     <string name="settings_on">开启</string>

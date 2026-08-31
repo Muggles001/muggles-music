@@ -8,7 +8,7 @@ import androidx.media3.session.SessionToken;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import top.boluofan.musictv.MusicService;
+import top.boluofan.musictv.player.service.MusicService;
 
 public final class MediaControllerConnection {
     public interface HostState {

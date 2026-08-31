@@ -16,10 +16,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import fi.iki.elonen.NanoHTTPD;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import top.boluofan.musictv.ConfigActivity;
+import top.boluofan.musictv.ui.settings.connection.ConfigActivity;
 import top.boluofan.musictv.R;
-import top.boluofan.musictv.backend.BackendMode;
-import top.boluofan.musictv.backend.BackendPreferences;
+import top.boluofan.musictv.settings.BackendMode;
+import top.boluofan.musictv.settings.BackendPreferences;
 import top.boluofan.musictv.local.MugglesDatabase;
 
 @RunWith(AndroidJUnit4.class)

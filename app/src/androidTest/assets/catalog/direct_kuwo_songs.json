@@ -1,0 +1,16 @@
+[
+  {
+    "MUSICRID": "MUSIC_228908",
+    "SONGNAME": "晴天 &amp; Live",
+    "ARTIST": "周杰伦&amp;阿信",
+    "ALBUM": "叶惠美",
+    "ALBUMID": "1001",
+    "prob_albumpic": "https://img.example/star/albumcover/500/cover.jpg",
+    "DURATION": 269,
+    "N_MINFO": "bitrate:128,format:mp3,size:4.10 MB;bitrate:320,format:mp3,size:10.20 MB;bitrate:2000,format:flac,size:30.30 MB"
+  },
+  {
+    "MUSICRID": "MUSIC_228908",
+    "SONGNAME": "duplicate"
+  }
+]

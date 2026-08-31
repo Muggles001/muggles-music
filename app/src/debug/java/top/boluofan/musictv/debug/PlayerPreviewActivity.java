@@ -27,7 +27,7 @@ import com.bumptech.glide.request.RequestOptions;
 import java.util.ArrayList;
 import java.util.List;
 import jp.wasabeef.glide.transformations.BlurTransformation;
-import top.boluofan.musictv.LyricParser;
+import top.boluofan.musictv.player.lyrics.LyricParser;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.player.control.PlayerControlsStateMachine;
 import top.boluofan.musictv.player.lyrics.LyricTimeline;

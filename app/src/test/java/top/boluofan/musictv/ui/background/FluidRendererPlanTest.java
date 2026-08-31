@@ -2,6 +2,7 @@ package top.boluofan.musictv.ui.background;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -63,12 +64,105 @@ public class FluidRendererPlanTest {
     }
 
     @Test
-    public void passAndBloomPlansMatchReferenceQuality() {
-        assertEquals(23, FluidRendererPlan.fixedStepPassCount(16));
-        assertEquals(480, FluidRendererPlan.bloomDimension(1920, 4));
-        assertEquals(270, FluidRendererPlan.bloomDimension(1080, 4));
-        assertEquals(240, FluidRendererPlan.bloomDimension(1920, 8));
-        assertEquals(135, FluidRendererPlan.bloomDimension(1080, 8));
-        assertEquals(1, FluidRendererPlan.bloomDimension(3, 8));
+    public void passPlanMatchesDirectSceneOutput() {
+        assertEquals(13, FluidRendererPlan.flowStepPassCount(10));
+        assertEquals(4, FluidRendererPlan.fastStepPassCount());
+        assertEquals(1, FluidRendererPlan.surfacePassCount());
+        assertEquals(23, FluidRendererPlan.twoFastStepPassCount(10));
+    }
+
+    @Test
+    public void flowCadenceRunsQualityAtHalfTheFastStepRate() {
+        FluidRendererPlan.FlowCadence cadence = new FluidRendererPlan.FlowCadence(2);
+        int flowSteps = 0;
+
+        for (int fastStep = 0; fastStep < 120; fastStep++) {
+            if (cadence.shouldRunFlowStep()) flowSteps++;
+        }
+
+        assertEquals(60, flowSteps);
+    }
+
+    @Test
+    public void flowCadenceRunsReducedEveryStepAndResetsWithoutBacklog() {
+        FluidRendererPlan.FlowCadence reduced = new FluidRendererPlan.FlowCadence(1);
+        for (int fastStep = 0; fastStep < 30; fastStep++) {
+            assertTrue(reduced.shouldRunFlowStep());
+        }
+
+        FluidRendererPlan.FlowCadence quality = new FluidRendererPlan.FlowCadence(2);
+        assertTrue(quality.shouldRunFlowStep());
+        assertFalse(quality.shouldRunFlowStep());
+        quality.reset();
+        assertTrue(quality.shouldRunFlowStep());
+        assertFalse(quality.shouldRunFlowStep());
+    }
+
+    @Test
+    public void simulationFormatsFallBackIndependently() {
+        FluidRendererPlan.SimulationFormatPlan narrow =
+                FluidRendererPlan.simulationFormatPlan(true, true);
+        assertTrue(narrow.narrowVelocity);
+        assertTrue(narrow.narrowScalar);
+
+        FluidRendererPlan.SimulationFormatPlan scalarOnly =
+                FluidRendererPlan.simulationFormatPlan(false, true);
+        assertFalse(scalarOnly.narrowVelocity);
+        assertTrue(scalarOnly.narrowScalar);
+
+        FluidRendererPlan.SimulationFormatPlan wide =
+                FluidRendererPlan.simulationFormatPlan(false, false);
+        assertFalse(wide.narrowVelocity);
+        assertFalse(wide.narrowScalar);
+    }
+
+    @Test
+    public void surfaceTargetsStayWithinProfileLimitWithoutChangingAspectRatio() {
+        FluidRendererPlan.RenderSize quality4k = FluidRendererPlan.cappedRenderSize(
+                3840, 2160, 960, 540);
+        assertEquals(960, quality4k.width);
+        assertEquals(540, quality4k.height);
+
+        FluidRendererPlan.RenderSize reduced1080 = FluidRendererPlan.cappedRenderSize(
+                1920, 1080, 640, 360);
+        assertEquals(640, reduced1080.width);
+        assertEquals(360, reduced1080.height);
+
+        FluidRendererPlan.RenderSize smallerSurface = FluidRendererPlan.cappedRenderSize(
+                640, 360, 960, 540);
+        assertEquals(640, smallerSurface.width);
+        assertEquals(360, smallerSurface.height);
+
+        FluidRendererPlan.RenderSize portraitSurface = FluidRendererPlan.cappedRenderSize(
+                1080, 1920, 960, 540);
+        assertEquals(304, portraitSurface.width);
+        assertEquals(540, portraitSurface.height);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void surfaceTargetPlanRejectsInvalidDimensions() {
+        FluidRendererPlan.cappedRenderSize(1920, 1080, 0, 540);
+    }
+
+    @Test
+    public void frameCadenceHonorsSixtyAndThirtyFramesPerSecond() {
+        FluidRendererPlan.FrameCadence quality = new FluidRendererPlan.FrameCadence(60);
+        assertTrue(quality.shouldRender(0L));
+        assertFalse(quality.shouldRender(8_333_333L));
+        assertTrue(quality.shouldRender(16_666_666L));
+
+        FluidRendererPlan.FrameCadence reduced = new FluidRendererPlan.FrameCadence(30);
+        assertTrue(reduced.shouldRender(0L));
+        assertFalse(reduced.shouldRender(16_666_666L));
+        assertTrue(reduced.shouldRender(33_333_332L));
+    }
+
+    @Test
+    public void frameCadenceDropsStallBacklogInsteadOfBursting() {
+        FluidRendererPlan.FrameCadence cadence = new FluidRendererPlan.FrameCadence(60);
+        assertTrue(cadence.shouldRender(0L));
+        assertTrue(cadence.shouldRender(1_000_000_000L));
+        assertFalse(cadence.shouldRender(1_008_000_000L));
+        assertTrue(cadence.shouldRender(1_016_666_666L));
     }
 }

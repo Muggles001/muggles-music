@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="sharedpref" path="LxMusicPrefs.xml" />
+    <exclude domain="sharedpref" path="MugglesBackendPrefs.xml" />
+    <exclude domain="sharedpref" path="MugglesSourcePrefs.xml" />
+    <exclude domain="file" path="sources/" />
+</full-backup-content>

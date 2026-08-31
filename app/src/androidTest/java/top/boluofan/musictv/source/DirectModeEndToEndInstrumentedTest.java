@@ -24,15 +24,15 @@ import fi.iki.elonen.NanoHTTPD;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import retrofit2.Response;
-import top.boluofan.musictv.api.LxApiService;
-import top.boluofan.musictv.api.model.ListData;
-import top.boluofan.musictv.api.model.MusicInfo;
-import top.boluofan.musictv.backend.BackendMode;
-import top.boluofan.musictv.backend.BackendPreferences;
-import top.boluofan.musictv.backend.MusicApiProvider;
+import top.boluofan.musictv.catalog.LxApiService;
+import top.boluofan.musictv.catalog.model.ListData;
+import top.boluofan.musictv.catalog.model.MusicInfo;
+import top.boluofan.musictv.settings.BackendMode;
+import top.boluofan.musictv.settings.BackendPreferences;
+import top.boluofan.musictv.catalog.MusicApiProvider;
 import top.boluofan.musictv.local.MugglesDatabase;
-import top.boluofan.musictv.MusicService;
-import top.boluofan.musictv.PlaybackQueue;
+import top.boluofan.musictv.player.service.MusicService;
+import top.boluofan.musictv.player.queue.PlaybackQueue;
 
 @RunWith(AndroidJUnit4.class)
 public class DirectModeEndToEndInstrumentedTest {

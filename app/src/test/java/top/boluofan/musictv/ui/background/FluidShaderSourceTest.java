@@ -17,7 +17,6 @@ import org.junit.Test;
 public class FluidShaderSourceTest {
     private static final String FULLSCREEN_VERTEX = "fluid_background_vertex.glsl";
     private static final String VELOCITY = "fluid_background_update_fragment.glsl";
-    private static final String FINAL = "fluid_background_fragment.glsl";
     private static final Pattern SPATIAL_SINE = Pattern.compile(
             "sin\\s*\\([^;\\n]*(?:field|point|uv|coord|position)");
     private static final Pattern BATCHED_TIME_SEED = Pattern.compile(
@@ -102,13 +101,11 @@ public class FluidShaderSourceTest {
     }
 
     @Test
-    public void particleDepositAndSparklesStayMaterialAttached() throws IOException {
+    public void particlesRemainDedicatedToMaterialDeposit() throws IOException {
         String particle = shaderSource("fluid_particle_update_vertex.glsl");
         String splatVertex = shaderSource("fluid_particle_splat_vertex.glsl");
         String splatFragment = shaderSource("fluid_particle_splat_fragment.glsl");
         String resolve = shaderSource("fluid_deposit_resolve_fragment.glsl");
-        String emissiveVertex = shaderSource("fluid_particle_emissive_vertex.glsl");
-        String emissiveFragment = shaderSource("fluid_particle_emissive_fragment.glsl");
 
         assertTrue(particle.contains("flow_response"));
         assertTrue(particle.contains("ambient_transport_uv"));
@@ -121,45 +118,27 @@ public class FluidShaderSourceTest {
         assertFalse(splatFragment.contains("settled"));
         assertTrue(resolve.contains("history_relaxation"));
         assertTrue(resolve.contains("shear_erosion"));
-        assertTrue(emissiveVertex.contains("texture(u_deposit"));
-        assertTrue(emissiveVertex.contains("texture(u_carrier"));
-        assertTrue(emissiveVertex.contains("carrier_curvature"));
-        assertTrue(emissiveVertex.contains("stable_selection"));
-        assertTrue(emissiveVertex.contains("continuous_breath"));
-        assertTrue(emissiveVertex.contains("a_identity.x"));
-        assertTrue(emissiveFragment.contains("gl_pointcoord"));
-        assertTrue(emissiveFragment.contains("cool_white"));
-        assertTrue(emissiveFragment.contains("mint_white"));
-        assertFalse(emissiveFragment.contains("gold"));
+        assertTrue(splatFragment.contains("discard"));
     }
 
     @Test
-    public void bloomIsIsolatedAndFinalCompositeEncodesSrgb() throws IOException {
+    public void sceneDirectlyEncodesSrgbWithoutAGlowPipeline() throws IOException {
         String scene = shaderSource("fluid_scene_fragment.glsl");
-        String downsample = shaderSource("fluid_downsample_fragment.glsl");
-        String blur = shaderSource("fluid_blur_fragment.glsl");
-        String composite = shaderSource(FINAL);
+        String renderer = javaSource("FluidBackgroundRenderer.java");
 
         assertTrue(scene.contains("carrier_gradient"));
         assertTrue(scene.contains("deposit_gradient"));
-        assertTrue(scene.contains("carrier_form_gradient"));
-        assertTrue(scene.contains("deposit_form_gradient"));
         assertTrue(scene.contains("transmission_mask"));
         assertTrue(scene.contains("narrow_crest"));
         assertTrue(scene.contains("srgb_to_linear"));
+        assertTrue(scene.contains("linear_to_srgb"));
         assertFalse(scene.contains("bloom"));
-        assertTrue(downsample.contains("texture(u_source"));
-        assertTrue(blur.contains("u_direction"));
-        assertTrue(composite.contains("texture(u_emissive"));
-        assertTrue(composite.contains("texture(u_bloom_near"));
-        assertTrue(composite.contains("texture(u_bloom_far"));
-        assertTrue(composite.contains("linear_to_srgb"));
-        assertTrue(composite.contains("compress_hdr_glow"));
-        assertTrue(composite.contains("0.24"));
-        assertTrue(composite.contains("0.12"));
-        assertFalse(composite.contains("tone_map(scene"));
-        assertFalse(composite.contains("u_carrier"));
-        assertFalse(composite.contains("u_deposit"));
+        assertFalse(renderer.contains("particleemissive"));
+        assertFalse(renderer.contains("downsample"));
+        assertFalse(renderer.contains("blurprogram"));
+        assertFalse(renderer.contains("bloom"));
+        assertFalse(renderer.contains("finalprogram"));
+        assertFalse(renderer.contains("scenetarget"));
     }
 
     @Test
@@ -174,6 +153,70 @@ public class FluidShaderSourceTest {
         assertTrue(scene.contains("vec3(0.282, 0.663, 0.506)"));
         assertTrue(scene.contains("vec3(0.714, 0.914, 0.831)"));
         assertFalse(scene.contains("vec3(1.0)"));
+    }
+
+    @Test
+    public void scenePassRendersAtTheFixedSurfaceResolution() throws IOException {
+        String renderer = javaSource("FluidBackgroundRenderer.java");
+
+        assertTrue(renderer.contains(
+                "sceneprogram.uniform(\"u_surface_resolution\"), surfacewidth, surfaceheight"));
+        assertTrue(renderer.contains(
+                "glbindframebuffer(gles30.gl_framebuffer, 0)"));
+    }
+
+    @Test
+    public void surfaceBufferUsesTheProfileRenderLimit() throws IOException {
+        String view = javaSource("FluidBackgroundView.java");
+
+        assertTrue(view.contains("fluidrendererplan.cappedrendersize"));
+        assertTrue(view.contains("profile.surfacetargetmaxwidth"));
+        assertTrue(view.contains("profile.surfacetargetmaxheight"));
+        assertTrue(view.contains("getholder().setfixedsize(size.width, size.height)"));
+    }
+
+    @Test
+    public void rendererKeepsVisibleTransportOnTheFastStep() throws IOException {
+        String renderer = javaSource("FluidBackgroundRenderer.java");
+        int fastStepStart = renderer.indexOf("private void runsimulationstep");
+        int flowStepStart = renderer.indexOf("private void runflowstep");
+        int velocityStart = renderer.indexOf("private void runvelocitypass");
+        String fastStep = renderer.substring(fastStepStart, flowStepStart);
+        String flowStep = renderer.substring(flowStepStart, velocityStart);
+
+        assertTrue(fastStep.contains("flowcadence.shouldrunflowstep"));
+        assertTrue(fastStep.contains("runcarrierpass"));
+        assertTrue(fastStep.contains("runparticleupdatepass"));
+        assertTrue(fastStep.contains("rundepositpass"));
+        assertTrue(flowStep.contains("runvelocitypass"));
+        assertTrue(flowStep.contains("runprojectionpass"));
+        assertFalse(flowStep.contains("runcarrierpass"));
+        assertTrue(renderer.contains("profile.flowstepseconds()"));
+    }
+
+    @Test
+    public void simulationTargetsProbeNarrowFormatsWithWideFallback() throws IOException {
+        String renderer = javaSource("FluidBackgroundRenderer.java");
+
+        assertTrue(renderer.contains("gles30.gl_rg16f"));
+        assertTrue(renderer.contains("gles30.gl_rg"));
+        assertTrue(renderer.contains("gles30.gl_r16f"));
+        assertTrue(renderer.contains("gles30.gl_red"));
+        assertTrue(renderer.contains("probetargetformat"));
+        assertTrue(renderer.contains("simulationformatplan"));
+        assertTrue(renderer.contains("rgba_half"));
+    }
+
+    @Test
+    public void sceneNormalsKeepTheVisibleMaterialScales() throws IOException {
+        String scene = shaderSource("fluid_scene_fragment.glsl");
+
+        assertTrue(scene.contains("carrier_gradient(v_uv, u_carrier_texel)"));
+        assertTrue(scene.contains("carrier_gradient(v_uv, u_carrier_texel * 8.0)"));
+        assertTrue(scene.contains("deposit_gradient(v_uv, u_deposit_texel * 3.0)"));
+        assertFalse(scene.contains("deposit_gradient(v_uv, u_deposit_texel)"));
+        assertFalse(scene.contains("top_left"));
+        assertFalse(scene.contains("bottom_right"));
     }
 
     @Test
@@ -229,20 +272,6 @@ public class FluidShaderSourceTest {
                 "uniform sampler2d u_carrier", "uniform sampler2d u_deposit",
                 "uniform vec2 u_surface_resolution", "uniform vec2 u_carrier_texel",
                 "uniform vec2 u_deposit_texel"});
-        contracts.put("fluid_particle_emissive_vertex.glsl", new String[] {
-                "uniform vec2 u_surface_resolution", "uniform sampler2d u_deposit",
-                "uniform sampler2d u_carrier", "uniform vec2 u_carrier_texel",
-                "uniform float u_time"});
-        contracts.put("fluid_particle_emissive_fragment.glsl", new String[] {});
-        contracts.put("fluid_downsample_fragment.glsl", new String[] {
-                "uniform sampler2d u_source", "uniform vec2 u_source_texel",
-                "uniform vec2 u_source_scale"});
-        contracts.put("fluid_blur_fragment.glsl", new String[] {
-                "uniform sampler2d u_source", "uniform vec2 u_source_texel",
-                "uniform vec2 u_direction"});
-        contracts.put(FINAL, new String[] {
-                "uniform sampler2d u_scene", "uniform sampler2d u_emissive",
-                "uniform sampler2d u_bloom_near", "uniform sampler2d u_bloom_far"});
         return contracts;
     }
 
@@ -254,6 +283,17 @@ public class FluidShaderSourceTest {
                 .toLowerCase(Locale.ROOT);
         return source.replaceAll("(?s)/\\*.*?\\*/", " ")
                 .replaceAll("(?m)//.*$", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private String javaSource(String fileName) throws IOException {
+        Path modulePath = Paths.get(
+                "src/main/java/top/boluofan/musictv/ui/background").resolve(fileName);
+        Path rootPath = Paths.get("app").resolve(modulePath);
+        Path sourcePath = Files.exists(modulePath) ? modulePath : rootPath;
+        return new String(Files.readAllBytes(sourcePath), StandardCharsets.UTF_8)
+                .toLowerCase(Locale.ROOT)
                 .replaceAll("\\s+", " ")
                 .trim();
     }

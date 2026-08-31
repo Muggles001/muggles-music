@@ -7,12 +7,14 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.Choreographer;
 import android.view.View;
 
 import top.boluofan.musictv.settings.AppSettingsPreferences;
 
 public final class FluidBackgroundView extends GLSurfaceView {
     private static final String TAG = "FluidBackground";
+    private static final long STILL_MOTION_POLL_MILLIS = 250L;
 
     private FluidBackgroundRenderer renderer;
     private boolean surfaceInitialized;
@@ -22,15 +24,21 @@ public final class FluidBackgroundView extends GLSurfaceView {
     private AppSettingsPreferences.BrowseMotion activeMotion;
     private final Handler frameHandler = new Handler(Looper.getMainLooper());
     private AppSettingsPreferences settingsPreferences;
-    private final Runnable reducedFrame = new Runnable() {
+    private FluidRendererPlan.FrameCadence frameCadence;
+    private boolean frameCallbackPosted;
+    private int surfaceBufferWidth;
+    private int surfaceBufferHeight;
+    private final Choreographer.FrameCallback frameCallback = this::onDisplayFrame;
+    private final Runnable stillMotionPoll = new Runnable() {
         @Override
         public void run() {
-            if (!hostResumed || !surfaceInitialized
-                    || activeMotion != AppSettingsPreferences.BrowseMotion.REDUCED) {
-                return;
+            if (!hostResumed || activeMotion != AppSettingsPreferences.BrowseMotion.STILL) return;
+            AppSettingsPreferences.BrowseMotion motion = currentMotion();
+            if (motion != activeMotion) {
+                applyMotion(motion);
+            } else {
+                frameHandler.postDelayed(this, STILL_MOTION_POLL_MILLIS);
             }
-            requestRender();
-            frameHandler.postDelayed(this, 33L);
         }
     };
 
@@ -65,8 +73,7 @@ public final class FluidBackgroundView extends GLSurfaceView {
                     context.getApplicationContext(), FluidBackgroundPolicy.profileFor(motion),
                     this::handleRendererUnavailable);
             setRenderer(renderer);
-            setRenderMode(motion == AppSettingsPreferences.BrowseMotion.REDUCED
-                    ? RENDERMODE_WHEN_DIRTY : RENDERMODE_CONTINUOUSLY);
+            setRenderMode(RENDERMODE_WHEN_DIRTY);
             surfaceInitialized = true;
             rendererAvailable = true;
         } catch (RuntimeException error) {
@@ -77,39 +84,89 @@ public final class FluidBackgroundView extends GLSurfaceView {
 
     public void resumeRendering() {
         hostResumed = true;
-        AppSettingsPreferences.BrowseMotion motion = currentMotion();
+        applyMotion(currentMotion());
+    }
+
+    private void applyMotion(AppSettingsPreferences.BrowseMotion motion) {
+        stopFrameScheduling();
         activeMotion = motion;
         if (motion == AppSettingsPreferences.BrowseMotion.STILL) {
-            frameHandler.removeCallbacks(reducedFrame);
             pauseSurface();
             setVisibility(View.INVISIBLE);
+            // Static mode has no frame callbacks to observe a later preference change.
+            if (hostResumed) frameHandler.postDelayed(stillMotionPoll, STILL_MOTION_POLL_MILLIS);
             return;
         }
         if (!surfaceInitialized) initializeRenderer(getContext(), motion);
         if (!surfaceInitialized) return;
+        FluidBackgroundPolicy.Profile profile = FluidBackgroundPolicy.profileFor(motion);
+        updateSurfaceBufferSize(profile, getWidth(), getHeight());
         setVisibility(rendererAvailable ? View.VISIBLE : View.INVISIBLE);
         if (!surfaceResumed) {
             onResume();
             surfaceResumed = true;
         }
-        if (rendererAvailable) queueEvent(renderer::resetWallClock);
-        applyRenderCadence(motion);
+        if (!rendererAvailable) return;
+        frameCadence = new FluidRendererPlan.FrameCadence(profile.framesPerSecond);
+        queueEvent(() -> renderer.applyProfile(profile));
+        scheduleDisplayFrame();
+    }
+
+    @Override
+    protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight);
+        if (!surfaceInitialized
+                || activeMotion == AppSettingsPreferences.BrowseMotion.STILL) return;
+        updateSurfaceBufferSize(
+                FluidBackgroundPolicy.profileFor(activeMotion), width, height);
+    }
+
+    private void updateSurfaceBufferSize(
+            FluidBackgroundPolicy.Profile profile, int width, int height) {
+        if (width <= 0 || height <= 0) return;
+        FluidRendererPlan.RenderSize size = FluidRendererPlan.cappedRenderSize(
+                width,
+                height,
+                profile.surfaceTargetMaxWidth,
+                profile.surfaceTargetMaxHeight);
+        if (surfaceBufferWidth == size.width && surfaceBufferHeight == size.height) return;
+        surfaceBufferWidth = size.width;
+        surfaceBufferHeight = size.height;
+        getHolder().setFixedSize(size.width, size.height);
     }
 
     public void pauseRendering() {
         hostResumed = false;
-        frameHandler.removeCallbacks(reducedFrame);
+        stopFrameScheduling();
         pauseSurface();
     }
 
-    private void applyRenderCadence(AppSettingsPreferences.BrowseMotion motion) {
-        frameHandler.removeCallbacks(reducedFrame);
-        if (motion == AppSettingsPreferences.BrowseMotion.REDUCED) {
-            setRenderMode(RENDERMODE_WHEN_DIRTY);
-            frameHandler.post(reducedFrame);
-        } else {
-            setRenderMode(RENDERMODE_CONTINUOUSLY);
+    private void onDisplayFrame(long frameTimeNanos) {
+        frameCallbackPosted = false;
+        if (!hostResumed || !surfaceInitialized || !rendererAvailable
+                || activeMotion == AppSettingsPreferences.BrowseMotion.STILL) return;
+
+        AppSettingsPreferences.BrowseMotion motion = currentMotion();
+        if (motion != activeMotion) {
+            applyMotion(motion);
+            return;
         }
+        if (frameCadence != null && frameCadence.shouldRender(frameTimeNanos)) requestRender();
+        scheduleDisplayFrame();
+    }
+
+    private void scheduleDisplayFrame() {
+        if (frameCallbackPosted || !hostResumed || !surfaceInitialized || !rendererAvailable
+                || activeMotion == AppSettingsPreferences.BrowseMotion.STILL) return;
+        frameCallbackPosted = true;
+        Choreographer.getInstance().postFrameCallback(frameCallback);
+    }
+
+    private void stopFrameScheduling() {
+        frameHandler.removeCallbacks(stillMotionPoll);
+        if (!frameCallbackPosted) return;
+        Choreographer.getInstance().removeFrameCallback(frameCallback);
+        frameCallbackPosted = false;
     }
 
     private AppSettingsPreferences.BrowseMotion currentMotion() {
@@ -125,7 +182,7 @@ public final class FluidBackgroundView extends GLSurfaceView {
     private void handleRendererUnavailable() {
         post(() -> {
             rendererAvailable = false;
-            frameHandler.removeCallbacks(reducedFrame);
+            stopFrameScheduling();
             setVisibility(View.INVISIBLE);
         });
     }
