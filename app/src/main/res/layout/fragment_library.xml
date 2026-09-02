@@ -60,12 +60,12 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Tab: 全部歌曲 -->
+        <!-- Tab: 全部歌单 -->
         <TextView
             android:id="@+id/tabAllSongs"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/lx_control_compact"
-            android:text="全部歌曲"
+            android:text="@string/library_all_playlists"
             android:textSize="@dimen/lx_type_body"
             android:textColor="@color/selector_selectable_content"
             android:gravity="center"
@@ -96,17 +96,10 @@
             android:layout_width="@dimen/lx_space_sm"
             android:layout_height="1dp" />
 
-        <TextView
-            android:id="@+id/tvPlaylistTitle"
+        <View
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="歌单"
-            android:textSize="@dimen/lx_type_section"
-            android:textStyle="bold"
-            android:textColor="@color/lx_text_primary"
-            android:maxLines="1"
-            android:ellipsize="end" />
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
         <TextView
             android:id="@+id/tvSongCount"
@@ -152,6 +145,37 @@
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/btnImportPlaylist"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/lx_control_compact"
+            android:background="@drawable/bg_btn_secondary"
+            android:focusable="true"
+            android:nextFocusLeft="@id/tabLibrary"
+            android:nextFocusRight="@id/btnManagePlaylists"
+            android:nextFocusDown="@id/rvPlaylists"
+            android:paddingStart="@dimen/lx_space_md"
+            android:paddingEnd="@dimen/lx_space_md"
+            android:text="@string/playlist_import_action"
+            android:textColor="@color/selector_action_content"
+            android:textSize="@dimen/lx_type_body" />
+
+        <Button
+            android:id="@+id/btnManagePlaylists"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/lx_control_compact"
+            android:layout_marginStart="@dimen/lx_space_sm"
+            android:background="@drawable/bg_btn_secondary"
+            android:focusable="true"
+            android:nextFocusLeft="@id/btnImportPlaylist"
+            android:nextFocusRight="@id/btnManagePlaylists"
+            android:nextFocusDown="@id/rvPlaylists"
+            android:paddingStart="@dimen/lx_space_md"
+            android:paddingEnd="@dimen/lx_space_md"
+            android:text="@string/library_manage"
+            android:textColor="@color/selector_action_content"
+            android:textSize="@dimen/lx_type_body" />
 
         <ImageButton
             android:id="@+id/btnPlayAllSongs"

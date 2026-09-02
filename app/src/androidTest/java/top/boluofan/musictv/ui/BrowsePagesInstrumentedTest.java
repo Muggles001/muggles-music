@@ -11,6 +11,7 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.TextView;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -83,6 +84,11 @@ public class BrowsePagesInstrumentedTest {
 
             assertEquals(playlists.getTop(), songs.getTop());
             assertEquals(View.VISIBLE, root.findViewById(R.id.libraryActionBar).getVisibility());
+            assertEquals("全部歌单",
+                    ((TextView) root.findViewById(R.id.tabAllSongs)).getText().toString());
+            assertTrue(root.findViewById(R.id.btnManagePlaylists).isFocusable());
+            assertEquals(R.id.btnManagePlaylists,
+                    root.findViewById(R.id.btnImportPlaylist).getNextFocusRightId());
             assertTransparentRoot(root);
         });
     }

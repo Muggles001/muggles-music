@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import fi.iki.elonen.NanoHTTPD;
+import top.boluofan.musictv.remote.RemoteWebContract;
+import top.boluofan.musictv.remote.RemoteWebResponse;
 
 public final class SourceImportWebServer extends NanoHTTPD
         implements SourceImportRemoteSession.Server {
@@ -20,7 +22,13 @@ public final class SourceImportWebServer extends NanoHTTPD
 
     @Override
     public Response serve(IHTTPSession session) {
-        if (Method.POST.equals(session.getMethod())) {
+        if (Method.GET.equals(session.getMethod())
+                && RemoteWebContract.SOURCE_IMPORT_PATH.equals(session.getUri())) {
+            return newFixedLengthResponse(Response.Status.OK,
+                    "text/html; charset=utf-8", page(""));
+        }
+        if (Method.POST.equals(session.getMethod())
+                && RemoteWebContract.SOURCE_IMPORT_SUBMIT_PATH.equals(session.getUri())) {
             try {
                 session.parseBody(new HashMap<>());
                 Map<String, String> params = session.getParms();
@@ -29,16 +37,17 @@ public final class SourceImportWebServer extends NanoHTTPD
                     return newFixedLengthResponse(Response.Status.BAD_REQUEST,
                             "text/html; charset=utf-8", page("请输入音源地址"));
                 }
-                listener.onSourceUrl(url.trim());
-                return newFixedLengthResponse(Response.Status.OK,
-                        "text/html; charset=utf-8", successPage());
+                String sourceUrl = url.trim();
+                return RemoteWebResponse.afterSent(Response.Status.OK,
+                        "text/html; charset=utf-8", successPage(),
+                        () -> listener.onSourceUrl(sourceUrl));
             } catch (IOException | NanoHTTPD.ResponseException e) {
                 return newFixedLengthResponse(Response.Status.INTERNAL_ERROR,
                         "text/plain; charset=utf-8", e.getMessage());
             }
         }
-        return newFixedLengthResponse(Response.Status.OK,
-                "text/html; charset=utf-8", page(""));
+        return newFixedLengthResponse(Response.Status.NOT_FOUND,
+                NanoHTTPD.MIME_PLAINTEXT, "Not Found");
     }
 
     private static String page(String message) {
@@ -56,7 +65,8 @@ public final class SourceImportWebServer extends NanoHTTPD
                 + "font-size:17px;font-weight:700}.msg{color:#bd3c36;margin:10px 0}</style></head><body><main class='card'>"
                 + "<h1>导入 LX 自定义音源</h1><div class='sub'>仅支持 HTTP/HTTPS 的落雪兼容 JavaScript 音源地址</div>"
                 + (message.isEmpty() ? "" : "<div class='msg'>" + message + "</div>")
-                + "<form method='post'><input name='sourceUrl' type='url' required placeholder='https://example.com/source.js'>"
+                + "<form method='post' action='" + RemoteWebContract.SOURCE_IMPORT_SUBMIT_PATH + "'>"
+                + "<input name='sourceUrl' type='url' required placeholder='https://example.com/source.js'>"
                 + "<button type='submit'>发送到电视并检测</button></form></main></body></html>";
     }
 

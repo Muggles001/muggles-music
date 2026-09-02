@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -220,8 +221,63 @@ public final class DirectLxApiService implements LxApiService {
     private JsonObject playlistDetail(String id) throws IOException {
         Response<JsonObject> response = netease.getPublicPlaylistDetail(id, 1000, 8).execute();
         JsonObject root = successful(response, "歌单详情加载失败");
-        return root.has("result") && root.get("result").isJsonObject()
+        JsonObject detail = root.has("result") && root.get("result").isJsonObject()
                 ? root.getAsJsonObject("result") : object(root, "playlist");
+        JsonArray trackIds = array(detail, "trackIds");
+        JsonArray tracks = array(detail, "tracks");
+        if (tracks.size() < trackIds.size()) {
+            Map<String, JsonObject> available = trackMap(tracks);
+            List<String> missing = new ArrayList<>();
+            for (JsonElement element : trackIds) {
+                String trackId = trackId(element);
+                if (!trackId.isEmpty() && !available.containsKey(trackId)) missing.add(trackId);
+            }
+            for (int start = 0; start < missing.size(); start += 200) {
+                int end = Math.min(start + 200, missing.size());
+                JsonArray batch = new JsonArray();
+                for (int i = start; i < end; i++) {
+                    try {
+                        batch.add(Long.parseLong(missing.get(i)));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+                if (batch.size() == 0) continue;
+                long firstId = batch.get(0).getAsLong();
+                Response<JsonObject> songsResponse = netease.getSongDetail(
+                        firstId, GSON.toJson(batch)).execute();
+                JsonObject songsRoot = successful(songsResponse, "网易云歌曲详情加载失败");
+                available.putAll(trackMap(array(songsRoot, "songs")));
+            }
+            detail.add("tracks", orderedTracks(trackIds, available));
+        }
+        return detail;
+    }
+
+    static JsonArray orderedTracks(JsonArray trackIds, Map<String, JsonObject> tracks) {
+        JsonArray ordered = new JsonArray();
+        for (JsonElement element : trackIds) {
+            JsonObject track = tracks.get(trackId(element));
+            if (track != null) ordered.add(track);
+        }
+        return ordered;
+    }
+
+    static Map<String, JsonObject> trackMap(JsonArray tracks) {
+        Map<String, JsonObject> byId = new LinkedHashMap<>();
+        for (JsonElement element : tracks) {
+            if (!element.isJsonObject()) continue;
+            JsonObject track = element.getAsJsonObject();
+            String id = string(track, "id", "");
+            if (!id.isEmpty()) byId.put(id, track);
+        }
+        return byId;
+    }
+
+    private static String trackId(JsonElement element) {
+        if (element == null || element.isJsonNull()) return "";
+        if (element.isJsonPrimitive()) return element.getAsString();
+        if (element.isJsonObject()) return string(element.getAsJsonObject(), "id", "");
+        return "";
     }
 
     private static Playlist playlistFromDetail(JsonObject detail) {

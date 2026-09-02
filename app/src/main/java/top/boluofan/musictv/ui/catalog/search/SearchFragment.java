@@ -46,6 +46,7 @@ import top.boluofan.musictv.catalog.direct.DirectSourcePlatforms;
 import top.boluofan.musictv.library.PlaylistActions;
 import top.boluofan.musictv.player.session.MediaControllerConnection;
 import top.boluofan.musictv.remote.LocalIpv4Address;
+import top.boluofan.musictv.remote.RemoteWebContract;
 import top.boluofan.musictv.remote.search.SearchRemoteSession;
 import top.boluofan.musictv.remote.search.SearchWebServer;
 import top.boluofan.musictv.catalog.model.MusicInfo;
@@ -117,15 +118,13 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
     private String[] ALL_SOURCES = {"kw", "kg", "tx", "wy", "mg"};
     private String[] ALL_SOURCE_NAMES = {"酷我", "酷狗", "QQ音乐", "网易云", "咪咕"};
 
-    private static final int SEARCH_SERVER_PORT = 8089;
     private SearchRemoteSession searchRemoteSession;
     private ImageButton btnScan;
     private RecyclerView.Adapter<?> hotSearchAdapter;
 
     private CustomKeyboardPopup customKeyboardPopup;
     private boolean isKeyboardVisible = false;
-    private PlaylistActions.Operation playlistChoicesOperation;
-    private PlaylistActions.Operation addSongOperation;
+    private PlaylistActions.Operation favoriteOperation;
 
     private boolean isPageUsable() {
         return isAdded() && rootView != null;
@@ -608,7 +607,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
             return;
         }
 
-        String searchUrl = "http://" + ipAddress + ":" + SEARCH_SERVER_PORT;
+        String searchUrl = RemoteWebContract.url(ipAddress, RemoteWebContract.SEARCH_PATH);
         stopSearchSession();
 
         AlertDialog qrDialog = DialogHelper.showQrCodeDialog(
@@ -620,7 +619,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         );
 
         SearchRemoteSession session = new SearchRemoteSession(listener ->
-                new SearchWebServer(SEARCH_SERVER_PORT, listener::onSearch));
+                new SearchWebServer(RemoteWebContract.PORT, listener::onSearch));
         searchRemoteSession = session;
         qrDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "关闭",
                 (dialog, which) -> stopSearchSession(session));
@@ -1046,8 +1045,7 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         hotSearchGeneration++;
         cancelSearchOperations();
         if (hotSearchOperation != null) hotSearchOperation.cancel();
-        if (playlistChoicesOperation != null) playlistChoicesOperation.cancel();
-        if (addSongOperation != null) addSongOperation.cancel();
+        if (favoriteOperation != null) favoriteOperation.cancel();
         mainHandler.removeCallbacksAndMessages(null);
         stopSearchSession();
         if (customKeyboardPopup != null) {
@@ -1073,66 +1071,28 @@ public class SearchFragment extends Fragment implements MainActivity.PrimaryPage
         PlaylistActions actions = new PlaylistActions(
                 MusicApiProvider.get(requireContext()), username, password, token);
 
-        playlistChoicesOperation = actions.loadChoices(new PlaylistActions.Callback<List<String>>() {
+        if (favoriteOperation != null) favoriteOperation.cancel();
+        favoriteOperation = actions.toggleFavorite(song,
+                new PlaylistActions.Callback<PlaylistActions.FavoriteResult>() {
             @Override
-            public void onSuccess(List<String> playlistNames) {
+            public void onSuccess(PlaylistActions.FavoriteResult result) {
                 if (!isPageUsable()) return;
-                DialogHelper.showPlaylistPickerDialog(requireContext(), "选择歌单",
-                        playlistNames.toArray(new String[0]), (dialog, which) -> {
-                    if (!isPageUsable() || which < 0 || which >= playlistNames.size()) return;
-                    addSongOperation = actions.addSong(
-                            playlistNames.get(which), song,
-                            new PlaylistActions.Callback<PlaylistActions.AddResult>() {
-                                @Override
-                                public void onSuccess(PlaylistActions.AddResult result) {
-                                    if (!isPageUsable()) return;
-                                    Toast.makeText(requireContext(),
-                                            "已添加到「" + result.getPlaylistName() + "」",
-                                            Toast.LENGTH_SHORT).show();
-                                }
-
-                                @Override
-                                public void onFailure(PlaylistActions.Failure failure) {
-                                    showAddSongFailure(failure);
-                                }
-                            });
-                });
+                favoriteOperation = null;
+                songAdapter.setFavoriteState(song, result.isFavorite());
+                Toast.makeText(requireContext(), result.isFavorite()
+                                ? R.string.library_favorite_added
+                                : R.string.library_favorite_removed,
+                        Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onFailure(PlaylistActions.Failure failure) {
                 if (!isPageUsable()) return;
-                String message = failure.getKind() == PlaylistActions.Failure.Kind.NO_PLAYLISTS
-                        ? "暂无歌单，请先在歌单库创建歌单"
-                        : playlistFailureMessage(failure, "获取歌单失败");
-                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                favoriteOperation = null;
+                Toast.makeText(requireContext(), R.string.library_operation_failed,
+                        Toast.LENGTH_SHORT).show();
             }
         });
-    }
-
-    private void showAddSongFailure(PlaylistActions.Failure failure) {
-        if (!isPageUsable()) return;
-        String message;
-        switch (failure.getKind()) {
-            case READ_RESPONSE:
-                message = "获取歌单失败";
-                break;
-            case DUPLICATE_SONG:
-                message = "歌曲已存在于此歌单";
-                break;
-            case WRITE_RESPONSE:
-                message = "添加失败";
-                break;
-            case TRANSPORT:
-                message = playlistFailureMessage(failure, "网络错误");
-                break;
-            case NO_PLAYLISTS:
-            case TARGET_NOT_FOUND:
-            default:
-                message = "歌单不存在";
-                break;
-        }
-        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
     }
 
     private static String playlistFailureMessage(PlaylistActions.Failure failure,

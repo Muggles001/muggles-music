@@ -172,7 +172,7 @@
             android:src="@drawable/ic_delete"
             android:scaleType="fitCenter"
             android:padding="@dimen/lx_space_sm"
-            app:tint="@color/selector_action_content"
+            app:tint="@color/selector_settings_danger_content"
             android:focusable="true"
             android:contentDescription="delete"/>
 

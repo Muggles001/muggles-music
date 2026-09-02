@@ -48,6 +48,11 @@
             android:label="歌单详情" />
 
         <activity
+            android:name="top.boluofan.musictv.ui.library.PlaylistImportActivity"
+            android:label="@string/playlist_import_title"
+            android:exported="false" />
+
+        <activity
             android:name="top.boluofan.musictv.ui.settings.SettingsDetailActivity"
             android:label="@string/settings_title"
             android:exported="false" />

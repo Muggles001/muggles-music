@@ -15,6 +15,7 @@ import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -23,6 +24,8 @@ import java.util.Set;
 
 import retrofit2.Response;
 import top.boluofan.musictv.catalog.LxApiService;
+import top.boluofan.musictv.catalog.MusicApiProvider;
+import top.boluofan.musictv.catalog.direct.DirectSourcePlatforms;
 import top.boluofan.musictv.catalog.lxserver.LxRetrofitClient;
 import top.boluofan.musictv.catalog.model.LoginResponse;
 import top.boluofan.musictv.catalog.model.MusicInfo;
@@ -41,6 +44,13 @@ public final class PlaybackUrlResolver {
 
     private final Context context;
     private final AppSettingsPreferences settingsPreferences;
+    private final Map<String, MusicInfo> directFallbackCache =
+            new LinkedHashMap<String, MusicInfo>(128, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, MusicInfo> eldest) {
+                    return size() > 128;
+                }
+            };
 
     public PlaybackUrlResolver(Context context) {
         this.context = context.getApplicationContext();
@@ -163,8 +173,7 @@ public final class PlaybackUrlResolver {
             musicInfo.addProperty("source", source);
             musicInfo.addProperty("songmid", songmid);
             if (name != null && !name.isEmpty()) musicInfo.addProperty("name", name);
-            return SourceRuntimeManager.get(context).resolveMusicUrlBlocking(
-                    source, musicInfo, chooseDirectSourceQuality(musicInfo));
+            return resolveDirectMusicUrl(source, songmid, musicInfo);
         }
 
         String serverUrl = LxRetrofitClient.getServerUrl(context);
@@ -231,6 +240,86 @@ public final class PlaybackUrlResolver {
             Log.e(TAG, "Failed to resolve URL: " + e.getMessage());
             throw e;
         }
+    }
+
+    private String resolveDirectMusicUrl(String source, String songmid, JsonObject musicInfo)
+            throws IOException {
+        String[] supported = DirectSourcePlatforms.snapshot(context).codes();
+        IOException originalFailure = null;
+        if (contains(supported, source)) {
+            try {
+                return resolveWithSource(source, musicInfo);
+            } catch (IOException error) {
+                originalFailure = error;
+                Log.w(TAG, "Original platform URL resolution failed; trying matched sources");
+            }
+        } else {
+            originalFailure = new IOException("当前音源不支持歌曲原平台: " + source);
+        }
+
+        MusicInfo original = GSON.fromJson(musicInfo, MusicInfo.class);
+        MusicInfo cached = cachedFallback(source + ':' + songmid);
+        if (cached != null && contains(supported, cached.getSource())) {
+            try {
+                return resolveWithSource(cached.getSource(), GSON.toJsonTree(cached).getAsJsonObject());
+            } catch (IOException ignored) {
+                removeCachedFallback(source + ':' + songmid);
+            }
+        }
+
+        LxApiService catalog = MusicApiProvider.get(context);
+        String query = searchQuery(original);
+        for (String fallbackSource : DirectPlaybackFallbackPolicy.fallbackSources(source, supported)) {
+            try {
+                Response<List<MusicInfo>> response = catalog
+                        .searchMusic(query, fallbackSource, 1, 8).execute();
+                if (!response.isSuccessful() || response.body() == null) continue;
+                MusicInfo candidate = DirectPlaybackFallbackPolicy.bestMatch(
+                        original, response.body());
+                if (candidate == null) continue;
+                String url = resolveWithSource(
+                        candidate.getSource(), GSON.toJsonTree(candidate).getAsJsonObject());
+                cacheFallback(source + ':' + songmid, candidate);
+                return url;
+            } catch (Exception error) {
+                Log.w(TAG, "Fallback platform did not resolve a playable candidate: "
+                        + fallbackSource);
+            }
+        }
+        throw new IOException("原平台不可用，其他音源未找到可信匹配歌曲", originalFailure);
+    }
+
+    private String resolveWithSource(String source, JsonObject musicInfo) throws IOException {
+        musicInfo.addProperty("source", source);
+        return SourceRuntimeManager.get(context).resolveMusicUrlBlocking(
+                source, musicInfo, chooseDirectSourceQuality(musicInfo));
+    }
+
+    private static String searchQuery(MusicInfo song) {
+        String name = song == null ? "" : song.getName();
+        String singer = song == null ? "" : song.getSinger();
+        StringBuilder query = new StringBuilder();
+        if (name != null) query.append(name.trim());
+        if (singer != null && !singer.trim().isEmpty()) query.append(' ').append(singer.trim());
+        return query.toString().trim();
+    }
+
+    private static boolean contains(String[] values, String target) {
+        if (values == null || target == null) return false;
+        for (String value : values) if (target.equals(value)) return true;
+        return false;
+    }
+
+    private synchronized MusicInfo cachedFallback(String key) {
+        return directFallbackCache.get(key);
+    }
+
+    private synchronized void cacheFallback(String key, MusicInfo song) {
+        directFallbackCache.put(key, song);
+    }
+
+    private synchronized void removeCachedFallback(String key) {
+        directFallbackCache.remove(key);
     }
 
     private String loginAndSaveToken(

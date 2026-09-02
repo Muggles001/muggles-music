@@ -11,21 +11,25 @@ import org.junit.runner.RunWith;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Field;
 import java.net.ServerSocket;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import fi.iki.elonen.NanoHTTPD;
-import top.boluofan.musictv.ui.settings.connection.ConfigActivity;
 import top.boluofan.musictv.remote.login.LoginWebServer;
+import top.boluofan.musictv.remote.login.LoginRemoteSession;
 import top.boluofan.musictv.remote.search.SearchWebServer;
+import top.boluofan.musictv.remote.playlistimport.PlaylistImportWebServer;
 import top.boluofan.musictv.remote.sourceimport.SourceImportWebServer;
-import top.boluofan.musictv.ui.catalog.search.SearchFragment;
 
 @RunWith(AndroidJUnit4.class)
 public class RemoteWebServerProtocolInstrumentedTest {
@@ -37,25 +41,41 @@ public class RemoteWebServerProtocolInstrumentedTest {
     }
 
     @Test
-    public void qrCallersUseDistinctCurrentPorts() throws Exception {
-        assertEquals(8088, intConstant(ConfigActivity.class, "SERVER_PORT"));
-        assertEquals(8089, intConstant(SearchFragment.class, "SEARCH_SERVER_PORT"));
+    public void qrFlowsShareOnePortAndUseDistinctFunctionalEndpoints() {
+        assertEquals(8088, RemoteWebContract.PORT);
+        java.util.Set<String> entryPaths = new java.util.LinkedHashSet<>(java.util.Arrays.asList(
+                RemoteWebContract.SERVER_CONFIG_PATH,
+                RemoteWebContract.SOURCE_IMPORT_PATH,
+                RemoteWebContract.SEARCH_PATH,
+                RemoteWebContract.PLAYLIST_IMPORT_PATH));
+        java.util.Set<String> submitPaths = new java.util.LinkedHashSet<>(java.util.Arrays.asList(
+                RemoteWebContract.SERVER_CONFIG_SUBMIT_PATH,
+                RemoteWebContract.SOURCE_IMPORT_SUBMIT_PATH,
+                RemoteWebContract.SEARCH_SUBMIT_PATH,
+                RemoteWebContract.PLAYLIST_IMPORT_SUBMIT_PATH));
+
+        assertEquals(4, entryPaths.size());
+        assertEquals(4, submitPaths.size());
+        assertEquals("http://192.168.1.8:8088/search",
+                RemoteWebContract.url("192.168.1.8", RemoteWebContract.SEARCH_PATH));
     }
 
     @Test
-    public void loginProtocolServesRootAndAcceptsFourFields() throws Exception {
+    public void loginProtocolServesFunctionalEndpointAndAcceptsFourFields() throws Exception {
         AtomicReference<List<String>> callback = new AtomicReference<>();
-        LoginWebServer server = new LoginWebServer(8088,
+        LoginWebServer server = new LoginWebServer(RemoteWebContract.PORT,
                 (url, username, password, token) -> callback.set(
                         java.util.Arrays.asList(url, username, password, token)),
                 "https://example.test/?a=1&b=2", "user<name", "p\"ass", "tok'en");
 
-        FakeSession get = new FakeSession(NanoHTTPD.Method.GET, "/", Collections.emptyMap());
+        FakeSession get = new FakeSession(NanoHTTPD.Method.GET,
+                RemoteWebContract.SERVER_CONFIG_PATH, Collections.emptyMap());
         NanoHTTPD.Response page = server.serve(get);
         String html = body(page);
 
         assertResponse(page, NanoHTTPD.Response.Status.OK, "text/html; charset=UTF-8");
-        assertTrue(html.contains("fetch('/login'"));
+        assertTrue(html.contains("fetch('"
+                + RemoteWebContract.SERVER_CONFIG_SUBMIT_PATH + "'"));
         assertTrue(html.contains("formData.append('url', url)"));
         assertTrue(html.contains("formData.append('username', username)"));
         assertTrue(html.contains("formData.append('password', password)"));
@@ -70,10 +90,12 @@ public class RemoteWebServerProtocolInstrumentedTest {
                 "username", "alice",
                 "password", "secret",
                 "token", "token-value");
-        FakeSession post = new FakeSession(NanoHTTPD.Method.POST, "/login", fields);
+        FakeSession post = new FakeSession(NanoHTTPD.Method.POST,
+                RemoteWebContract.SERVER_CONFIG_SUBMIT_PATH, fields);
         NanoHTTPD.Response response = server.serve(post);
 
         assertTrue(post.bodyParsed);
+        assertEquals(null, callback.get());
         assertResponse(response, NanoHTTPD.Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT);
         assertEquals("SUCCESS", body(response));
         assertEquals(java.util.Arrays.asList(
@@ -82,12 +104,14 @@ public class RemoteWebServerProtocolInstrumentedTest {
 
     @Test
     public void loginProtocolRejectsOtherRoutesAndMethods() throws Exception {
-        LoginWebServer server = new LoginWebServer(8088, null);
+        LoginWebServer server = new LoginWebServer(RemoteWebContract.PORT, null);
 
         NanoHTTPD.Response wrongMethod = server.serve(
-                new FakeSession(NanoHTTPD.Method.GET, "/login", Collections.emptyMap()));
+                new FakeSession(NanoHTTPD.Method.GET,
+                        RemoteWebContract.SERVER_CONFIG_SUBMIT_PATH, Collections.emptyMap()));
         NanoHTTPD.Response wrongRoute = server.serve(
-                new FakeSession(NanoHTTPD.Method.POST, "/", Collections.emptyMap()));
+                new FakeSession(NanoHTTPD.Method.POST,
+                        RemoteWebContract.SERVER_CONFIG_PATH, Collections.emptyMap()));
 
         assertResponse(wrongMethod, NanoHTTPD.Response.Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT);
         assertEquals("Not Found", body(wrongMethod));
@@ -96,17 +120,19 @@ public class RemoteWebServerProtocolInstrumentedTest {
     }
 
     @Test
-    public void searchProtocolServesRootAndAcceptsKeywordAndSource() throws Exception {
+    public void searchProtocolServesFunctionalEndpointAndAcceptsKeywordAndSource() throws Exception {
         AtomicReference<List<String>> callback = new AtomicReference<>();
-        SearchWebServer server = new SearchWebServer(8089,
+        SearchWebServer server = new SearchWebServer(RemoteWebContract.PORT,
                 (keyword, source) -> callback.set(java.util.Arrays.asList(keyword, source)));
 
         NanoHTTPD.Response page = server.serve(
-                new FakeSession(NanoHTTPD.Method.GET, "/", Collections.emptyMap()));
+                new FakeSession(NanoHTTPD.Method.GET,
+                        RemoteWebContract.SEARCH_PATH, Collections.emptyMap()));
         String html = body(page);
 
         assertResponse(page, NanoHTTPD.Response.Status.OK, "text/html; charset=UTF-8");
-        assertTrue(html.contains("fetch('/search'"));
+        assertTrue(html.contains("fetch('"
+                + RemoteWebContract.SEARCH_SUBMIT_PATH + "'"));
         assertTrue(html.contains("formData.append('keyword', keyword)"));
         assertTrue(html.contains("formData.append('source', source)"));
         assertTrue(html.contains("<option value=\"all\">"));
@@ -116,11 +142,13 @@ public class RemoteWebServerProtocolInstrumentedTest {
         assertTrue(html.contains("<option value=\"wy\">"));
         assertTrue(html.contains("<option value=\"mg\">"));
 
-        FakeSession post = new FakeSession(NanoHTTPD.Method.POST, "/search",
+        FakeSession post = new FakeSession(NanoHTTPD.Method.POST,
+                RemoteWebContract.SEARCH_SUBMIT_PATH,
                 fields("keyword", "night drive", "source", "tx"));
         NanoHTTPD.Response response = server.serve(post);
 
         assertTrue(post.bodyParsed);
+        assertEquals(null, callback.get());
         assertResponse(response, NanoHTTPD.Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT);
         assertEquals("SUCCESS", body(response));
         assertEquals(java.util.Arrays.asList("night drive", "tx"), callback.get());
@@ -128,12 +156,14 @@ public class RemoteWebServerProtocolInstrumentedTest {
 
     @Test
     public void searchProtocolRejectsOtherRoutesAndMethods() throws Exception {
-        SearchWebServer server = new SearchWebServer(8089, null);
+        SearchWebServer server = new SearchWebServer(RemoteWebContract.PORT, null);
 
         NanoHTTPD.Response wrongMethod = server.serve(
-                new FakeSession(NanoHTTPD.Method.GET, "/search", Collections.emptyMap()));
+                new FakeSession(NanoHTTPD.Method.GET,
+                        RemoteWebContract.SEARCH_SUBMIT_PATH, Collections.emptyMap()));
         NanoHTTPD.Response wrongRoute = server.serve(
-                new FakeSession(NanoHTTPD.Method.POST, "/", Collections.emptyMap()));
+                new FakeSession(NanoHTTPD.Method.POST,
+                        RemoteWebContract.SEARCH_PATH, Collections.emptyMap()));
 
         assertResponse(wrongMethod, NanoHTTPD.Response.Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT);
         assertEquals("Not Found", body(wrongMethod));
@@ -142,23 +172,28 @@ public class RemoteWebServerProtocolInstrumentedTest {
     }
 
     @Test
-    public void sourceImportProtocolUsesRootFormAndTrimmedSourceUrlCallback() throws Exception {
+    public void sourceImportProtocolUsesFunctionalEndpointAndTrimmedSourceUrlCallback() throws Exception {
         AtomicReference<String> callback = new AtomicReference<>();
-        SourceImportWebServer server = new SourceImportWebServer(8088, callback::set);
+        SourceImportWebServer server = new SourceImportWebServer(
+                RemoteWebContract.PORT, callback::set);
 
         NanoHTTPD.Response page = server.serve(
-                new FakeSession(NanoHTTPD.Method.GET, "/", Collections.emptyMap()));
+                new FakeSession(NanoHTTPD.Method.GET,
+                        RemoteWebContract.SOURCE_IMPORT_PATH, Collections.emptyMap()));
         String html = body(page);
 
         assertResponse(page, NanoHTTPD.Response.Status.OK, "text/html; charset=utf-8");
-        assertTrue(html.contains("<form method='post'>"));
+        assertTrue(html.contains("action='"
+                + RemoteWebContract.SOURCE_IMPORT_SUBMIT_PATH + "'"));
         assertTrue(html.contains("name='sourceUrl'"));
 
-        FakeSession post = new FakeSession(NanoHTTPD.Method.POST, "/",
+        FakeSession post = new FakeSession(NanoHTTPD.Method.POST,
+                RemoteWebContract.SOURCE_IMPORT_SUBMIT_PATH,
                 fields("sourceUrl", "  https://example.test/source.js  "));
         NanoHTTPD.Response response = server.serve(post);
 
         assertTrue(post.bodyParsed);
+        assertEquals(null, callback.get());
         assertResponse(response, NanoHTTPD.Response.Status.OK, "text/html; charset=utf-8");
         assertTrue(body(response).contains("已发送"));
         assertEquals("https://example.test/source.js", callback.get());
@@ -167,8 +202,10 @@ public class RemoteWebServerProtocolInstrumentedTest {
     @Test
     public void sourceImportProtocolRejectsBlankFieldWithoutCallback() throws Exception {
         AtomicReference<String> callback = new AtomicReference<>();
-        SourceImportWebServer server = new SourceImportWebServer(8088, callback::set);
-        FakeSession post = new FakeSession(NanoHTTPD.Method.POST, "/",
+        SourceImportWebServer server = new SourceImportWebServer(
+                RemoteWebContract.PORT, callback::set);
+        FakeSession post = new FakeSession(NanoHTTPD.Method.POST,
+                RemoteWebContract.SOURCE_IMPORT_SUBMIT_PATH,
                 fields("sourceUrl", "   "));
 
         NanoHTTPD.Response response = server.serve(post);
@@ -179,27 +216,96 @@ public class RemoteWebServerProtocolInstrumentedTest {
     }
 
     @Test
+    public void playlistImportRequiresTokenAndConsumesOneSubmission() throws Exception {
+        AtomicReference<String> delivered = new AtomicReference<>();
+        PlaylistImportWebServer server = new PlaylistImportWebServer(
+                RemoteWebContract.PORT, "token-123", delivered::set);
+        Map<String, String> pageParams = fields("token", "token-123");
+
+        NanoHTTPD.Response page = server.serve(
+                new FakeSession(NanoHTTPD.Method.GET,
+                        RemoteWebContract.PLAYLIST_IMPORT_PATH, pageParams));
+        assertResponse(page, NanoHTTPD.Response.Status.OK, "text/html; charset=utf-8");
+
+        Map<String, String> submit = fields(
+                "token", "token-123",
+                "playlistLink", "https://music.163.com/playlist?id=123456");
+        NanoHTTPD.Response accepted = server.serve(
+                new FakeSession(NanoHTTPD.Method.POST,
+                        RemoteWebContract.PLAYLIST_IMPORT_SUBMIT_PATH, submit));
+        assertResponse(accepted, NanoHTTPD.Response.Status.OK, "text/html; charset=utf-8");
+        assertEquals(null, delivered.get());
+        assertTrue(body(accepted).contains("已发送"));
+        assertEquals("https://music.163.com/playlist?id=123456", delivered.get());
+
+        NanoHTTPD.Response repeated = server.serve(
+                new FakeSession(NanoHTTPD.Method.POST,
+                        RemoteWebContract.PLAYLIST_IMPORT_SUBMIT_PATH, submit));
+        assertResponse(repeated, NanoHTTPD.Response.Status.CONFLICT,
+                "text/plain; charset=utf-8");
+
+        NanoHTTPD.Response rejected = server.serve(
+                new FakeSession(NanoHTTPD.Method.GET,
+                        RemoteWebContract.PLAYLIST_IMPORT_PATH, fields("token", "wrong")));
+        assertResponse(rejected, NanoHTTPD.Response.Status.NOT_FOUND,
+                "text/plain; charset=utf-8");
+    }
+
+    @Test
     public void parseFailuresKeepEachProtocolCurrentErrorContract() throws Exception {
-        FakeSession login = FakeSession.failingPost("/login");
-        NanoHTTPD.Response loginResponse = new LoginWebServer(8088, null).serve(login);
+        FakeSession login = FakeSession.failingPost(
+                RemoteWebContract.SERVER_CONFIG_SUBMIT_PATH);
+        NanoHTTPD.Response loginResponse = new LoginWebServer(
+                RemoteWebContract.PORT, null).serve(login);
         assertResponse(loginResponse, NanoHTTPD.Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT);
         assertEquals("ERROR: parse failed", body(loginResponse));
 
-        FakeSession search = FakeSession.failingPost("/search");
-        NanoHTTPD.Response searchResponse = new SearchWebServer(8089, null).serve(search);
+        FakeSession search = FakeSession.failingPost(RemoteWebContract.SEARCH_SUBMIT_PATH);
+        NanoHTTPD.Response searchResponse = new SearchWebServer(
+                RemoteWebContract.PORT, null).serve(search);
         assertResponse(searchResponse, NanoHTTPD.Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT);
         assertEquals("ERROR: parse failed", body(searchResponse));
 
-        FakeSession source = FakeSession.failingPost("/");
-        NanoHTTPD.Response sourceResponse = new SourceImportWebServer(8088, ignored -> { }).serve(source);
+        FakeSession source = FakeSession.failingPost(
+                RemoteWebContract.SOURCE_IMPORT_SUBMIT_PATH);
+        NanoHTTPD.Response sourceResponse = new SourceImportWebServer(
+                RemoteWebContract.PORT, ignored -> { }).serve(source);
         assertResponse(sourceResponse, NanoHTTPD.Response.Status.INTERNAL_ERROR, "text/plain; charset=utf-8");
         assertEquals("parse failed", body(sourceResponse));
     }
 
-    private static int intConstant(Class<?> owner, String name) throws Exception {
-        Field field = owner.getDeclaredField(name);
-        field.setAccessible(true);
-        return field.getInt(null);
+    @Test
+    public void liveLoginSessionSendsSuccessBeforeClosingSocket() throws Exception {
+        int port;
+        try (ServerSocket socket = new ServerSocket(0)) {
+            port = socket.getLocalPort();
+        }
+        CountDownLatch delivered = new CountDownLatch(1);
+        LoginRemoteSession session = new LoginRemoteSession(listener ->
+                new LoginWebServer(port, listener::onLogin));
+        session.start((url, username, password, token) -> delivered.countDown());
+
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL(
+                    "http://127.0.0.1:" + port
+                            + RemoteWebContract.SERVER_CONFIG_SUBMIT_PATH).openConnection();
+            connection.setConnectTimeout(3000);
+            connection.setReadTimeout(3000);
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            byte[] payload = ("url=" + URLEncoder.encode(
+                    "http://127.0.0.1:58090", StandardCharsets.UTF_8.name()))
+                    .getBytes(StandardCharsets.UTF_8);
+            connection.setFixedLengthStreamingMode(payload.length);
+            connection.getOutputStream().write(payload);
+
+            assertEquals(200, connection.getResponseCode());
+            assertEquals("SUCCESS", read(connection.getInputStream()));
+            assertTrue(delivered.await(3, TimeUnit.SECONDS));
+            connection.disconnect();
+        } finally {
+            session.close();
+        }
     }
 
     private static Map<String, String> fields(String... entries) {
@@ -241,11 +347,15 @@ public class RemoteWebServerProtocolInstrumentedTest {
     }
 
     private static String body(NanoHTTPD.Response response) throws IOException {
-        try (InputStream input = response.getData();
+        return read(response.getData());
+    }
+
+    private static String read(InputStream input) throws IOException {
+        try (InputStream closeable = input;
              ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[1024];
             int read;
-            while ((read = input.read(buffer)) != -1) {
+            while ((read = closeable.read(buffer)) != -1) {
                 output.write(buffer, 0, read);
             }
             return output.toString(StandardCharsets.UTF_8.name());

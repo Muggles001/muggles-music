@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.catalog.model.MusicInfo;
+import top.boluofan.musictv.catalog.model.ListData;
+import top.boluofan.musictv.library.PlaylistMutations;
 import top.boluofan.musictv.ui.common.FocusAnimationHelper;
 import top.boluofan.musictv.ui.common.ViewHierarchy;
 
@@ -30,6 +32,7 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
     private boolean isPlaying = false;
     private boolean showDeleteButton = false;
     private boolean showFavButton = true;
+    private final List<MusicInfo> favoriteSongs = new ArrayList<>();
     private int nextFocusDownId = View.NO_ID;
     private int nextFocusLeftId = View.NO_ID;
     private int indexOffset = 0;
@@ -97,6 +100,21 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
 
     public void setShowFavButton(boolean show) {
         this.showFavButton = show;
+    }
+
+    public void setFavoriteSongs(List<MusicInfo> favorites) {
+        favoriteSongs.clear();
+        if (favorites != null) favoriteSongs.addAll(favorites);
+        notifyDataSetChanged();
+    }
+
+    public void setFavoriteState(MusicInfo song, boolean favorite) {
+        boolean current = PlaylistMutations.isFavorite(favoriteSongs, song);
+        if (current == favorite) return;
+        ListData data = new ListData();
+        data.setLoveList(favoriteSongs);
+        PlaylistMutations.toggleFavorite(data, song);
+        notifyDataSetChanged();
     }
 
     public void setNextFocusDownId(int id) {
@@ -303,6 +321,11 @@ public class LxMusicAdapter extends RecyclerView.Adapter<LxMusicAdapter.ViewHold
             holder.btnDelete.setOnClickListener(null);
         }
         holder.btnFav.setVisibility(showFavButton ? View.VISIBLE : View.GONE);
+        boolean favorite = PlaylistMutations.isFavorite(favoriteSongs, song);
+        holder.btnFav.setImageResource(favorite
+                ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
+        holder.btnFav.setContentDescription(favorite ? "取消收藏" : "收藏");
+        holder.btnFav.setSelected(favorite);
         if (showFavButton && favListener != null) {
             holder.btnFav.setOnClickListener(v -> {
                 int adapterPosition = holder.getAdapterPosition();

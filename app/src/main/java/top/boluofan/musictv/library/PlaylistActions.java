@@ -179,6 +179,83 @@ public final class PlaylistActions {
         return operation;
     }
 
+    public Operation toggleFavorite(MusicInfo song, Callback<FavoriteResult> callback) {
+        return mutateLibrary(data -> Mutation.success(
+                new FavoriteResult(PlaylistMutations.toggleFavorite(data, song))), callback);
+    }
+
+    public Operation deletePlaylist(String playlistId,
+                                    Callback<PlaylistChangeResult> callback) {
+        return mutateLibrary(data -> PlaylistMutations.deletePlaylist(data, playlistId)
+                ? Mutation.success(new PlaylistChangeResult(playlistId, null))
+                : Mutation.failure(Failure.Kind.TARGET_NOT_FOUND), callback);
+    }
+
+    public Operation renamePlaylist(String playlistId, String newName,
+                                    Callback<PlaylistChangeResult> callback) {
+        return mutateLibrary(data -> {
+            PlaylistMutations.RenameResult result = PlaylistMutations.renamePlaylist(
+                    data, playlistId, newName);
+            if (result == PlaylistMutations.RenameResult.RENAMED) {
+                return Mutation.success(new PlaylistChangeResult(playlistId, newName.trim()));
+            }
+            if (result == PlaylistMutations.RenameResult.DUPLICATE_NAME) {
+                return Mutation.failure(Failure.Kind.DUPLICATE_NAME);
+            }
+            if (result == PlaylistMutations.RenameResult.INVALID_NAME) {
+                return Mutation.failure(Failure.Kind.INVALID_NAME);
+            }
+            return Mutation.failure(Failure.Kind.TARGET_NOT_FOUND);
+        }, callback);
+    }
+
+    private <T> Operation mutateLibrary(LibraryMutation<T> mutation, Callback<T> callback) {
+        ActiveOperation operation = new ActiveOperation();
+        Call<ListData> read = apiService.getUserList(username, password, token);
+        operation.replace(read);
+        read.enqueue(new retrofit2.Callback<ListData>() {
+            @Override
+            public void onResponse(Call<ListData> call, Response<ListData> response) {
+                if (operation.isCanceled()) return;
+                if (!response.isSuccessful() || response.body() == null) {
+                    fail(operation, callback, Failure.Kind.READ_RESPONSE, null);
+                    return;
+                }
+                ListData data = response.body();
+                Mutation<T> result = mutation.apply(data);
+                if (result.failure != null) {
+                    fail(operation, callback, result.failure, null);
+                    return;
+                }
+                Call<ResponseBody> write = apiService.updateUserList(
+                        username, password, token, data);
+                if (!operation.replace(write)) return;
+                write.enqueue(new retrofit2.Callback<ResponseBody>() {
+                    @Override
+                    public void onResponse(Call<ResponseBody> call,
+                                           Response<ResponseBody> response) {
+                        if (!response.isSuccessful()) {
+                            fail(operation, callback, Failure.Kind.WRITE_RESPONSE, null);
+                            return;
+                        }
+                        succeed(operation, callback, result.value);
+                    }
+
+                    @Override
+                    public void onFailure(Call<ResponseBody> call, Throwable error) {
+                        fail(operation, callback, Failure.Kind.TRANSPORT, error);
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(Call<ListData> call, Throwable error) {
+                fail(operation, callback, Failure.Kind.TRANSPORT, error);
+            }
+        });
+        return operation;
+    }
+
     private void save(ActiveOperation operation, ListData listData, Playlist target,
                       Callback<AddResult> callback) {
         Call<ResponseBody> write = apiService.updateUserList(
@@ -248,6 +325,28 @@ public final class PlaylistActions {
         boolean prepend(Playlist playlist, MusicInfo song);
     }
 
+    private interface LibraryMutation<T> {
+        Mutation<T> apply(ListData data);
+    }
+
+    private static final class Mutation<T> {
+        private final T value;
+        private final Failure.Kind failure;
+
+        private Mutation(T value, Failure.Kind failure) {
+            this.value = value;
+            this.failure = failure;
+        }
+
+        static <T> Mutation<T> success(T value) {
+            return new Mutation<>(value, null);
+        }
+
+        static <T> Mutation<T> failure(Failure.Kind failure) {
+            return new Mutation<>(null, failure);
+        }
+    }
+
     public interface CollectCallback {
         void onCreated();
         void onOverwriteRequired(OverwriteConfirmation confirmation);
@@ -282,6 +381,36 @@ public final class PlaylistActions {
         }
     }
 
+    public static final class FavoriteResult {
+        private final boolean favorite;
+
+        FavoriteResult(boolean favorite) {
+            this.favorite = favorite;
+        }
+
+        public boolean isFavorite() {
+            return favorite;
+        }
+    }
+
+    public static final class PlaylistChangeResult {
+        private final String playlistId;
+        private final String playlistName;
+
+        PlaylistChangeResult(String playlistId, String playlistName) {
+            this.playlistId = playlistId;
+            this.playlistName = playlistName;
+        }
+
+        public String getPlaylistId() {
+            return playlistId;
+        }
+
+        public String getPlaylistName() {
+            return playlistName;
+        }
+    }
+
     public static final class Failure {
         public enum Kind {
             READ_RESPONSE,
@@ -289,6 +418,8 @@ public final class PlaylistActions {
             NO_PLAYLISTS,
             TARGET_NOT_FOUND,
             DUPLICATE_SONG,
+            DUPLICATE_NAME,
+            INVALID_NAME,
             WRITE_RESPONSE,
             TRANSPORT
         }

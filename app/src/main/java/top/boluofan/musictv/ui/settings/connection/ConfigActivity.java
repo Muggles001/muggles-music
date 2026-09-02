@@ -30,6 +30,7 @@ import top.boluofan.musictv.player.service.MusicService;
 import top.boluofan.musictv.settings.BackendMode;
 import top.boluofan.musictv.settings.BackendPreferences;
 import top.boluofan.musictv.remote.LocalIpv4Address;
+import top.boluofan.musictv.remote.RemoteWebContract;
 import top.boluofan.musictv.remote.login.LoginWebServer;
 import top.boluofan.musictv.remote.login.LoginRemoteSession;
 import top.boluofan.musictv.remote.sourceimport.SourceImportWebServer;
@@ -44,7 +45,6 @@ public class ConfigActivity extends AppCompatActivity {
     private static final String TAG = "ConfigActivity";
     private LoginRemoteSession loginRemoteSession;
     private SourceImportRemoteSession sourceImportSession;
-    private static final int SERVER_PORT = 8088;
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private SourceImportActions sourceImportActions;
     private boolean isQrMode = false;
@@ -382,7 +382,8 @@ public class ConfigActivity extends AppCompatActivity {
         }
         stopLoginSession();
         stopSourceImportSession();
-        String importUrl = "http://" + ipAddress + ":" + SERVER_PORT;
+        String importUrl = RemoteWebContract.url(
+                ipAddress, RemoteWebContract.SOURCE_IMPORT_PATH);
         AlertDialog dialog = DialogHelper.showQrCodeDialog(
                 this,
                 "扫码导入 LX 音源",
@@ -391,7 +392,7 @@ public class ConfigActivity extends AppCompatActivity {
                 "访问地址: " + importUrl
         );
         SourceImportRemoteSession session = new SourceImportRemoteSession(listener ->
-                new SourceImportWebServer(SERVER_PORT, listener::onSourceUrl));
+                new SourceImportWebServer(RemoteWebContract.PORT, listener::onSourceUrl));
         sourceImportSession = session;
         try {
             session.start(sourceUrl -> mainHandler.post(() -> {
@@ -513,7 +514,8 @@ public class ConfigActivity extends AppCompatActivity {
 
         stopSourceImportSession();
         stopLoginSession();
-        String loginUrl = "http://" + ipAddress + ":" + SERVER_PORT;
+        String loginUrl = RemoteWebContract.url(
+                ipAddress, RemoteWebContract.SERVER_CONFIG_PATH);
         
         AlertDialog qrDialog = DialogHelper.showQrCodeDialog(
             this,
@@ -529,7 +531,7 @@ public class ConfigActivity extends AppCompatActivity {
         String savedToken = LxRetrofitClient.getToken(this);
 
         LoginRemoteSession session = new LoginRemoteSession(listener ->
-                new LoginWebServer(SERVER_PORT, listener::onLogin,
+                new LoginWebServer(RemoteWebContract.PORT, listener::onLogin,
                         savedUrl, savedUsername, savedPassword, savedToken));
         loginRemoteSession = session;
         qrDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "关闭", (dialog, which) -> {

@@ -25,7 +25,6 @@
 
     <!-- Custom AlertDialog Style -->
     <style name="CustomAlertDialog" parent="Theme.AppCompat.Dialog.Alert">
-        <item name="android:background">@drawable/bg_dialog</item>
         <item name="android:textColor">@color/lx_text_primary</item>
         <item name="android:textColorPrimary">@color/lx_text_primary</item>
         <item name="android:textColorSecondary">@color/lx_text_secondary</item>

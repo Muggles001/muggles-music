@@ -7,8 +7,8 @@ import org.junit.Test;
 
 public class PlayerOptionActionsTest {
     @Test
-    public void labelsMapToSixActionsInAdapterOrder() {
-        assertEquals(6, PlayerOptionActions.labels().size());
+    public void labelsMapToSevenActionsInAdapterOrder() {
+        assertEquals(7, PlayerOptionActions.labels().size());
         for (int index = 0; index < PlayerOptionActions.labels().size(); index++) {
             assertEquals(PlayerOptionActions.Action.values()[index],
                     PlayerOptionActions.actionFor(PlayerOptionActions.labels().get(index)));

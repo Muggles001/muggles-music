@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="@dimen/lx_space_lg"
-    android:background="@drawable/bg_dialog"
+    android:background="@android:color/transparent"
     android:elevation="@dimen/lx_elevation_surface">
 
     <TextView

@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import top.boluofan.musictv.remote.RemoteWebContract;
+import top.boluofan.musictv.remote.RemoteWebResponse;
+
 public class SearchWebServer extends NanoHTTPD implements SearchRemoteSession.Server {
     private OnSearchDataReceivedListener listener;
 
@@ -23,11 +26,11 @@ public class SearchWebServer extends NanoHTTPD implements SearchRemoteSession.Se
         String uri = session.getUri();
         Method method = session.getMethod();
 
-        if (Method.GET.equals(method) && "/".equals(uri)) {
+        if (Method.GET.equals(method) && RemoteWebContract.SEARCH_PATH.equals(uri)) {
             return newFixedLengthResponse(getHtml());
         }
 
-        if (Method.POST.equals(method) && "/search".equals(uri)) {
+        if (Method.POST.equals(method) && RemoteWebContract.SEARCH_SUBMIT_PATH.equals(uri)) {
             try {
                 Map<String, String> files = new HashMap<>();
                 session.parseBody(files);
@@ -36,11 +39,10 @@ public class SearchWebServer extends NanoHTTPD implements SearchRemoteSession.Se
                 String keyword = params.get("keyword");
                 String source = params.get("source");
 
-                if (listener != null) {
-                    listener.onSearchReceived(keyword, source);
-                }
-
-                return newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "SUCCESS");
+                return RemoteWebResponse.afterSent(
+                        Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "SUCCESS", () -> {
+                            if (listener != null) listener.onSearchReceived(keyword, source);
+                        });
             } catch (IOException | NanoHTTPD.ResponseException e) {
                 return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "ERROR: " + e.getMessage());
             }
@@ -109,7 +111,7 @@ public class SearchWebServer extends NanoHTTPD implements SearchRemoteSession.Se
                 "            formData.append('keyword', keyword);\n" +
                 "            formData.append('source', source);\n" +
                 "\n" +
-                "            fetch('/search', {\n" +
+                "            fetch('" + RemoteWebContract.SEARCH_SUBMIT_PATH + "', {\n" +
                 "                method: 'POST',\n" +
                 "                body: formData\n" +
                 "            })\n" +

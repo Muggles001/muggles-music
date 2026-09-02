@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import top.boluofan.musictv.remote.RemoteWebContract;
+import top.boluofan.musictv.remote.RemoteWebResponse;
+
 public class LoginWebServer extends NanoHTTPD implements LoginRemoteSession.Server {
     private OnLoginDataReceivedListener listener;
     private String initialUrl;
@@ -36,11 +39,12 @@ public class LoginWebServer extends NanoHTTPD implements LoginRemoteSession.Serv
         String uri = session.getUri();
         Method method = session.getMethod();
 
-        if (Method.GET.equals(method) && "/".equals(uri)) {
+        if (Method.GET.equals(method) && RemoteWebContract.SERVER_CONFIG_PATH.equals(uri)) {
             return newFixedLengthResponse(getHtml());
         }
 
-        if (Method.POST.equals(method) && "/login".equals(uri)) {
+        if (Method.POST.equals(method)
+                && RemoteWebContract.SERVER_CONFIG_SUBMIT_PATH.equals(uri)) {
             try {
                 Map<String, String> files = new HashMap<>();
                 session.parseBody(files);
@@ -51,11 +55,12 @@ public class LoginWebServer extends NanoHTTPD implements LoginRemoteSession.Serv
                 String password = params.get("password");
                 String token = params.get("token");
 
-                if (listener != null) {
-                    listener.onDataReceived(url, username, password, token);
-                }
-
-                return newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "SUCCESS");
+                return RemoteWebResponse.afterSent(
+                        Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "SUCCESS", () -> {
+                            if (listener != null) {
+                                listener.onDataReceived(url, username, password, token);
+                            }
+                        });
             } catch (IOException | NanoHTTPD.ResponseException e) {
                 return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "ERROR: " + e.getMessage());
             }
@@ -142,7 +147,7 @@ public class LoginWebServer extends NanoHTTPD implements LoginRemoteSession.Serv
                 "            formData.append('password', password);\n" +
                 "            formData.append('token', document.getElementById('token').value);\n" +
                 "\n" +
-                "            fetch('/login', {\n" +
+                "            fetch('" + RemoteWebContract.SERVER_CONFIG_SUBMIT_PATH + "', {\n" +
                 "                method: 'POST',\n" +
                 "                body: formData\n" +
                 "            })\n" +

@@ -78,7 +78,23 @@ public class DialogHelper {
     }
 
     public static AlertDialog showDeleteConfirmDialog(Context context, String songName, IDialogCallback callback) {
-        return showConfirmDialog(context, "删除歌曲", "确定要从歌单中删除《" + songName + "》吗？", "删除", "取消", callback);
+        return showDangerConfirmDialog(context, "删除歌曲",
+                "确定要从歌单中删除《" + songName + "》吗？",
+                "删除", "取消", callback);
+    }
+
+    public static AlertDialog showDangerConfirmDialog(
+            Context context, String title, String message, String confirmText,
+            String cancelText, IDialogCallback callback) {
+        AlertDialog dialog = showConfirmDialog(
+                context, title, message, confirmText, cancelText, callback);
+        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (positiveButton != null) {
+            positiveButton.setTextColor(ContextCompat.getColorStateList(
+                    context, R.color.selector_settings_danger_content));
+            positiveButton.setBackgroundResource(R.drawable.bg_dialog_button_secondary);
+        }
+        return dialog;
     }
 
     public static AlertDialog showOverwriteConfirmDialog(Context context, String playlistName, IDialogCallback callback) {
@@ -154,7 +170,7 @@ public class DialogHelper {
                 ? R.color.selector_primary_action_content
                 : R.color.selector_action_content));
         button.setBackgroundResource(primary
-                ? R.drawable.bg_btn_primary : R.drawable.bg_btn_secondary);
+                ? R.drawable.bg_btn_primary : R.drawable.bg_dialog_button_secondary);
         int horizontal = context.getResources().getDimensionPixelSize(R.dimen.lx_space_md);
         int vertical = context.getResources().getDimensionPixelSize(R.dimen.lx_space_sm);
         button.setPadding(horizontal, vertical, horizontal, vertical);

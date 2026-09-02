@@ -35,6 +35,10 @@ import java.util.List;
 import java.util.Map;
 import top.boluofan.musictv.R;
 import top.boluofan.musictv.catalog.direct.netease.SongScraper;
+import top.boluofan.musictv.catalog.MusicApiProvider;
+import top.boluofan.musictv.catalog.lxserver.LxRetrofitClient;
+import top.boluofan.musictv.catalog.model.MusicInfo;
+import top.boluofan.musictv.library.PlaylistActions;
 import top.boluofan.musictv.player.control.PlayerControlsStateMachine;
 import top.boluofan.musictv.player.lyrics.LyricRequestCoordinator;
 import top.boluofan.musictv.player.lyrics.LyricCatalogActions;
@@ -49,6 +53,8 @@ import top.boluofan.musictv.player.visual.VinylTurntableView;
 import top.boluofan.musictv.player.visual.WaveformProgressView;
 import top.boluofan.musictv.settings.AppSettingsPreferences;
 import top.boluofan.musictv.settings.LyricTimingPreferences;
+import top.boluofan.musictv.settings.BackendPreferences;
+import top.boluofan.musictv.ui.common.DialogHelper;
 
 public class PlayerActivity extends AppCompatActivity {
     private static final String TAG = "PlayerActivity";
@@ -89,6 +95,8 @@ public class PlayerActivity extends AppCompatActivity {
     private PlayerPreferences playerPreferences;
     private boolean activityResumed;
     private long playbackErrorGeneration;
+    private PlaylistActions.Operation playlistChoicesOperation;
+    private PlaylistActions.Operation addSongOperation;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable progressUpdater = new Runnable() {
@@ -1162,6 +1170,9 @@ public class PlayerActivity extends AppCompatActivity {
         String songTitle = current.mediaMetadata.title != null ? current.mediaMetadata.title.toString() : mediaId;
 
         switch (action) {
+            case ADD_TO_PLAYLIST:
+                addCurrentSongToPlaylist(current);
+                break;
             case EDIT_ARTIST:
                 String currentArtist = PlayerOptionActions.editableArtist(
                         tvBigArtist.getText().toString());
@@ -1186,6 +1197,90 @@ public class PlayerActivity extends AppCompatActivity {
                 Toast.makeText(this, "当前版本不支持写回歌词或封面", Toast.LENGTH_SHORT).show();
                 break;
         }
+    }
+
+    private void addCurrentSongToPlaylist(MediaItem mediaItem) {
+        if (!LxRetrofitClient.isLoggedIn(this) && !BackendPreferences.usesLocalLibrary(this)) {
+            Toast.makeText(this, "请先配置连接或音源", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        MusicInfo song = musicInfoFrom(mediaItem);
+        PlaylistActions actions = new PlaylistActions(
+                MusicApiProvider.get(this),
+                LxRetrofitClient.getUsername(this),
+                LxRetrofitClient.getPassword(this),
+                LxRetrofitClient.getToken(this));
+        if (playlistChoicesOperation != null) playlistChoicesOperation.cancel();
+        playlistChoicesOperation = actions.loadChoices(
+                new PlaylistActions.Callback<List<String>>() {
+                    @Override
+                    public void onSuccess(List<String> playlistNames) {
+                        if (isFinishing() || isDestroyed()) return;
+                        playlistChoicesOperation = null;
+                        DialogHelper.showPlaylistPickerDialog(
+                                PlayerActivity.this, "选择歌单",
+                                playlistNames.toArray(new String[0]), (dialog, which) -> {
+                            if (which < 0 || which >= playlistNames.size()) return;
+                            addSongOperation = actions.addSongSkippingNullEntries(
+                                    playlistNames.get(which), song,
+                                    new PlaylistActions.Callback<PlaylistActions.AddResult>() {
+                                        @Override
+                                        public void onSuccess(PlaylistActions.AddResult result) {
+                                            if (isFinishing() || isDestroyed()) return;
+                                            addSongOperation = null;
+                                            Toast.makeText(PlayerActivity.this,
+                                                    "已添加到「"
+                                                            + result.getPlaylistName() + "」",
+                                                    Toast.LENGTH_SHORT).show();
+                                        }
+
+                                        @Override
+                                        public void onFailure(PlaylistActions.Failure failure) {
+                                            if (isFinishing() || isDestroyed()) return;
+                                            addSongOperation = null;
+                                            Toast.makeText(PlayerActivity.this,
+                                                    R.string.library_operation_failed,
+                                                    Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                        });
+                    }
+
+                    @Override
+                    public void onFailure(PlaylistActions.Failure failure) {
+                        if (isFinishing() || isDestroyed()) return;
+                        playlistChoicesOperation = null;
+                        Toast.makeText(PlayerActivity.this,
+                                failure.getKind() == PlaylistActions.Failure.Kind.NO_PLAYLISTS
+                                        ? "暂无歌单，请先创建或导入歌单"
+                                        : getString(R.string.library_operation_failed),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private static MusicInfo musicInfoFrom(MediaItem mediaItem) {
+        MusicInfo song = new MusicInfo();
+        Bundle extras = mediaItem.mediaMetadata.extras == null
+                ? Bundle.EMPTY : mediaItem.mediaMetadata.extras;
+        song.setId(extras.getString("song_id", ""));
+        song.setName(extras.getString("original_name",
+                mediaItem.mediaMetadata.title == null
+                        ? mediaItem.mediaId : mediaItem.mediaMetadata.title.toString()));
+        song.setSinger(extras.getString("singer",
+                mediaItem.mediaMetadata.artist == null
+                        ? "" : mediaItem.mediaMetadata.artist.toString()));
+        song.setSource(extras.getString("source", ""));
+        song.setSongmid(extras.getString("songmid", mediaItem.mediaId));
+        song.setPicUrl(extras.getString("pic_url", ""));
+        song.setHash(extras.getString("hash", ""));
+        song.setInterval(extras.getString("interval", ""));
+        song.setCopyrightId(extras.getString("copyrightId", ""));
+        song.setAlbumId(extras.getString("albumId", ""));
+        song.setLrcUrl(extras.getString("lrcUrl", ""));
+        song.setMrcUrl(extras.getString("mrcUrl", ""));
+        song.setTrcUrl(extras.getString("trcUrl", ""));
+        return song;
     }
 
     private void adjustLyricTiming(long deltaMs) {
@@ -1309,6 +1404,8 @@ public class PlayerActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (playlistChoicesOperation != null) playlistChoicesOperation.cancel();
+        if (addSongOperation != null) addSongOperation.cancel();
         if (controlsStateMachine != null) controlsStateMachine.dispose();
         if (artworkLoader != null) artworkLoader.close();
         super.onDestroy();

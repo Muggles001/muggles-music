@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_app_gradient">
+
+    <top.boluofan.musictv.ui.background.FluidBackgroundView
+        android:id="@+id/fluidBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/importTopBar"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/lx_title_height"
+        android:gravity="top|center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/lx_title_gutter"
+        android:paddingEnd="@dimen/lx_title_gutter"
+        android:paddingTop="@dimen/lx_title_top"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnImportBack"
+            android:layout_width="@dimen/lx_control_compact"
+            android:layout_height="@dimen/lx_control_compact"
+            android:background="@drawable/btn_focused_circle"
+            android:contentDescription="@string/playlist_import_back"
+            android:focusable="true"
+            android:nextFocusLeft="@id/btnImportBack"
+            android:nextFocusUp="@id/btnImportBack"
+            android:nextFocusRight="@id/btnSourceAuto"
+            android:nextFocusDown="@id/btnSourceAuto"
+            android:padding="@dimen/lx_space_sm"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_back"
+            app:tint="@color/selector_action_content" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/lx_space_md"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/playlist_import_title"
+                android:textColor="@color/lx_text_primary"
+                android:textSize="@dimen/lx_type_title"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/lx_space_xxs"
+                android:text="@string/playlist_import_subtitle"
+                android:textColor="@color/lx_text_secondary"
+                android:textSize="@dimen/lx_type_body" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/importContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="@dimen/lx_nav_gutter"
+        android:layout_marginTop="@dimen/lx_space_sm"
+        android:layout_marginEnd="@dimen/lx_nav_gutter"
+        android:layout_marginBottom="@dimen/lx_nav_gutter"
+        android:background="@drawable/bg_content_panel"
+        android:clipToOutline="true"
+        android:elevation="@dimen/lx_elevation_surface"
+        android:orientation="vertical"
+        android:outlineProvider="background"
+        android:padding="@dimen/lx_space_lg"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/importTopBar">
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/lx_control_standard"
+            android:fillViewport="true"
+            android:focusable="false"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnSourceAuto"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/lx_control_compact"
+                    android:background="@drawable/selector_tab_bg"
+                    android:focusable="true"
+                    android:nextFocusLeft="@id/btnImportBack"
+                    android:nextFocusRight="@id/btnSourceWy"
+                    android:nextFocusDown="@id/etPlaylistLink"
+                    android:paddingStart="@dimen/lx_space_md"
+                    android:paddingEnd="@dimen/lx_space_md"
+                    android:text="@string/playlist_import_platform_auto"
+                    android:textColor="@color/selector_selectable_content" />
+
+                <Button
+                    android:id="@+id/btnSourceWy"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/lx_control_compact"
+                    android:layout_marginStart="@dimen/lx_space_xs"
+                    android:background="@drawable/selector_tab_bg"
+                    android:focusable="true"
+                    android:nextFocusLeft="@id/btnSourceAuto"
+                    android:nextFocusRight="@id/btnSourceTx"
+                    android:nextFocusDown="@id/etPlaylistLink"
+                    android:paddingStart="@dimen/lx_space_md"
+                    android:paddingEnd="@dimen/lx_space_md"
+                    android:text="@string/playlist_import_platform_wy"
+                    android:textColor="@color/selector_selectable_content" />
+
+                <Button
+                    android:id="@+id/btnSourceTx"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/lx_control_compact"
+                    android:layout_marginStart="@dimen/lx_space_xs"
+                    android:background="@drawable/selector_tab_bg"
+                    android:focusable="true"
+                    android:nextFocusLeft="@id/btnSourceWy"
+                    android:nextFocusRight="@id/btnSourceKw"
+                    android:nextFocusDown="@id/etPlaylistLink"
+                    android:paddingStart="@dimen/lx_space_md"
+                    android:paddingEnd="@dimen/lx_space_md"
+                    android:text="@string/playlist_import_platform_tx"
+                    android:textColor="@color/selector_selectable_content" />
+
+                <Button
+                    android:id="@+id/btnSourceKw"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/lx_control_compact"
+                    android:layout_marginStart="@dimen/lx_space_xs"
+                    android:background="@drawable/selector_tab_bg"
+                    android:focusable="true"
+                    android:nextFocusLeft="@id/btnSourceTx"
+                    android:nextFocusRight="@id/btnSourceKg"
+                    android:nextFocusDown="@id/etPlaylistLink"
+                    android:paddingStart="@dimen/lx_space_md"
+                    android:paddingEnd="@dimen/lx_space_md"
+                    android:text="@string/playlist_import_platform_kw"
+                    android:textColor="@color/selector_selectable_content" />
+
+                <Button
+                    android:id="@+id/btnSourceKg"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/lx_control_compact"
+                    android:layout_marginStart="@dimen/lx_space_xs"
+                    android:background="@drawable/selector_tab_bg"
+                    android:focusable="true"
+                    android:nextFocusLeft="@id/btnSourceKw"
+                    android:nextFocusRight="@id/btnSourceMg"
+                    android:nextFocusDown="@id/etPlaylistLink"
+                    android:paddingStart="@dimen/lx_space_md"
+                    android:paddingEnd="@dimen/lx_space_md"
+                    android:text="@string/playlist_import_platform_kg"
+                    android:textColor="@color/selector_selectable_content" />
+
+                <Button
+                    android:id="@+id/btnSourceMg"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/lx_control_compact"
+                    android:layout_marginStart="@dimen/lx_space_xs"
+                    android:background="@drawable/selector_tab_bg"
+                    android:focusable="true"
+                    android:nextFocusLeft="@id/btnSourceKg"
+                    android:nextFocusRight="@id/btnSourceMg"
+                    android:nextFocusDown="@id/etPlaylistLink"
+                    android:paddingStart="@dimen/lx_space_md"
+                    android:paddingEnd="@dimen/lx_space_md"
+                    android:text="@string/playlist_import_platform_mg"
+                    android:textColor="@color/selector_selectable_content" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/lx_control_standard"
+            android:layout_marginTop="@dimen/lx_space_sm"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/etPlaylistLink"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/bg_input_field"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:hint="@string/playlist_import_hint"
+                android:imeOptions="actionDone"
+                android:inputType="textUri|textNoSuggestions"
+                android:nextFocusLeft="@id/btnImportBack"
+                android:nextFocusRight="@id/btnImportClear"
+                android:nextFocusUp="@id/btnSourceAuto"
+                android:nextFocusDown="@id/btnImportResolve"
+                android:paddingStart="@dimen/lx_space_md"
+                android:paddingEnd="@dimen/lx_space_md"
+                android:singleLine="true"
+                android:textColor="@color/lx_text_primary"
+                android:textColorHint="@color/lx_text_muted"
+                android:textSize="@dimen/lx_type_control" />
+
+            <ImageButton
+                android:id="@+id/btnImportClear"
+                android:layout_width="@dimen/lx_control_standard"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/lx_space_xs"
+                android:background="@drawable/bg_btn_secondary"
+                android:contentDescription="@string/playlist_import_clear"
+                android:focusable="true"
+                android:nextFocusLeft="@id/etPlaylistLink"
+                android:nextFocusRight="@id/btnImportResolve"
+                android:nextFocusUp="@id/btnSourceAuto"
+                android:nextFocusDown="@id/btnImportClear"
+                android:padding="@dimen/lx_space_md"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_close"
+                app:tint="@color/selector_action_content" />
+
+            <Button
+                android:id="@+id/btnImportResolve"
+                android:layout_width="@dimen/lx_button_short_width"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/lx_space_sm"
+                android:background="@drawable/bg_btn_primary"
+                android:focusable="true"
+                android:nextFocusLeft="@id/btnImportClear"
+                android:nextFocusRight="@id/btnImportScan"
+                android:nextFocusUp="@id/btnSourceAuto"
+                android:nextFocusDown="@id/btnImportResolve"
+                android:text="@string/playlist_import_resolve"
+                android:textColor="@color/selector_primary_action_content"
+                android:textSize="@dimen/lx_type_body" />
+
+            <ImageButton
+                android:id="@+id/btnImportScan"
+                android:layout_width="@dimen/lx_control_standard"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/lx_space_sm"
+                android:background="@drawable/bg_btn_secondary"
+                android:contentDescription="@string/playlist_import_scan"
+                android:focusable="true"
+                android:nextFocusLeft="@id/btnImportResolve"
+                android:nextFocusRight="@id/btnImportScan"
+                android:nextFocusUp="@id/btnSourceAuto"
+                android:nextFocusDown="@id/btnImportScan"
+                android:padding="@dimen/lx_space_md"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_qr_code"
+                app:tint="@color/selector_action_content" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/lx_control_compact"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ProgressBar
+                android:id="@+id/importProgress"
+                style="?android:attr/progressBarStyleSmall"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:indeterminateTint="@color/lx_brand"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvImportState"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/lx_space_sm"
+                android:layout_weight="1"
+                android:focusable="false"
+                android:text="@string/playlist_import_ready"
+                android:textColor="@color/lx_text_secondary"
+                android:textSize="@dimen/lx_type_body" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layoutImportPreview"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_floating_glass"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/lx_space_md"
+            android:visibility="gone">
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="124dp"
+                android:layout_height="124dp"
+                app:cardCornerRadius="@dimen/lx_radius_small"
+                app:cardElevation="@dimen/lx_elevation_control">
+
+                <ImageView
+                    android:id="@+id/ivImportCover"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/playlist_import_cover"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_cover_placeholder" />
+            </androidx.cardview.widget.CardView>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/lx_space_md"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvImportName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="2"
+                    android:textColor="@color/lx_text_primary"
+                    android:textSize="@dimen/lx_type_section"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvImportMeta"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/lx_space_xs"
+                    android:textColor="@color/lx_text_secondary"
+                    android:textSize="@dimen/lx_type_body" />
+
+                <TextView
+                    android:id="@+id/tvImportDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/lx_space_xs"
+                    android:ellipsize="end"
+                    android:maxLines="2"
+                    android:textColor="@color/lx_text_secondary"
+                    android:textSize="@dimen/lx_type_caption" />
+            </LinearLayout>
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnImportCancel"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="@dimen/lx_button_short_width"
+                android:layout_height="@dimen/lx_control_standard"
+                android:layout_marginStart="@dimen/lx_space_md"
+                android:background="@drawable/bg_btn_secondary_capsule"
+                android:backgroundTint="@null"
+                android:focusable="true"
+                android:nextFocusLeft="@id/etPlaylistLink"
+                android:nextFocusRight="@id/btnImportConfirm"
+                android:nextFocusUp="@id/etPlaylistLink"
+                android:nextFocusDown="@id/btnImportCancel"
+                android:stateListAnimator="@null"
+                android:text="@string/playlist_import_cancel"
+                android:textColor="@color/selector_action_content"
+                app:backgroundTint="@null" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnImportConfirm"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="@dimen/lx_button_short_width"
+                android:layout_height="@dimen/lx_control_standard"
+                android:layout_marginStart="@dimen/lx_space_sm"
+                android:background="@drawable/bg_btn_primary_capsule"
+                android:backgroundTint="@null"
+                android:focusable="true"
+                android:nextFocusLeft="@id/btnImportCancel"
+                android:nextFocusRight="@id/btnImportConfirm"
+                android:nextFocusUp="@id/etPlaylistLink"
+                android:nextFocusDown="@id/btnImportConfirm"
+                android:stateListAnimator="@null"
+                android:text="@string/playlist_import_confirm"
+                android:textColor="@color/selector_primary_action_content"
+                app:backgroundTint="@null" />
+        </LinearLayout>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

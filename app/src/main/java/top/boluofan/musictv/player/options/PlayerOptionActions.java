@@ -7,6 +7,7 @@ import java.util.List;
 public final class PlayerOptionActions {
     public static final String SAVE_LYRICS_LABEL = "保存歌词（暂不支持）";
     private static final List<String> LABELS = Collections.unmodifiableList(Arrays.asList(
+            "加入歌单",
             "修改歌手名",
             "重新刮削歌词",
             "歌词提前 0.25 秒",
@@ -37,6 +38,7 @@ public final class PlayerOptionActions {
     }
 
     public enum Action {
+        ADD_TO_PLAYLIST,
         EDIT_ARTIST,
         FORCE_SCRAPE,
         ADVANCE_LYRICS,

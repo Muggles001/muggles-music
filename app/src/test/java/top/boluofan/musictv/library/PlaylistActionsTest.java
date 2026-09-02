@@ -450,6 +450,55 @@ public class PlaylistActionsTest {
         assertCollectionEmpty(recorder);
     }
 
+    @Test
+    public void toggleFavoriteReadsLatestLibraryAndPersistsResult() {
+        FakeService service = new FakeService();
+        ListData data = library(playlist("id", "List"));
+        data.setLoveList(new ArrayList<>());
+        service.reads.add(FakeCall.success(data));
+        service.writes.add(FakeCall.success(responseBody()));
+        MusicInfo song = song("Favorite", "kw");
+        song.setSongmid("song-1");
+        Recorder<PlaylistActions.FavoriteResult> recorder = new Recorder<>();
+
+        new PlaylistActions(service.api, "u", "p", "t").toggleFavorite(song, recorder);
+
+        assertTrue(recorder.value.isFavorite());
+        assertEquals(Collections.singletonList(song), service.savedData.getLoveList());
+        assertEquals(1, service.readCount);
+        assertEquals(1, service.writeCount);
+    }
+
+    @Test
+    public void deletePlaylistPersistsByStableId() {
+        FakeService service = new FakeService();
+        Playlist kept = playlist("keep", "Same");
+        Playlist removed = playlist("remove", "Same");
+        service.reads.add(FakeCall.success(library(kept, removed)));
+        service.writes.add(FakeCall.success(responseBody()));
+        Recorder<PlaylistActions.PlaylistChangeResult> recorder = new Recorder<>();
+
+        new PlaylistActions(service.api, "u", "p", "t")
+                .deletePlaylist("remove", recorder);
+
+        assertEquals("remove", recorder.value.getPlaylistId());
+        assertEquals(Collections.singletonList(kept), service.savedData.getUserList());
+    }
+
+    @Test
+    public void renamePlaylistRejectsDuplicateWithoutWriting() {
+        FakeService service = new FakeService();
+        service.reads.add(FakeCall.success(library(
+                playlist("target", "Old"), playlist("other", "Taken"))));
+        Recorder<PlaylistActions.PlaylistChangeResult> recorder = new Recorder<>();
+
+        new PlaylistActions(service.api, "u", "p", "t")
+                .renamePlaylist("target", "Taken", recorder);
+
+        assertFailure(PlaylistActions.Failure.Kind.DUPLICATE_NAME, recorder);
+        assertEquals(0, service.writeCount);
+    }
+
     private static void assertFailure(PlaylistActions.Failure.Kind kind, Recorder<?> recorder) {
         assertNull(recorder.value);
         assertEquals(kind, recorder.failure.getKind());

@@ -83,8 +83,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     private static final int SONGS_PER_PAGE = 8;
     private int currentPage = 0;
     private PlaylistActions.Operation collectPlaylistOperation;
-    private PlaylistActions.Operation playlistChoicesOperation;
-    private PlaylistActions.Operation addSongOperation;
+    private PlaylistActions.Operation favoriteOperation;
     private PlaylistActions.Operation playlistLoadOperation;
     
     private final String[] SOURCES = {"mg", "kw", "kg", "tx", "wy"};
@@ -315,69 +314,28 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         PlaylistActions actions = new PlaylistActions(
                 MusicApiProvider.get(this), username, password, token);
 
-        playlistChoicesOperation = actions.loadChoices(new PlaylistActions.Callback<List<String>>() {
+        if (favoriteOperation != null) favoriteOperation.cancel();
+        favoriteOperation = actions.toggleFavorite(song,
+                new PlaylistActions.Callback<PlaylistActions.FavoriteResult>() {
             @Override
-            public void onSuccess(List<String> playlistNames) {
+            public void onSuccess(PlaylistActions.FavoriteResult result) {
                 if (!isActivityUsable()) return;
-                DialogHelper.showPlaylistPickerDialog(
-                        PlaylistDetailActivity.this, "选择歌单",
-                        playlistNames.toArray(new String[0]), (dialog, which) -> {
-                    if (!isActivityUsable() || which < 0 || which >= playlistNames.size()) return;
-                    addSongOperation = actions.addSongSkippingNullEntries(
-                            playlistNames.get(which), song,
-                            new PlaylistActions.Callback<PlaylistActions.AddResult>() {
-                                @Override
-                                public void onSuccess(PlaylistActions.AddResult result) {
-                                    if (!isActivityUsable()) return;
-                                    Toast.makeText(PlaylistDetailActivity.this,
-                                            "已添加到「" + result.getPlaylistName() + "」",
-                                            Toast.LENGTH_SHORT).show();
-                                }
-
-                                @Override
-                                public void onFailure(PlaylistActions.Failure failure) {
-                                    showAddSongFailure(failure);
-                                }
-                            });
-                });
+                favoriteOperation = null;
+                songAdapter.setFavoriteState(song, result.isFavorite());
+                Toast.makeText(PlaylistDetailActivity.this, result.isFavorite()
+                                ? R.string.library_favorite_added
+                                : R.string.library_favorite_removed,
+                        Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onFailure(PlaylistActions.Failure failure) {
                 if (!isActivityUsable()) return;
-                String message = failure.getKind() == PlaylistActions.Failure.Kind.NO_PLAYLISTS
-                        ? "暂无歌单，请先在歌单库创建歌单"
-                        : playlistFailureMessage(failure, "获取歌单失败");
+                favoriteOperation = null;
                 Toast.makeText(PlaylistDetailActivity.this,
-                        message, Toast.LENGTH_SHORT).show();
+                        R.string.library_operation_failed, Toast.LENGTH_SHORT).show();
             }
         });
-    }
-
-    private void showAddSongFailure(PlaylistActions.Failure failure) {
-        if (!isActivityUsable()) return;
-        String message;
-        switch (failure.getKind()) {
-            case READ_RESPONSE:
-                message = "获取歌单失败";
-                break;
-            case DUPLICATE_SONG:
-                message = "歌曲已存在于此歌单";
-                break;
-            case WRITE_RESPONSE:
-                message = "添加失败";
-                break;
-            case TRANSPORT:
-                message = playlistFailureMessage(failure, "网络错误");
-                break;
-            case NO_PLAYLISTS:
-            case TARGET_NOT_FOUND:
-            default:
-                message = "歌单不存在";
-                break;
-        }
-        Toast.makeText(PlaylistDetailActivity.this,
-                message, Toast.LENGTH_SHORT).show();
     }
 
     private static String playlistFailureMessage(PlaylistActions.Failure failure,
@@ -777,8 +735,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         if (collectPlaylistOperation != null) collectPlaylistOperation.cancel();
-        if (playlistChoicesOperation != null) playlistChoicesOperation.cancel();
-        if (addSongOperation != null) addSongOperation.cancel();
+        if (favoriteOperation != null) favoriteOperation.cancel();
         if (playlistLoadOperation != null) playlistLoadOperation.cancel();
         super.onDestroy();
         if (floatingPlayerWindow != null) {

@@ -88,7 +88,7 @@
             android:layout_height="@dimen/lx_control_standard"
             android:layout_marginStart="@dimen/lx_space_xxs"
             android:background="@drawable/bg_btn_secondary"
-            android:src="@drawable/ic_delete"
+            android:src="@drawable/ic_close"
             android:scaleType="centerInside"
             android:padding="@dimen/lx_space_md"
             android:contentDescription="清空"

@@ -165,6 +165,58 @@ public class PlaylistMutationsTest {
         assertEquals(3, result.getSongs().size());
     }
 
+    @Test
+    public void favoriteToggleUsesSourceAndSongIdAndRemovesDuplicates() {
+        ListData data = new ListData();
+        MusicInfo favorite = song("Same title", "kw");
+        favorite.setSongmid("song-1");
+        MusicInfo duplicate = song("Renamed title", "kw");
+        duplicate.setSongmid("song-1");
+        MusicInfo otherSource = song("Same title", "tx");
+        otherSource.setSongmid("song-1");
+        data.setLoveList(new ArrayList<>(Arrays.asList(favorite, duplicate, otherSource)));
+
+        assertFalse(PlaylistMutations.toggleFavorite(data, duplicate));
+        assertEquals(Collections.singletonList(otherSource), data.getLoveList());
+        assertTrue(PlaylistMutations.toggleFavorite(data, duplicate));
+        assertEquals(duplicate, data.getLoveList().get(0));
+        assertEquals(otherSource, data.getLoveList().get(1));
+    }
+
+    @Test
+    public void deletePlaylistUsesStableIdAndPreservesSameNameSibling() {
+        Playlist first = playlist("first", "Same");
+        Playlist second = playlist("second", "Same");
+        ListData data = new ListData();
+        data.setUserList(new ArrayList<>(Arrays.asList(first, second)));
+
+        assertTrue(PlaylistMutations.deletePlaylist(data, "second"));
+
+        assertEquals(Collections.singletonList(first), data.getUserList());
+        assertFalse(PlaylistMutations.deletePlaylist(data, "missing"));
+    }
+
+    @Test
+    public void renamePlaylistPreservesContentAndRejectsDuplicateName() {
+        Playlist target = playlist("target", "Old");
+        target.setSource("kw");
+        target.setSourceListId("source-list");
+        target.setSongs(new ArrayList<>(Collections.singletonList(song("Song", "kw"))));
+        Playlist sibling = playlist("sibling", "Taken");
+        ListData data = new ListData();
+        data.setUserList(new ArrayList<>(Arrays.asList(target, sibling)));
+
+        assertEquals(PlaylistMutations.RenameResult.RENAMED,
+                PlaylistMutations.renamePlaylist(data, "target", "New"));
+        assertEquals("New", target.getName());
+        assertEquals("kw", target.getSource());
+        assertEquals("source-list", target.getSourceListId());
+        assertEquals("Song", target.getSongs().get(0).getName());
+        assertEquals(PlaylistMutations.RenameResult.DUPLICATE_NAME,
+                PlaylistMutations.renamePlaylist(data, "target", "Taken"));
+        assertEquals("New", target.getName());
+    }
+
     private static Playlist playlist(String id, String name) {
         Playlist playlist = new Playlist();
         playlist.setId(id);

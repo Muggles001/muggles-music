@@ -25,6 +25,7 @@
 
     <dimen name="lx_radius_small">10dp</dimen>
     <dimen name="lx_radius_control">16dp</dimen>
+    <dimen name="lx_radius_capsule">28dp</dimen>
     <dimen name="lx_radius_panel">26dp</dimen>
     <dimen name="lx_stroke_hairline">1dp</dimen>
     <dimen name="lx_stroke_selected">2dp</dimen>

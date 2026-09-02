@@ -46,8 +46,9 @@ public class PlayerOptionMenuInstrumentedTest {
     }
 
     @Test
-    public void menuKeepsSixActionsInOrderAndSaveStartsDisabled() {
+    public void menuKeepsSevenActionsInOrderAndSaveStartsDisabled() {
         List<String> expected = Arrays.asList(
+                "加入歌单",
                 "修改歌手名",
                 "重新刮削歌词",
                 "歌词提前 0.25 秒",
@@ -94,7 +95,7 @@ public class PlayerOptionMenuInstrumentedTest {
                 assertEquals(View.VISIBLE,
                         activity.findViewById(R.id.layoutOptionMenu).getVisibility());
                 RecyclerView options = activity.findViewById(R.id.rvOptions);
-                RecyclerView.ViewHolder scrape = options.findViewHolderForAdapterPosition(1);
+                RecyclerView.ViewHolder scrape = options.findViewHolderForAdapterPosition(2);
                 assertNotNull(scrape);
                 TextView label = scrape.itemView.findViewById(R.id.tvOptionName);
                 assertEquals("重新刮削歌词", label.getText().toString());

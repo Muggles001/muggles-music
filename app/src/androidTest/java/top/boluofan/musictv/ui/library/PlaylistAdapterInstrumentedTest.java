@@ -11,9 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -27,13 +25,12 @@ public class PlaylistAdapterInstrumentedTest {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             PlaylistAdapter adapter = new PlaylistAdapter();
-            Map<String, List<String>> playlists = new LinkedHashMap<>();
+            List<LibraryPlaylistRow> playlists = new ArrayList<>();
             for (int i = 1; i <= 11; i++) {
-                List<String> songs = new ArrayList<>();
-                songs.add("song-" + i);
-                playlists.put("playlist-" + i, songs);
+                playlists.add(new LibraryPlaylistRow(
+                        "id-" + i, "playlist-" + i, 1));
             }
-            AtomicReference<String> clicked = new AtomicReference<>();
+            AtomicReference<LibraryPlaylistRow> clicked = new AtomicReference<>();
             adapter.setOnItemClickListener(clicked::set);
             adapter.setData(playlists);
             adapter.setPageSize(10);
@@ -56,8 +53,79 @@ public class PlaylistAdapterInstrumentedTest {
             assertEquals("11", ((TextView) holder.itemView.findViewById(R.id.tvIndex)).getText());
             assertEquals(R.id.btnLibraryNextPage, holder.itemView.getNextFocusDownId());
             holder.itemView.performClick();
-            assertEquals("playlist-11", clicked.get());
+            assertEquals("id-11", clicked.get().getPlaylistId());
             assertEquals(View.VISIBLE, holder.itemView.getVisibility());
+        });
+    }
+
+    @Test
+    public void sameNamePlaylistsRemainDistinctAndEmitStableIdentity() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            PlaylistAdapter adapter = new PlaylistAdapter();
+            List<LibraryPlaylistRow> rows = new ArrayList<>();
+            rows.add(new LibraryPlaylistRow("first", "同名歌单", 2));
+            rows.add(new LibraryPlaylistRow("second", "同名歌单", 3));
+            AtomicReference<String> clickedId = new AtomicReference<>();
+            adapter.setOnItemClickListener(row -> clickedId.set(row.getPlaylistId()));
+            adapter.setData(rows);
+
+            RecyclerView parent = new RecyclerView(context);
+            parent.setLayoutManager(new LinearLayoutManager(context));
+            parent.setAdapter(adapter);
+            RecyclerViewLayoutFixture.layout(parent, context);
+
+            assertEquals(2, adapter.getItemCount());
+            PlaylistAdapter.ViewHolder second = (PlaylistAdapter.ViewHolder)
+                    parent.findViewHolderForAdapterPosition(1);
+            assertNotNull(second);
+            second.itemView.performClick();
+            assertEquals("second", clickedId.get());
+        });
+    }
+
+    @Test
+    public void managementActionsAppearOnlyInManagementModeAndKeepStableIdentity() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            PlaylistAdapter adapter = new PlaylistAdapter();
+            LibraryPlaylistRow row = new LibraryPlaylistRow("stable-id", "Managed", 4);
+            AtomicReference<String> renamed = new AtomicReference<>();
+            AtomicReference<String> deleted = new AtomicReference<>();
+            adapter.setData(java.util.Collections.singletonList(row));
+            adapter.setOnManageClickListener(new PlaylistAdapter.OnManageClickListener() {
+                @Override
+                public void onRename(LibraryPlaylistRow playlist) {
+                    renamed.set(playlist.getPlaylistId());
+                }
+
+                @Override
+                public void onDelete(LibraryPlaylistRow playlist) {
+                    deleted.set(playlist.getPlaylistId());
+                }
+            });
+            RecyclerView parent = new RecyclerView(context);
+            parent.setLayoutManager(new LinearLayoutManager(context));
+            parent.setAdapter(adapter);
+            RecyclerViewLayoutFixture.layout(parent, context);
+            PlaylistAdapter.ViewHolder holder = (PlaylistAdapter.ViewHolder)
+                    parent.findViewHolderForAdapterPosition(0);
+
+            assertNotNull(holder);
+            assertEquals(View.GONE, holder.btnRename.getVisibility());
+            assertEquals(View.GONE, holder.btnDelete.getVisibility());
+
+            adapter.setManagementMode(true);
+            RecyclerViewLayoutFixture.layout(parent, context);
+            holder = (PlaylistAdapter.ViewHolder) parent.findViewHolderForAdapterPosition(0);
+            assertNotNull(holder);
+            assertEquals(View.VISIBLE, holder.btnRename.getVisibility());
+            assertEquals(View.VISIBLE, holder.btnDelete.getVisibility());
+            assertEquals(R.id.btnPlaylistRename, holder.itemView.getNextFocusRightId());
+            holder.btnRename.performClick();
+            holder.btnDelete.performClick();
+            assertEquals("stable-id", renamed.get());
+            assertEquals("stable-id", deleted.get());
         });
     }
 

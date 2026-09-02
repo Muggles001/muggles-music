@@ -42,9 +42,10 @@ public interface ExternalApiService {
 
     @Headers({
         "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Referer: https://music.163.com"
+        "Referer: https://music.163.com",
+        "Cookie: os=pc; appver=2.10.13"
     })
-    @GET("api/playlist/detail")
+    @GET("api/v6/playlist/detail")
     Call<JsonObject> getPublicPlaylistDetail(
             @Query("id") String id,
             @Query("n") int limit,

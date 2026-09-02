@@ -29,6 +29,8 @@ public final class KgCatalog implements DirectPlatformCatalog {
     private static final Gson GSON = new Gson();
     private static final Pattern EMBEDDED_PLAYLIST = Pattern.compile(
             "global\\.data\\s*=\\s*(\\[[\\s\\S]*?]);");
+    private static final Pattern MOBILE_PLAYLIST = Pattern.compile(
+            "window\\.\\$output\\s*=\\s*(\\{[\\s\\S]*?\\})\\s*;");
 
     private final DirectHttpTransport transport;
 
@@ -58,6 +60,9 @@ public final class KgCatalog implements DirectPlatformCatalog {
 
     @Override
     public Playlist playlistDetail(String rawId, int page) throws IOException {
+        if (rawId != null && (rawId.contains("gcid_") || rawId.contains("/songlist/"))) {
+            return playlistDetailByShareLink(rawId);
+        }
         String id = normalizeNumericId(rawId);
         String html = transport.getText(
                 "http://www2.kugou.kugou.com/yueku/v9/special/single/"
@@ -79,6 +84,42 @@ public final class KgCatalog implements DirectPlatformCatalog {
         playlist.setPicUrl("");
         playlist.setDesc("");
         playlist.setCreator("");
+        playlist.setSongCount(songs.size());
+        playlist.setSongs(mapSongs(songs));
+        return playlist;
+    }
+
+    private Playlist playlistDetailByShareLink(String rawId) throws IOException {
+        String gcid = group(rawId, "(gcid_[A-Za-z0-9_]+)");
+        if (gcid == null) throw new IOException("酷狗分享链接缺少 gcid");
+        String url = rawId.startsWith("http://") || rawId.startsWith("https://")
+                ? rawId : "https://m.kugou.com/songlist/" + gcid + "/";
+        Map<String, String> headers = new java.util.LinkedHashMap<>();
+        headers.put("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36");
+        headers.put("Referer", "https://m.kugou.com/");
+        String html = transport.getText(url, headers);
+        return playlistFromShareHtml(gcid, html);
+    }
+
+    static Playlist playlistFromShareHtml(String gcid, String html) throws IOException {
+        Matcher matcher = MOBILE_PLAYLIST.matcher(html == null ? "" : html);
+        if (!matcher.find()) throw new IOException("酷狗分享歌单数据解析失败");
+        JsonObject output;
+        try {
+            output = new JsonParser().parse(matcher.group(1)).getAsJsonObject();
+        } catch (Exception error) {
+            throw new IOException("酷狗分享歌单数据无效", error);
+        }
+        JsonObject info = object(output, "info");
+        JsonObject listInfo = object(info, "listinfo");
+        JsonArray songs = array(info, "songs");
+        Playlist playlist = new Playlist();
+        playlist.setId(gcid);
+        playlist.setSource("kg");
+        playlist.setName(string(listInfo, "name", "酷狗歌单"));
+        playlist.setPicUrl(first(listInfo, "pic", "img"));
+        playlist.setDesc(string(listInfo, "intro", ""));
+        playlist.setCreator(first(listInfo, "list_create_username", "nickname"));
         playlist.setSongCount(songs.size());
         playlist.setSongs(mapSongs(songs));
         return playlist;
@@ -115,7 +156,7 @@ public final class KgCatalog implements DirectPlatformCatalog {
         return result;
     }
 
-    private List<MusicInfo> mapSongs(JsonArray raw) {
+    private static List<MusicInfo> mapSongs(JsonArray raw) {
         List<MusicInfo> result = new ArrayList<>();
         Set<String> ids = new LinkedHashSet<>();
         for (JsonElement element : raw) {
@@ -130,28 +171,38 @@ public final class KgCatalog implements DirectPlatformCatalog {
 
     private static JsonObject mapSong(JsonObject raw) {
         String id = first(raw, "Audioid", "audio_id", "songmid", "songid");
-        JsonObject song = baseSong(id,
-                decode(first(raw, "SongName", "songname")),
-                decode(first(raw, "SingerName", "singername")));
+        String singer = decode(first(raw, "SingerName", "singername"));
+        if (singer.isEmpty()) singer = joinSingers(array(raw, "singerinfo"));
+        String name = decode(first(raw, "SongName", "songname", "name"));
+        String prefix = singer.isEmpty() ? "" : singer + " - ";
+        if (!prefix.isEmpty() && name.startsWith(prefix)) name = name.substring(prefix.length());
+        JsonObject song = baseSong(id, name, singer);
         song.addProperty("albumName", decode(first(raw, "AlbumName", "album_name", "remark")));
         song.addProperty("albumId", first(raw, "AlbumID", "album_id"));
         String hash = first(raw, "FileHash", "hash");
         song.addProperty("hash", hash);
-        String cover = first(raw, "Image", "album_sizable_cover");
+        String cover = first(raw, "Image", "album_sizable_cover", "cover");
         if (cover.isEmpty()) cover = string(object(raw, "trans_param"), "union_cover", "");
         song.addProperty("img", cover.replace("{size}", "400"));
-        long duration = longFirst(raw, "Duration", "duration");
+        long duration = longFirst(raw, "Duration", "duration", "timelen");
         if (duration > 10000) duration /= 1000;
         song.addProperty("_interval", duration);
         song.addProperty("interval", formatDuration(duration));
         QualityBuilder quality = new QualityBuilder(song);
-        quality.addIfPositive("128k", longFirst(raw, "FileSize", "filesize"), hash);
+        quality.addIfPositive("128k", longFirst(raw, "FileSize", "filesize", "size"), hash);
         quality.addIfPositive("320k", longFirst(raw, "HQFileSize", "320filesize", "filesize_320"),
                 first(raw, "HQFileHash", "320hash", "hash_320"));
         quality.addIfPositive("flac", longFirst(raw, "SQFileSize", "sqfilesize", "filesize_flac"),
                 first(raw, "SQFileHash", "sqhash", "hash_flac"));
         quality.addIfPositive("flac24bit", longFirst(raw, "ResFileSize", "filesize_high"),
                 first(raw, "ResFileHash", "hash_high"));
+        for (JsonElement element : array(raw, "relate_goods")) {
+            if (!element.isJsonObject()) continue;
+            JsonObject item = element.getAsJsonObject();
+            long bitrate = longFirst(item, "bitrate");
+            String type = bitrate >= 900 ? "flac" : bitrate >= 300 ? "320k" : "128k";
+            quality.addIfPositive(type, longFirst(item, "size"), first(item, "hash"));
+        }
         if (quality.isEmpty()) quality.add("128k", "", hash);
         quality.finish();
         return song;
@@ -198,6 +249,24 @@ public final class KgCatalog implements DirectPlatformCatalog {
     private static JsonArray array(JsonObject parent, String name) {
         return parent != null && parent.has(name) && parent.get(name).isJsonArray()
                 ? parent.getAsJsonArray(name) : new JsonArray();
+    }
+
+    private static String joinSingers(JsonArray singers) {
+        StringBuilder joined = new StringBuilder();
+        for (JsonElement element : singers) {
+            if (!element.isJsonObject()) continue;
+            String name = first(element.getAsJsonObject(), "name");
+            if (name.isEmpty()) continue;
+            if (joined.length() > 0) joined.append('、');
+            joined.append(name);
+        }
+        return joined.toString();
+    }
+
+    private static String group(String value, String expression) {
+        if (value == null) return null;
+        Matcher matcher = Pattern.compile(expression, Pattern.CASE_INSENSITIVE).matcher(value);
+        return matcher.find() ? matcher.group(1) : null;
     }
 
     private static JsonObject object(JsonObject parent, String name) {

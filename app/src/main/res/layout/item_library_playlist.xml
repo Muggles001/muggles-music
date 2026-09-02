@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/item_playlist_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="@dimen/lx_space_xxs"
@@ -78,5 +79,31 @@
             android:maxLines="1"
             android:duplicateParentState="true" />
     </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/btnPlaylistRename"
+        android:layout_width="@dimen/lx_control_compact"
+        android:layout_height="@dimen/lx_control_compact"
+        android:layout_marginStart="@dimen/lx_space_xxs"
+        android:background="@drawable/btn_focused_circle"
+        android:contentDescription="@string/library_rename_playlist"
+        android:focusable="true"
+        android:padding="@dimen/lx_space_sm"
+        android:src="@drawable/ic_edit"
+        android:visibility="gone"
+        app:tint="@color/selector_action_content" />
+
+    <ImageButton
+        android:id="@+id/btnPlaylistDelete"
+        android:layout_width="@dimen/lx_control_compact"
+        android:layout_height="@dimen/lx_control_compact"
+        android:layout_marginStart="@dimen/lx_space_xxs"
+        android:background="@drawable/btn_focused_circle"
+        android:contentDescription="@string/library_delete_playlist"
+        android:focusable="true"
+        android:padding="@dimen/lx_space_sm"
+        android:src="@drawable/ic_delete"
+        android:visibility="gone"
+        app:tint="@color/selector_settings_danger_content" />
 
 </LinearLayout>
